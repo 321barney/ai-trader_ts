@@ -178,8 +178,15 @@ export class AsterService {
 
             // If we have credentials, test private endpoint
             if (this.apiKey && this.apiSecret) {
-                const balances = await this.getBalance();
-                return { success: true, balance: balances };
+                try {
+                    // Use V2 balance endpoint as per documentation
+                    const balances = await this.getBalance();
+                    return { success: true, balance: balances };
+                } catch (accountError: any) {
+                    // If balance fails, log and return the error
+                    console.log('[Aster] Balance request failed:', accountError.message);
+                    return { success: false, error: accountError.message };
+                }
             }
 
             return { success: true };
@@ -264,16 +271,17 @@ export class AsterService {
     // ============ Account ============
 
     /**
-     * Get account balances
+     * Get account balances - V2 endpoint
      */
     async getBalance(): Promise<Balance[]> {
-        const data = await this.signedRequest<any[]>('GET', '/fapi/v1/balance');
+        // Use V2 endpoint as per documentation
+        const data = await this.signedRequest<any[]>('GET', '/fapi/v2/balance');
 
         return data.map((b: any) => ({
             asset: b.asset,
-            available: parseFloat(b.availableBalance),
-            locked: parseFloat(b.balance) - parseFloat(b.availableBalance),
-            total: parseFloat(b.balance),
+            available: parseFloat(b.availableBalance || '0'),
+            locked: parseFloat(b.balance || '0') - parseFloat(b.availableBalance || '0'),
+            total: parseFloat(b.balance || '0'),
         }));
     }
 
