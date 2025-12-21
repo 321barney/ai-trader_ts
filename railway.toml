@@ -8,9 +8,11 @@ restartPolicyMaxRetries = 3
 [[services]]
 name = "backend"
 root = "backend"
+dockerfilePath = "Dockerfile"
 watchPatterns = ["backend/**"]
 
 [[services]]
 name = "frontend"
 root = "frontend"
+dockerfilePath = "Dockerfile"
 watchPatterns = ["frontend/**"]
