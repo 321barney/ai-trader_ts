@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/api";
 
@@ -28,6 +28,14 @@ export default function OnboardingPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [isTesting, setIsTesting] = useState(false);
+
+    // Check authentication on mount
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            router.push("/login");
+        }
+    }, [router]);
     const [connectionResult, setConnectionResult] = useState<ConnectionResult | null>(null);
     const [availablePairs, setAvailablePairs] = useState<string[]>([]);
     const [data, setData] = useState<StepData>({
