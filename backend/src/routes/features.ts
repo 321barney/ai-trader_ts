@@ -1,11 +1,11 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { jinaSearchService } from '../services/jina-search.service.js';
 import { performanceService } from '../services/performance.service.js';
 import { historicalReplayService } from '../services/historical-replay.service.js';
 import { postTradeAnalysisService } from '../services/post-trade-analysis.service.js';
 import { toolRegistry } from '../mcp/tool-registry.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { asyncHandler } from '../middleware/async.js';
+import { asyncHandler } from '../middleware/error.js';
 
 const router = Router();
 
@@ -13,7 +13,7 @@ const router = Router();
 // MARKET INTELLIGENCE (Jina)
 // ============================================
 
-router.get('/market/news', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/market/news', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { query, symbol, days } = req.query;
 
     if (symbol) {
@@ -30,7 +30,7 @@ router.get('/market/news', authMiddleware, asyncHandler(async (req, res) => {
     }
 }));
 
-router.post('/market/analyze-sentiment', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/market/analyze-sentiment', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { text } = req.body;
     if (!text) {
         return res.status(400).json({ success: false, error: 'Text required' });
@@ -40,7 +40,7 @@ router.post('/market/analyze-sentiment', authMiddleware, asyncHandler(async (req
     res.json({ success: true, data: result });
 }));
 
-router.get('/market/financial-reports', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/market/financial-reports', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { symbol, reportType } = req.query;
 
     if (!symbol) {
@@ -59,7 +59,7 @@ router.get('/market/financial-reports', authMiddleware, asyncHandler(async (req,
 // PERFORMANCE ANALYTICS
 // ============================================
 
-router.get('/analytics/performance', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/analytics/performance', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user.userId;
     const { startDate, endDate } = req.query;
@@ -68,7 +68,7 @@ router.get('/analytics/performance', authMiddleware, asyncHandler(async (req, re
     res.json({ success: true, data: report });
 }));
 
-router.post('/analytics/analyze-trade', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/analytics/analyze-trade', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { tradeId } = req.body;
     // In a real app, you'd fetch the trade from DB first
     // For now, we accept full trade object for testing
@@ -86,7 +86,7 @@ router.post('/analytics/analyze-trade', authMiddleware, asyncHandler(async (req,
 // HISTORICAL REPLAY
 // ============================================
 
-router.post('/replay/start', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/replay/start', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user.userId;
     const config = req.body; // ReplayConfig
@@ -95,7 +95,7 @@ router.post('/replay/start', authMiddleware, asyncHandler(async (req, res) => {
     res.json({ success: true, data: session });
 }));
 
-router.post('/replay/action/:sessionId', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/replay/action/:sessionId', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
     const { action, steps } = req.body; // action: 'start', 'pause', 'advance'
 
@@ -117,7 +117,7 @@ router.post('/replay/action/:sessionId', authMiddleware, asyncHandler(async (req
     res.json({ success: true, data: result });
 }));
 
-router.get('/replay/session/:sessionId', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/replay/session/:sessionId', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
     const summary = historicalReplayService.getSessionSummary(sessionId);
 
@@ -128,7 +128,7 @@ router.get('/replay/session/:sessionId', authMiddleware, asyncHandler(async (req
     res.json({ success: true, data: summary });
 }));
 
-router.post('/replay/trade/:sessionId', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/replay/trade/:sessionId', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
     const { symbol, side, quantity, reasoning } = req.body;
 
@@ -151,7 +151,7 @@ router.post('/replay/trade/:sessionId', authMiddleware, asyncHandler(async (req,
 // MCP TOOLCHAIN (Debug/Manual)
 // ============================================
 
-router.get('/mcp/tools', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/mcp/tools', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const tools = toolRegistry.listTools().map(t => ({
         name: t.name,
         description: t.description,
@@ -161,7 +161,7 @@ router.get('/mcp/tools', authMiddleware, asyncHandler(async (req, res) => {
     res.json({ success: true, count: tools.length, data: tools });
 }));
 
-router.post('/mcp/execute', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/mcp/execute', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user.userId;
     const { toolName, params, context } = req.body;
