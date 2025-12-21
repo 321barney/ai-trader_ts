@@ -4,7 +4,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dependencies needed for build (python/make/g++ sometimes needed for native modules)
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files
 COPY package.json package-lock.json ./
