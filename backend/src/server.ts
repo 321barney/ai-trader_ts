@@ -36,11 +36,30 @@ app.use('/api', apiRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Debug: Print all registered routes
+function printRoutes(app: express.Application) {
+    console.log('📋 Registered Routes:');
+    app._router.stack.forEach((middleware: any) => {
+        if (middleware.route) { // routes registered directly on the app
+            console.log(`TE  ${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`);
+        } else if (middleware.name === 'router') { // router middleware 
+            middleware.handle.stack.forEach((handler: any) => {
+                const route = handler.route;
+                if (route) {
+                    // This creates a rough approximation of the path
+                    console.log(`TE  ${Object.keys(route.methods).join(', ').toUpperCase()} /api${route.path}`);
+                }
+            });
+        }
+    });
+}
+
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 AI Trader Backend running on port ${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 API Base: http://localhost:${PORT}/api`);
+    printRoutes(app);
 });
 
 export default app;
