@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE } from "@/lib/api";
 
 interface StepData {
     asterApiKey?: string;
@@ -67,7 +68,7 @@ export default function OnboardingPage() {
         setConnectionResult(null);
 
         try {
-            const response = await fetch("/api/onboarding/test-connection", {
+            const response = await fetch(`${API_BASE}/api/onboarding/test-connection`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -254,8 +255,8 @@ export default function OnboardingPage() {
                                     {/* Connection Result */}
                                     {connectionResult && (
                                         <div className={`rounded-lg p-4 border ${connectionResult.connected
-                                                ? "bg-green-500/10 border-green-500/30"
-                                                : "bg-red-500/10 border-red-500/30"
+                                            ? "bg-green-500/10 border-green-500/30"
+                                            : "bg-red-500/10 border-red-500/30"
                                             }`}>
                                             {connectionResult.connected ? (
                                                 <>
