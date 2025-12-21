@@ -14,6 +14,7 @@ const router = Router();
 /**
  * POST /api/auth/register
  */
+console.log('[AuthRoutes] Registering POST /register endpoint');
 router.post('/register', asyncHandler(async (req: Request, res: Response) => {
     const validation = validateSchema(registerSchema, req.body);
 

@@ -8,6 +8,7 @@ import featureRoutes from './features.js';
 const router = Router();
 
 // ... existing routes
+console.log('[ApiRouter] Mounting /auth routes');
 router.use('/auth', authRoutes);
 router.use('/onboarding', onboardingRoutes);
 router.use('/trading', tradingRoutes);

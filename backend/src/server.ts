@@ -29,6 +29,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+console.log('[Server] Mounting API routes at /api');
 app.use('/api', apiRouter);
 
 // Error handling
