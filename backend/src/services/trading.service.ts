@@ -2,11 +2,9 @@
  * Trading Service
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from './rl.service.js';
-
-const prisma = new PrismaClient();
 
 export class TradingService {
     private orchestrator: AgentOrchestrator;
@@ -89,16 +87,41 @@ export class TradingService {
     async updateSettings(userId: string, settings: {
         tradingMode?: 'signal' | 'trade';
         strategyMode?: 'deepseek' | 'rl' | 'hybrid';
+        tradingEnabled?: boolean;
+        methodology?: string;
+        leverage?: number;
+        selectedPairs?: string[];
+        asterApiKey?: string;
+        asterApiSecret?: string;
+        deepseekApiKey?: string;
     }) {
+        // Build update data, only include non-undefined values
+        const updateData: Record<string, any> = {};
+
+        if (settings.tradingMode !== undefined) updateData.tradingMode = settings.tradingMode;
+        if (settings.strategyMode !== undefined) updateData.strategyMode = settings.strategyMode;
+        if (settings.tradingEnabled !== undefined) updateData.tradingEnabled = settings.tradingEnabled;
+        if (settings.methodology !== undefined) updateData.methodology = settings.methodology;
+        if (settings.leverage !== undefined) updateData.leverage = settings.leverage;
+        if (settings.selectedPairs !== undefined) updateData.selectedPairs = settings.selectedPairs;
+        if (settings.asterApiKey !== undefined) updateData.asterApiKey = settings.asterApiKey;
+        if (settings.asterApiSecret !== undefined) updateData.asterApiSecret = settings.asterApiSecret;
+        if (settings.deepseekApiKey !== undefined) updateData.deepseekApiKey = settings.deepseekApiKey;
+
         const user = await prisma.user.update({
             where: { id: userId },
-            data: settings,
+            data: updateData,
+            select: {
+                tradingMode: true,
+                strategyMode: true,
+                tradingEnabled: true,
+                methodology: true,
+                leverage: true,
+                selectedPairs: true,
+            }
         });
 
-        return {
-            tradingMode: user.tradingMode,
-            strategyMode: user.strategyMode,
-        };
+        return user;
     }
 
     /**

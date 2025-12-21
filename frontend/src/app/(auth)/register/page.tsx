@@ -46,12 +46,12 @@ export default function RegisterPage() {
 
             const data = await res.json();
 
-            if (!res.ok) {
-                throw new Error(data.message || "Registration failed");
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || data.message || "Registration failed");
             }
 
-            // Store token
-            localStorage.setItem("token", data.token);
+            // Store token (backend returns { success, data: { user, token } })
+            localStorage.setItem("token", data.data.token);
 
             // Redirect to onboarding
             router.push("/onboarding");

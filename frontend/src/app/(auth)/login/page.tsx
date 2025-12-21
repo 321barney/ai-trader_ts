@@ -28,15 +28,15 @@ export default function LoginPage() {
 
             const data = await res.json();
 
-            if (!res.ok) {
-                throw new Error(data.message || "Login failed");
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || data.message || "Login failed");
             }
 
-            // Store token
-            localStorage.setItem("token", data.token);
+            // Store token (backend returns { success, data: { user, token } })
+            localStorage.setItem("token", data.data.token);
 
             // Redirect based on onboarding status
-            if (data.user.onboardingCompleted) {
+            if (data.data.user.onboardingCompleted) {
                 router.push("/dashboard");
             } else {
                 router.push("/onboarding");

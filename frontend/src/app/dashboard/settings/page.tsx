@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { API_BASE } from "@/lib/api";
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState({
@@ -10,14 +11,101 @@ export default function SettingsPage() {
         methodology: "SMC",
         leverage: 10,
         selectedPairs: ["BTC-USD", "ETH-USD"],
+        // API Keys
+        asterApiKey: "",
+        asterApiSecret: "",
+        deepseekApiKey: "",
     });
 
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [error, setError] = useState("");
+    const [editingKey, setEditingKey] = useState<string | null>(null);
 
-    const handleSave = () => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+    // Load settings on mount
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const res = await fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && data.data) {
+                    const user = data.data;
+                    setSettings(prev => ({
+                        ...prev,
+                        tradingEnabled: user.tradingSettings?.enabled || false,
+                        tradingMode: user.tradingSettings?.mode || "signal",
+                        strategyMode: user.tradingSettings?.strategyMode || "hybrid",
+                        methodology: user.tradingSettings?.methodology || "SMC",
+                        leverage: user.tradingSettings?.leverage || 10,
+                        selectedPairs: user.tradingSettings?.pairs || ["BTC-USD", "ETH-USD"],
+                        asterApiKey: user.asterApiKey ? "••••••••" : "",
+                        asterApiSecret: user.asterApiSecret ? "••••••••" : "",
+                        deepseekApiKey: user.deepseekApiKey ? "••••••••" : "",
+                    }));
+                }
+            } catch (err) {
+                console.error("Failed to load settings:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadSettings();
+    }, []);
+
+    const handleSave = async () => {
+        setSaving(true);
+        setError("");
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE}/api/trading/settings`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    tradingEnabled: settings.tradingEnabled,
+                    tradingMode: settings.tradingMode,
+                    strategyMode: settings.strategyMode,
+                    methodology: settings.methodology,
+                    leverage: settings.leverage,
+                    selectedPairs: settings.selectedPairs,
+                    // Only send API keys if they were edited (not masked)
+                    ...(settings.deepseekApiKey && !settings.deepseekApiKey.includes("••••")
+                        ? { deepseekApiKey: settings.deepseekApiKey } : {}),
+                    ...(settings.asterApiKey && !settings.asterApiKey.includes("••••")
+                        ? { asterApiKey: settings.asterApiKey } : {}),
+                    ...(settings.asterApiSecret && !settings.asterApiSecret.includes("••••")
+                        ? { asterApiSecret: settings.asterApiSecret } : {}),
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                setSaved(true);
+                setTimeout(() => setSaved(false), 2000);
+                setEditingKey(null);
+            } else {
+                setError(data.error || "Failed to save settings");
+            }
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setSaving(false);
+        }
     };
+
+    if (loading) {
+        return (
+            <div className="p-8 flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+            </div>
+        );
+    }
 
     return (
         <div className="p-8">
@@ -25,6 +113,12 @@ export default function SettingsPage() {
                 <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
                 <p className="text-gray-400">Configure your trading preferences</p>
             </div>
+
+            {error && (
+                <div className="mb-6 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
+                    {error}
+                </div>
+            )}
 
             <div className="grid lg:grid-cols-2 gap-8">
                 {/* Trading Settings */}
@@ -59,8 +153,8 @@ export default function SettingsPage() {
                                         key={mode}
                                         onClick={() => setSettings({ ...settings, tradingMode: mode })}
                                         className={`p-4 rounded-lg border transition-all ${settings.tradingMode === mode
-                                                ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
-                                                : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                                            ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                                            : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
                                             }`}
                                     >
                                         <div className="font-bold capitalize">{mode}</div>
@@ -85,8 +179,8 @@ export default function SettingsPage() {
                                         key={mode.id}
                                         onClick={() => setSettings({ ...settings, strategyMode: mode.id })}
                                         className={`p-3 rounded-lg border transition-all text-center ${settings.strategyMode === mode.id
-                                                ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
-                                                : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                                            ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                                            : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
                                             }`}
                                     >
                                         <div className="font-bold text-sm">{mode.label}</div>
@@ -121,37 +215,51 @@ export default function SettingsPage() {
                     </h2>
 
                     <div className="space-y-6">
+                        {/* Aster API Key */}
                         <div>
                             <label className="text-white font-medium block mb-2">Aster API Key</label>
                             <div className="flex gap-2">
                                 <input
-                                    type="password"
-                                    value="••••••••••••••••"
-                                    readOnly
-                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-gray-400"
+                                    type={editingKey === 'aster' ? 'text' : 'password'}
+                                    value={settings.asterApiKey}
+                                    onChange={(e) => setSettings({ ...settings, asterApiKey: e.target.value })}
+                                    readOnly={editingKey !== 'aster'}
+                                    placeholder="Enter API key"
+                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
                                 />
-                                <button className="btn-secondary px-4">Edit</button>
-                            </div>
-                            <div className="text-green-400 text-sm mt-2 flex items-center gap-1">
-                                <span className="w-2 h-2 bg-green-400 rounded-full" />
-                                Connected (Testnet)
+                                <button
+                                    onClick={() => setEditingKey(editingKey === 'aster' ? null : 'aster')}
+                                    className="btn-secondary px-4"
+                                >
+                                    {editingKey === 'aster' ? 'Done' : 'Edit'}
+                                </button>
                             </div>
                         </div>
 
+                        {/* DeepSeek API Key */}
                         <div>
                             <label className="text-white font-medium block mb-2">DeepSeek API Key</label>
                             <div className="flex gap-2">
                                 <input
-                                    type="password"
-                                    value="••••••••••••••••"
-                                    readOnly
-                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-gray-400"
+                                    type={editingKey === 'deepseek' ? 'text' : 'password'}
+                                    value={settings.deepseekApiKey}
+                                    onChange={(e) => setSettings({ ...settings, deepseekApiKey: e.target.value })}
+                                    readOnly={editingKey !== 'deepseek'}
+                                    placeholder="sk-..."
+                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
                                 />
-                                <button className="btn-secondary px-4">Edit</button>
+                                <button
+                                    onClick={() => setEditingKey(editingKey === 'deepseek' ? null : 'deepseek')}
+                                    className="btn-secondary px-4"
+                                >
+                                    {editingKey === 'deepseek' ? 'Done' : 'Edit'}
+                                </button>
                             </div>
-                            <div className="text-green-400 text-sm mt-2 flex items-center gap-1">
-                                <span className="w-2 h-2 bg-green-400 rounded-full" />
-                                Connected
+                            <div className="text-gray-500 text-sm mt-2">
+                                Get your key from{" "}
+                                <a href="https://platform.deepseek.com" target="_blank" className="text-indigo-400 hover:underline">
+                                    platform.deepseek.com
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -174,8 +282,8 @@ export default function SettingsPage() {
                                     setSettings({ ...settings, selectedPairs: pairs });
                                 }}
                                 className={`px-4 py-2 rounded-lg border transition-all ${settings.selectedPairs.includes(pair)
-                                        ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
-                                        : 'bg-white/5 border-white/10 text-gray-400'
+                                    ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                                    : 'bg-white/5 border-white/10 text-gray-400'
                                     }`}
                             >
                                 {pair}
@@ -196,8 +304,8 @@ export default function SettingsPage() {
                                 key={m}
                                 onClick={() => setSettings({ ...settings, methodology: m })}
                                 className={`w-full p-4 rounded-lg border text-left transition-all ${settings.methodology === m
-                                        ? 'bg-indigo-500/20 border-indigo-500/50'
-                                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                                    ? 'bg-indigo-500/20 border-indigo-500/50'
+                                    : 'bg-white/5 border-white/10 hover:border-white/20'
                                     }`}
                             >
                                 <div className="text-white font-medium">{m}</div>
@@ -209,10 +317,15 @@ export default function SettingsPage() {
 
             {/* Save Button */}
             <div className="mt-8 flex justify-end">
-                <button onClick={handleSave} className="btn-primary px-8 py-3">
-                    {saved ? '✓ Saved' : 'Save Changes'}
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="btn-primary px-8 py-3 disabled:opacity-50"
+                >
+                    {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Changes'}
                 </button>
             </div>
         </div>
     );
 }
+

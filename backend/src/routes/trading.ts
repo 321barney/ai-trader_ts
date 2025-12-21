@@ -52,12 +52,29 @@ router.put('/disable', authMiddleware, asyncHandler(async (req: Request, res: Re
  * PUT /api/trading/settings
  */
 router.put('/settings', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
-    const { tradingMode, strategyMode } = req.body;
+    const {
+        tradingMode,
+        strategyMode,
+        tradingEnabled,
+        methodology,
+        leverage,
+        selectedPairs,
+        asterApiKey,
+        asterApiSecret,
+        deepseekApiKey
+    } = req.body;
 
     try {
         const result = await tradingService.updateSettings(req.userId!, {
             tradingMode,
             strategyMode,
+            tradingEnabled,
+            methodology,
+            leverage,
+            selectedPairs,
+            asterApiKey,
+            asterApiSecret,
+            deepseekApiKey,
         });
         return successResponse(res, result, 'Settings updated');
     } catch (error: any) {
