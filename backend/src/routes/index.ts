@@ -1,18 +1,18 @@
 import { Router } from 'express';
-import authRoutes from './auth.js';
-import onboardingRoutes from './onboarding.js';
-import tradingRoutes from './trading.js';
-import agentRoutes from './agents.js';
-import featureRoutes from './features.js';
+import { authRouter } from './auth.js';
+import { onboardingRouter } from './onboarding.js';
+import { tradingRouter } from './trading.js';
+import { agentRouter } from './agents.js';
+import { featureRouter } from './features.js';
 
 const router = Router();
 
 // ... existing routes
 console.log('[ApiRouter] Mounting /auth routes');
-router.use('/auth', authRoutes);
-router.use('/onboarding', onboardingRoutes);
-router.use('/trading', tradingRoutes);
-router.use('/agents', agentRoutes);
-router.use('/features', featureRoutes);
+router.use('/auth', authRouter);
+router.use('/onboarding', onboardingRouter);
+router.use('/trading', tradingRouter);
+router.use('/agents', agentRouter);
+router.use('/features', featureRouter);
 
 export default router;

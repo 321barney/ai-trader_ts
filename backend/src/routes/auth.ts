@@ -80,4 +80,4 @@ router.get('/me', authMiddleware, asyncHandler(async (req: Request, res: Respons
     }
 }));
 
-export default router;
+export const authRouter = router;

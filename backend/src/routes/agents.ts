@@ -155,4 +155,4 @@ router.post('/rl/stop', authMiddleware, asyncHandler(async (req: Request, res: R
     return successResponse(res, null, 'Training stopped');
 }));
 
-export default router;
+export const agentRouter = router;

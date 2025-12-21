@@ -129,4 +129,4 @@ router.get('/pnl', authMiddleware, asyncHandler(async (req: Request, res: Respon
     }
 }));
 
-export default router;
+export const tradingRouter = router;

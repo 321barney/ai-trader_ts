@@ -228,4 +228,4 @@ router.get('/pairs', authMiddleware, asyncHandler(async (req: Request, res: Resp
     }
 }));
 
-export default router;
+export const onboardingRouter = router;

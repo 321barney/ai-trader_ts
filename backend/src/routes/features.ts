@@ -180,4 +180,4 @@ router.post('/mcp/execute', authMiddleware, asyncHandler(async (req, res) => {
     res.json({ success: true, data: result });
 }));
 
-export default router;
+export const featureRouter = router;
