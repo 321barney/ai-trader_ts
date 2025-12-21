@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import { API_BASE } from "@/lib/api";
 
+interface ConnectionTest {
+    testing: boolean;
+    result: { connected: boolean; message?: string; error?: string } | null;
+}
+
 export default function SettingsPage() {
     const [settings, setSettings] = useState({
         tradingEnabled: false,
@@ -22,6 +27,56 @@ export default function SettingsPage() {
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState("");
     const [editingKey, setEditingKey] = useState<string | null>(null);
+
+    // Connection test states
+    const [asterTest, setAsterTest] = useState<ConnectionTest>({ testing: false, result: null });
+    const [deepseekTest, setDeepseekTest] = useState<ConnectionTest>({ testing: false, result: null });
+
+    // Test Aster connection
+    const testAsterConnection = async () => {
+        if (!settings.asterApiKey || settings.asterApiKey.includes("••••")) {
+            setAsterTest({ testing: false, result: { connected: false, error: "Please enter your API key first" } });
+            return;
+        }
+        setAsterTest({ testing: true, result: null });
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE}/api/trading/test-aster`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                    apiKey: settings.asterApiKey,
+                    apiSecret: settings.asterApiSecret,
+                    testnet: true
+                })
+            });
+            const data = await res.json();
+            setAsterTest({ testing: false, result: data.data || data });
+        } catch (err: any) {
+            setAsterTest({ testing: false, result: { connected: false, error: err.message } });
+        }
+    };
+
+    // Test DeepSeek connection
+    const testDeepseekConnection = async () => {
+        if (!settings.deepseekApiKey || settings.deepseekApiKey.includes("••••")) {
+            setDeepseekTest({ testing: false, result: { connected: false, error: "Please enter your API key first" } });
+            return;
+        }
+        setDeepseekTest({ testing: true, result: null });
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE}/api/trading/test-deepseek`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ apiKey: settings.deepseekApiKey })
+            });
+            const data = await res.json();
+            setDeepseekTest({ testing: false, result: data.data || data });
+        } catch (err: any) {
+            setDeepseekTest({ testing: false, result: { connected: false, error: err.message } });
+        }
+    };
 
     // Load settings on mount
     useEffect(() => {
@@ -233,7 +288,20 @@ export default function SettingsPage() {
                                 >
                                     {editingKey === 'aster' ? 'Done' : 'Edit'}
                                 </button>
+                                <button
+                                    onClick={testAsterConnection}
+                                    disabled={asterTest.testing}
+                                    className="btn-secondary px-4"
+                                >
+                                    {asterTest.testing ? '...' : 'Test'}
+                                </button>
                             </div>
+                            {asterTest.result && (
+                                <div className={`text-sm mt-2 flex items-center gap-1 ${asterTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${asterTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                    {asterTest.result.connected ? asterTest.result.message : asterTest.result.error}
+                                </div>
+                            )}
                         </div>
 
                         {/* DeepSeek API Key */}
@@ -254,7 +322,20 @@ export default function SettingsPage() {
                                 >
                                     {editingKey === 'deepseek' ? 'Done' : 'Edit'}
                                 </button>
+                                <button
+                                    onClick={testDeepseekConnection}
+                                    disabled={deepseekTest.testing}
+                                    className="btn-secondary px-4"
+                                >
+                                    {deepseekTest.testing ? '...' : 'Test'}
+                                </button>
                             </div>
+                            {deepseekTest.result && (
+                                <div className={`text-sm mt-2 flex items-center gap-1 ${deepseekTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${deepseekTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                    {deepseekTest.result.connected ? deepseekTest.result.message : deepseekTest.result.error}
+                                </div>
+                            )}
                             <div className="text-gray-500 text-sm mt-2">
                                 Get your key from{" "}
                                 <a href="https://platform.deepseek.com" target="_blank" className="text-indigo-400 hover:underline">

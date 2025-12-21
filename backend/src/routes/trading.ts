@@ -146,4 +146,85 @@ router.get('/pnl', authMiddleware, asyncHandler(async (req: Request, res: Respon
     }
 }));
 
+/**
+ * POST /api/trading/test-aster
+ * Test Aster exchange API connection
+ */
+router.post('/test-aster', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    const { apiKey, apiSecret, testnet } = req.body;
+
+    try {
+        // Import Aster service dynamically to test connection
+        const { asterService } = await import('../services/aster.service.js');
+
+        // Create a test client with provided credentials
+        const testService = Object.create(asterService);
+        testService.configure(apiKey, apiSecret, testnet ?? true);
+
+        // Test by fetching account balance
+        const balance = await testService.getAccountBalance();
+
+        return successResponse(res, {
+            connected: true,
+            balance: balance,
+            message: 'Successfully connected to Aster exchange'
+        });
+    } catch (error: any) {
+        return successResponse(res, {
+            connected: false,
+            error: error.message || 'Failed to connect to Aster exchange'
+        });
+    }
+}));
+
+/**
+ * POST /api/trading/test-deepseek
+ * Test DeepSeek AI API connection
+ */
+router.post('/test-deepseek', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    const { apiKey } = req.body;
+
+    if (!apiKey) {
+        return successResponse(res, {
+            connected: false,
+            error: 'API key is required'
+        });
+    }
+
+    try {
+        // Test DeepSeek API directly
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages: [{ role: 'user', content: 'test' }],
+                max_tokens: 5
+            })
+        });
+
+        if (response.ok) {
+            return successResponse(res, {
+                connected: true,
+                message: 'DeepSeek API connection successful'
+            });
+        } else {
+            const errorData = await response.json().catch(() => ({})) as any;
+            return successResponse(res, {
+                connected: false,
+                error: errorData.error?.message || `API returned ${response.status}`
+            });
+        }
+    } catch (error: any) {
+        return successResponse(res, {
+            connected: false,
+            error: error.message || 'Failed to connect to DeepSeek API'
+        });
+    }
+}));
+
 export const tradingRouter = router;
+
