@@ -68,9 +68,13 @@ export default function OnboardingPage() {
         setConnectionResult(null);
 
         try {
+            const token = localStorage.getItem("token");
             const response = await fetch(`${API_BASE}/api/onboarding/test-connection`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     apiKey: data.asterApiKey,
                     apiSecret: data.asterApiSecret,
