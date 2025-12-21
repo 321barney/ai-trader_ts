@@ -1,0 +1,335 @@
+// Prisma schema for AI Trader
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String   // bcrypt hashed
+  role      UserRole @default(TRADER)
+  status    UserStatus @default(ACTIVE)
+  
+  // Exchange Credentials (encrypted)
+  asterApiKey      String?
+  asterApiSecret   String?
+  asterTestnet     Boolean @default(true)
+  
+  // AI Provider
+  deepseekApiKey   String?
+  
+  // Trading Preferences
+  preferredExchange String @default("aster")
+  marketType        String @default("perp")  // perp | spot
+  methodology       String @default("SMC")   // SMC | ICT | Gann | Custom
+  selectedPairs     Json?  // ["BTC-USD", "ETH-USD"]
+  leverage          Int    @default(10)
+  
+  // Risk Parameters
+  maxPositionSize   Float  @default(5)   // % of portfolio
+  maxRiskPerTrade   Float  @default(2)   // % of portfolio
+  
+  // Trading Controls
+  tradingEnabled       Boolean @default(false)
+  tradingMode          String  @default("signal") // signal | trade | test
+  strategyMode         String  @default("deepseek") // deepseek | rl | hybrid
+  disclaimerAccepted   Boolean @default(false)
+  disclaimerAcceptedAt DateTime?
+  
+  // Onboarding
+  onboardingStep      Int     @default(0)
+  onboardingCompleted Boolean @default(false)
+  
+  // Relations
+  sessions         UserSession[]
+  trades           Trade[]
+  signals          Signal[]
+  agentDecisions   AgentDecision[]
+  strategyVersions StrategyVersion[]
+  trackedSignals   TrackedSignal[]
+  testSessions     TestSession[]
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+  
+  @@index([email])
+  @@index([username])
+}
+
+enum UserRole {
+  ADMIN
+  TRADER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+model UserSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// ============================================
+// TRADING
+// ============================================
+
+model Trade {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  symbol        String
+  side          String   // LONG | SHORT
+  entryPrice    Float
+  exitPrice     Float?
+  quantity      Float
+  leverage      Int
+  
+  pnl           Float?
+  pnlPercent    Float?
+  
+  status        TradeStatus @default(OPEN)
+  methodology   String   // SMC | ICT | Gann
+  strategyMode  String   @default("deepseek") // deepseek | rl
+  
+  // Agent that triggered the trade
+  agentDecisionId String?
+  
+  openedAt      DateTime @default(now())
+  closedAt      DateTime?
+  
+  @@index([userId])
+  @@index([symbol])
+  @@index([status])
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+model Signal {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  symbol          String
+  direction       String   // LONG | SHORT | HOLD
+  confidence      Float
+  methodology     String
+  strategyMode    String   @default("deepseek") // deepseek | rl
+  
+  entryPrice      Float?
+  stopLoss        Float?
+  takeProfit      Float?
+  
+  status          SignalStatus @default(ACTIVE)
+  
+  // Link to agent decision
+  agentDecisionId String?
+  
+  createdAt       DateTime @default(now())
+  executedAt      DateTime?
+  
+  @@index([userId])
+  @@index([symbol])
+  @@index([status])
+}
+
+enum SignalStatus {
+  ACTIVE
+  EXECUTED
+  EXPIRED
+  CANCELLED
+}
+
+// ============================================
+// STRATEGY EVOLUTION
+// ============================================
+
+model StrategyVersion {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  version         Int
+  baseMethodology String   // SMC | ICT | Gann | Custom
+  rules           Json     // StrategyRule[]
+  learnings       Json     // string[] - COT learnings
+  metrics         Json     // Performance metrics
+  
+  active          Boolean  @default(true)
+  parentVersionId String?  // For tracking evolution chain
+  
+  trackedSignals  TrackedSignal[]
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([active])
+  @@index([version])
+}
+
+model TrackedSignal {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  strategyVersionId String
+  strategyVersion   StrategyVersion @relation(fields: [strategyVersionId], references: [id])
+  
+  symbol          String
+  direction       String   // LONG | SHORT
+  entryPrice      Float
+  stopLoss        Float
+  takeProfit      Float
+  confidence      Float
+  
+  // Agent reasoning (all 3 agents)
+  agentReasoning  Json     // { strategyConsultant, riskOfficer, marketAnalyst }
+  
+  // Market snapshot at signal time
+  indicatorsSnapshot Json?
+  
+  // Tracking status
+  status          String   @default("PENDING") // PENDING | HIT_TP | HIT_SL | EXPIRED | CANCELLED
+  actualOutcome   String?  // WIN | LOSS | BREAKEVEN
+  pnlPercent      Float?
+  priceAtClose    Float?
+  
+  // Execution info (if traded)
+  executed        Boolean  @default(false)
+  orderId         String?
+  executionPrice  Float?
+  realizedPnL     Float?
+  
+  createdAt       DateTime @default(now())
+  closedAt        DateTime?
+  expiresAt       DateTime?
+  
+  @@index([userId])
+  @@index([strategyVersionId])
+  @@index([status])
+  @@index([symbol])
+}
+
+model TestSession {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  
+  status              String   @default("RUNNING") // RUNNING | STOPPED | COMPLETED
+  
+  initialStrategyId   String
+  currentStrategyId   String
+  
+  // Performance tracking
+  signalCount         Int      @default(0)
+  winCount            Int      @default(0)
+  lossCount           Int      @default(0)
+  totalPnLPercent     Float    @default(0)
+  
+  // Evolution tracking
+  evolutionCount      Int      @default(0)
+  
+  startedAt           DateTime @default(now())
+  endedAt             DateTime?
+  
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================================
+// AI AGENTS
+// ============================================
+
+model AgentDecision {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  agentType       AgentType
+  
+  // Chain of Thought (COT)
+  reasoning       String   @db.Text  // Full COT reasoning
+  thoughtSteps    Json     // Array of thought steps
+  
+  // Decision
+  decision        String   // LONG | SHORT | HOLD | MODIFY_RL | RETRAIN | STOP_RL
+  confidence      Float
+  
+  // Context
+  symbol          String?
+  marketData      Json?    // Market data at decision time
+  
+  // RL Control (for StrategyConsultant)
+  rlAction        String?  // modify_params | retrain | stop
+  rlParams        Json?    // Modified parameters
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([agentType])
+  @@index([createdAt])
+}
+
+enum AgentType {
+  STRATEGY_CONSULTANT
+  RISK_OFFICER
+  MARKET_ANALYST
+  ORCHESTRATOR
+}
+
+// ============================================
+// RL SERVICE TRACKING
+// ============================================
+
+model RLModelStatus {
+  id              String   @id @default(uuid())
+  
+  modelName       String
+  algorithm       String   @default("SAC") // PPO | SAC | A2C
+  
+  // Performance Metrics
+  sharpeRatio     Float?
+  totalReturn     Float?
+  maxDrawdown     Float?
+  winRate         Float?
+  
+  // Training Status
+  trainingStatus  String   @default("idle") // idle | training | stopped
+  lastTrainedAt   DateTime?
+  totalTimesteps  Int      @default(0)
+  
+  // Current Parameters
+  hyperparams     Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([modelName])
+}
+
