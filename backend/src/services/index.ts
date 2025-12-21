@@ -7,4 +7,7 @@ export * from './market-data.service.js';
 export * from './strategy.service.js';
 export * from './signal-tracker.service.js';
 export * from './trading.pipeline.js';
-
+export * from './post-trade-analysis.service.js';
+export * from './jina-search.service.js';
+export * from './historical-replay.service.js';
+export * from './performance.service.js';

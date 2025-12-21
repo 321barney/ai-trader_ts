@@ -13,9 +13,8 @@ import { marketDataService, AnalysisData } from './market-data.service.js';
 import { strategyService, StrategyVersion } from './strategy.service.js';
 import { signalTrackerService, TrackedSignal } from './signal-tracker.service.js';
 import { AgentOrchestrator, OrchestratorDecision } from '../agents/orchestrator.js';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
 
 // Types
 export type TradingMode = 'signal' | 'trade' | 'test';
@@ -78,7 +77,26 @@ export class TradingPipeline {
         // 3. Fetch market data from AsterDex
         const analysisData = await marketDataService.getAnalysisData(symbol);
 
-        // 4. Prepare context for orchestrator
+        // 4. Get real portfolio value from AsterDex
+        let portfolioValue = 10000; // Default fallback
+        if (config.asterApiKey && config.asterApiSecret) {
+            try {
+                const aster = createAsterService(
+                    config.asterApiKey,
+                    config.asterApiSecret,
+                    config.asterTestnet
+                );
+                const balances = await aster.getBalance();
+                const usdtBalance = balances.find(b => b.asset === 'USDT');
+                if (usdtBalance) {
+                    portfolioValue = usdtBalance.total;
+                }
+            } catch (error) {
+                console.warn('[Pipeline] Failed to fetch portfolio value, using default:', error);
+            }
+        }
+
+        // 5. Prepare context for orchestrator
         const context = {
             userId,
             symbol,
@@ -91,7 +109,7 @@ export class TradingPipeline {
                 atr: analysisData.indicators.atr,
             },
             riskMetrics: {
-                portfolioValue: 50000, // TODO: Get from account
+                portfolioValue,
                 currentExposure: 0,
                 openPositions: 0,
                 maxRiskPerTrade: config.maxRiskPerTrade,

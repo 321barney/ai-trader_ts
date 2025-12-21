@@ -2,11 +2,10 @@
  * Authentication Service
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../utils/jwt.js';
 
-const prisma = new PrismaClient();
 
 export interface RegisterInput {
     username: string;

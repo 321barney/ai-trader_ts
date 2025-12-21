@@ -1,12 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { API_BASE } from '@/lib/api';
 
 interface ReplayConfig {
     initDate: string;
     endDate: string;
     initialCapital: number;
     symbol: string;
+}
+
+interface PortfolioSnapshot {
+    date: string;
+    value: number;
 }
 
 export default function BacktestPage() {
@@ -20,11 +26,12 @@ export default function BacktestPage() {
     const [status, setStatus] = useState('idle');
     const [currentDate, setCurrentDate] = useState('');
     const [portfolioValue, setPortfolioValue] = useState(10000);
+    const [portfolioHistory, setPortfolioHistory] = useState<PortfolioSnapshot[]>([]);
 
     const startReplay = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3001/api/features/replay/start', {
+            const res = await fetch(`${API_BASE}/api/features/replay/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -42,6 +49,7 @@ export default function BacktestPage() {
                 setSessionId(data.data.id);
                 setStatus('running');
                 setCurrentDate(data.data.currentDate);
+                setPortfolioHistory([{ date: data.data.currentDate, value: config.initialCapital }]);
             }
         } catch (error) {
             console.error('Failed to start replay:', error);
@@ -52,7 +60,7 @@ export default function BacktestPage() {
         if (!sessionId) return;
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:3001/api/features/replay/action/${sessionId}`, {
+            const res = await fetch(`${API_BASE}/api/features/replay/action/${sessionId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -64,7 +72,9 @@ export default function BacktestPage() {
             if (data.success) {
                 if (data.data.status === 'completed') setStatus('completed');
                 setCurrentDate(data.data.currentDate);
-                setPortfolioValue(data.data.portfolio.totalValue);
+                const newValue = data.data.portfolio.totalValue;
+                setPortfolioValue(newValue);
+                setPortfolioHistory(prev => [...prev, { date: data.data.currentDate, value: newValue }]);
             }
         } catch (error) {
             console.error('Failed to advance time:', error);
@@ -161,21 +171,35 @@ export default function BacktestPage() {
                         </div>
                     </div>
 
-                    {/* Chart Placeholder */}
-                    <div className="bg-[#12121a] border border-white/5 rounded-xl p-6 h-80 flex items-center justify-center relative overflow-hidden">
-                        {/* Simple visual mock of a chart */}
-                        <div className="absolute bottom-0 left-0 right-0 h-full flex items-end px-4 gap-1 opacity-50">
-                            {[...Array(20)].map((_, i) => (
-                                <div
-                                    key={i}
-                                    className="bg-indigo-500/30 w-full rounded-t"
-                                    style={{ height: `${20 + Math.random() * 60}%` }}
-                                ></div>
-                            ))}
-                        </div>
-                        <div className="z-10 text-gray-400">
-                            Simulated Price Chart
-                        </div>
+                    {/* Portfolio Equity Curve */}
+                    <div className="bg-[#12121a] border border-white/5 rounded-xl p-6 h-80 relative overflow-hidden">
+                        <h3 className="text-sm text-gray-400 mb-2">Portfolio Equity Curve</h3>
+                        {portfolioHistory.length > 1 ? (
+                            <div className="absolute bottom-4 left-4 right-4 top-10 flex items-end gap-1">
+                                {(() => {
+                                    const values = portfolioHistory.map(p => p.value);
+                                    const min = Math.min(...values) * 0.95;
+                                    const max = Math.max(...values) * 1.05;
+                                    const range = max - min || 1;
+                                    return portfolioHistory.map((p, i) => {
+                                        const height = ((p.value - min) / range) * 100;
+                                        const isGain = p.value >= config.initialCapital;
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={`flex-1 rounded-t transition-all duration-300 ${isGain ? 'bg-green-500/60' : 'bg-red-500/60'}`}
+                                                style={{ height: `${Math.max(5, height)}%` }}
+                                                title={`${new Date(p.date).toLocaleDateString()}: $${p.value.toLocaleString()}`}
+                                            />
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-gray-500">
+                                Start simulation to see equity curve
+                            </div>
+                        )}
                     </div>
 
                     {/* Recent Trades */}

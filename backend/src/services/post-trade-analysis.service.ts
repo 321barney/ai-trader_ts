@@ -9,9 +9,8 @@
  * - Pattern recognition
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
 
 // Dynamic import helper
 let jinaService: any = null;
@@ -245,13 +244,36 @@ export class PostTradeAnalysisService {
         const bufferEnd = new Date(endDate);
         bufferEnd.setDate(bufferEnd.getDate() + 5);
 
-        // Fetch from JinaService
-        const jina = await getJinaService();
-        // Use a method appropriately or fallback if fetchHistoricalPriceData doesn't exist on JinaService
-        // Note: JinaService as implemented earlier doesn't have fetchHistoricalPriceData, it has searchMarketNews
-        // We will leave the logic here as a placeholder using search since Jina is for news, not price history
-        // Real implementation would use Aster/AlphaVantage for price history
-        return this.generateMockPriceHistory(symbol, bufferStart, bufferEnd);
+        // Try to fetch real price data from AsterDex
+        try {
+            const { asterService } = await import('./aster.service.js');
+
+            // Calculate number of days needed
+            const daysDiff = Math.ceil((bufferEnd.getTime() - bufferStart.getTime()) / (1000 * 60 * 60 * 24));
+            const limit = Math.min(daysDiff + 1, 500); // API limit
+
+            // Fetch daily klines
+            const klines = await asterService.getKlines(symbol, '1d', limit);
+
+            // Convert to HistoricalPriceData format
+            const priceData: HistoricalPriceData[] = klines.map(k => ({
+                date: new Date(k.openTime),
+                open: k.open,
+                high: k.high,
+                low: k.low,
+                close: k.close,
+                volume: k.volume,
+            }));
+
+            // Filter to date range
+            return priceData.filter(p =>
+                p.date >= bufferStart && p.date <= bufferEnd
+            );
+        } catch (error) {
+            console.warn('[PostTradeAnalysis] Failed to fetch real price data, using mock:', error);
+            // Fallback to mock data if API fails
+            return this.generateMockPriceHistory(symbol, bufferStart, bufferEnd);
+        }
     }
 
     private calculateEfficiency(

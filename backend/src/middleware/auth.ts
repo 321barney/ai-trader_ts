@@ -3,11 +3,10 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { verifyToken, JwtPayload } from '../utils/jwt.js';
 import { unauthorizedResponse } from '../utils/response.js';
 
-const prisma = new PrismaClient();
 
 // Extend Express Request type
 declare global {

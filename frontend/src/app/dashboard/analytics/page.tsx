@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { API_BASE } from '@/lib/api';
 
 // Mock data to initialize before API load
 const mockMetrics = {
@@ -23,7 +24,7 @@ export default function AnalyticsPage() {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3001/api/features/analytics/performance', {
+            const res = await fetch(`${API_BASE}/api/features/analytics/performance`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();

@@ -3,7 +3,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error.js';
 import { successResponse, errorResponse } from '../utils/response.js';
@@ -18,7 +18,7 @@ import {
 } from '../utils/validation.js';
 
 const router = Router();
-const prisma = new PrismaClient();
+
 
 const stepSchemas = {
     1: onboardingStep1Schema,

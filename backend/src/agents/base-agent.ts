@@ -5,9 +5,9 @@
  * to provide transparent, step-by-step reasoning for decisions.
  */
 
-import { PrismaClient, AgentType } from '@prisma/client';
+import { AgentType } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
 
 export interface ThoughtStep {
     step: number;

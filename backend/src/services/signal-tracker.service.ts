@@ -5,10 +5,9 @@
  * their performance for strategy evolution.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { asterService } from './aster.service.js';
 
-const prisma = new PrismaClient();
 
 // Types
 export interface TrackedSignal {

@@ -3,7 +3,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { authMiddleware, onboardingCompleteMiddleware } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error.js';
 import { successResponse, errorResponse } from '../utils/response.js';
@@ -11,7 +11,7 @@ import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from '../services/rl.service.js';
 
 const router = Router();
-const prisma = new PrismaClient();
+
 
 /**
  * GET /api/agents/decisions
