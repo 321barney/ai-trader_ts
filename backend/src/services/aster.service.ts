@@ -94,9 +94,8 @@ export class AsterService {
 
     constructor(apiKey?: string, apiSecret?: string, testnet = true) {
         this.testnet = testnet;
-        this.baseUrl = testnet
-            ? 'https://testnet.asterdex.com'  // Testnet URL
-            : 'https://fapi.asterdex.com';     // Production URL
+        // Note: AsterDex uses same URL for testnet/mainnet - testnet is determined by API key type
+        this.baseUrl = 'https://fapi.asterdex.com';
         this.apiKey = apiKey || process.env.ASTER_API_KEY || '';
         this.apiSecret = apiSecret || process.env.ASTER_API_SECRET || '';
     }
