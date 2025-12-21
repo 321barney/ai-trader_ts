@@ -1,0 +1,16 @@
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "backend"
+root = "backend"
+watchPatterns = ["backend/**"]
+
+[[services]]
+name = "frontend"
+root = "frontend"
+watchPatterns = ["frontend/**"]

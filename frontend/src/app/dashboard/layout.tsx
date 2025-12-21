@@ -7,7 +7,10 @@ export default function DashboardLayout({
 }) {
     const navItems = [
         { href: "/dashboard", icon: "📊", label: "Overview" },
+        { href: "/dashboard/market", icon: "🌐", label: "Market Intel" },
         { href: "/dashboard/agents", icon: "🤖", label: "AI Agents" },
+        { href: "/dashboard/backtest", icon: "⏪", label: "Backtest" },
+        { href: "/dashboard/analytics", icon: "📈", label: "Analytics" },
         { href: "/dashboard/signals", icon: "📡", label: "Signals" },
         { href: "/dashboard/pnl", icon: "💹", label: "PnL" },
         { href: "/dashboard/history", icon: "📜", label: "History" },
