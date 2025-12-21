@@ -119,11 +119,18 @@ export class AsterService {
         params: Record<string, any> = {}
     ): Promise<T> {
         const timestamp = Date.now();
-        const allParams: Record<string, string> = { ...params, timestamp: String(timestamp) };
+        // Add recvWindow as per documentation (default 5000ms)
+        const allParams: Record<string, string> = {
+            ...params,
+            recvWindow: '5000',
+            timestamp: String(timestamp)
+        };
         const queryString = new URLSearchParams(allParams).toString();
         const signature = this.sign(queryString);
 
         const url = `${this.baseUrl}${endpoint}?${queryString}&signature=${signature}`;
+
+        console.log('[Aster] Request:', method, endpoint, '| Timestamp:', timestamp);
 
         const response = await fetch(url, {
             method,
@@ -135,6 +142,7 @@ export class AsterService {
 
         if (!response.ok) {
             const error = await response.text();
+            console.log('[Aster] Error response:', error);
             throw new Error(`AsterDex API error: ${response.status} - ${error}`);
         }
 
