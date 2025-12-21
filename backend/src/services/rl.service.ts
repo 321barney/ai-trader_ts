@@ -64,7 +64,7 @@ export class RLService {
                 throw new Error('RL prediction failed');
             }
 
-            return await response.json();
+            return await response.json() as unknown as RLPrediction;
         } catch (error) {
             console.error('[RL Service] Prediction error:', error);
             // Return mock prediction if service unavailable
@@ -88,7 +88,7 @@ export class RLService {
                 throw new Error('Failed to get metrics');
             }
 
-            return await response.json();
+            return await response.json() as unknown as RLMetrics;
         } catch (error) {
             console.error('[RL Service] Metrics error:', error);
             // Return mock metrics
@@ -139,7 +139,7 @@ export class RLService {
                 throw new Error('Failed to start training');
             }
 
-            return await response.json();
+            return await response.json() as unknown as { jobId: string };
         } catch (error) {
             console.error('[RL Service] Training error:', error);
             return null;
@@ -180,7 +180,12 @@ export class RLService {
                 throw new Error('Failed to get training status');
             }
 
-            return await response.json();
+            return await response.json() as unknown as {
+                status: string;
+                progress: number;
+                currentEpisode: number;
+                totalEpisodes: number;
+            };
         } catch (error) {
             return {
                 status: 'idle',

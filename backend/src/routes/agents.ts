@@ -2,7 +2,7 @@
  * Agent Routes
  */
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware, onboardingCompleteMiddleware } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error.js';
@@ -16,7 +16,7 @@ const prisma = new PrismaClient();
 /**
  * GET /api/agents/decisions
  */
-router.get('/decisions', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/decisions', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { limit, agentType } = req.query;
 
     const decisions = await prisma.agentDecision.findMany({
@@ -34,7 +34,7 @@ router.get('/decisions', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * GET /api/agents/decisions/:id
  */
-router.get('/decisions/:id', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/decisions/:id', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const decision = await prisma.agentDecision.findFirst({
         where: {
             id: req.params.id,
@@ -52,7 +52,7 @@ router.get('/decisions/:id', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * POST /api/agents/analyze
  */
-router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req, res) => {
+router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { symbol } = req.body;
 
     if (!symbol) {
@@ -91,7 +91,7 @@ router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandl
 /**
  * GET /api/agents/rl/status
  */
-router.get('/rl/status', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/rl/status', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const metrics = await rlService.getMetrics();
     const trainingStatus = await rlService.getTrainingStatus();
 
@@ -105,7 +105,7 @@ router.get('/rl/status', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * PUT /api/agents/rl/params
  */
-router.put('/rl/params', authMiddleware, asyncHandler(async (req, res) => {
+router.put('/rl/params', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { learning_rate, gamma, batch_size } = req.body;
 
     const success = await rlService.modifyParams({
@@ -124,7 +124,7 @@ router.put('/rl/params', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * POST /api/agents/rl/train
  */
-router.post('/rl/train', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/rl/train', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { symbols, timesteps, algorithm } = req.body;
 
     const result = await rlService.startTraining({
@@ -143,7 +143,7 @@ router.post('/rl/train', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * POST /api/agents/rl/stop
  */
-router.post('/rl/stop', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/rl/stop', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { reason } = req.body;
 
     const success = await rlService.stopTraining(reason);

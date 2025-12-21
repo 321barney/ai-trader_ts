@@ -2,7 +2,7 @@
  * Authentication Routes
  */
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error.js';
@@ -14,7 +14,7 @@ const router = Router();
 /**
  * POST /api/auth/register
  */
-router.post('/register', asyncHandler(async (req, res) => {
+router.post('/register', asyncHandler(async (req: Request, res: Response) => {
     const validation = validateSchema(registerSchema, req.body);
 
     if (!validation.success) {
@@ -32,7 +32,7 @@ router.post('/register', asyncHandler(async (req, res) => {
 /**
  * POST /api/auth/login
  */
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', asyncHandler(async (req: Request, res: Response) => {
     const validation = validateSchema(loginSchema, req.body);
 
     if (!validation.success) {
@@ -50,7 +50,7 @@ router.post('/login', asyncHandler(async (req, res) => {
 /**
  * POST /api/auth/logout
  */
-router.post('/logout', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/logout', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     // In a more complex setup, we'd invalidate the token in a blacklist
     return successResponse(res, null, 'Logged out successfully');
 }));
@@ -58,7 +58,7 @@ router.post('/logout', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * POST /api/auth/refresh
  */
-router.post('/refresh', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/refresh', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     try {
         const token = await authService.refreshToken(req.userId!);
         return successResponse(res, { token }, 'Token refreshed');
@@ -70,7 +70,7 @@ router.post('/refresh', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * GET /api/auth/me
  */
-router.get('/me', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/me', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     try {
         const user = await authService.getCurrentUser(req.userId!);
         return successResponse(res, user);

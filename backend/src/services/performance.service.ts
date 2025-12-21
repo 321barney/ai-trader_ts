@@ -140,14 +140,14 @@ export class PerformanceService {
         const where: any = { userId };
 
         if (startDate || endDate) {
-            where.createdAt = {};
-            if (startDate) where.createdAt.gte = startDate;
-            if (endDate) where.createdAt.lte = endDate;
+            where.openedAt = {};
+            if (startDate) where.openedAt.gte = startDate;
+            if (endDate) where.openedAt.lte = endDate;
         }
 
         const trades = await prisma.trade.findMany({
             where,
-            orderBy: { createdAt: 'asc' },
+            orderBy: { openedAt: 'asc' },
         });
 
         return trades.map(t => ({
@@ -155,11 +155,11 @@ export class PerformanceService {
             symbol: t.symbol,
             side: t.side as 'BUY' | 'SELL',
             quantity: t.quantity,
-            price: t.price || 0,
+            price: t.entryPrice || 0,
             pnl: t.pnl || undefined,
             pnlPercent: t.pnlPercent || undefined,
-            entryDate: t.createdAt,
-            exitDate: t.updatedAt,
+            entryDate: t.openedAt,
+            exitDate: t.closedAt || undefined,
             status: t.status,
         }));
     }

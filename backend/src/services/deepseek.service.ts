@@ -72,7 +72,7 @@ export class DeepSeekService {
                 throw new Error(`DeepSeek API error: ${error}`);
             }
 
-            const data: DeepSeekResponse = await response.json();
+            const data: DeepSeekResponse = await response.json() as unknown as DeepSeekResponse;
             return data.choices[0]?.message?.content || '';
         } catch (error) {
             console.error('[DeepSeek] API error:', error);

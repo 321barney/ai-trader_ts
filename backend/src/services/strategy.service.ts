@@ -148,7 +148,7 @@ export class StrategyService {
             userId: strategy.userId,
             version: strategy.version,
             baseMethodology: strategy.baseMethodology as any,
-            rules: strategy.rules as StrategyRule[],
+            rules: strategy.rules as unknown as StrategyRule[],
             learnings: strategy.learnings as string[],
             metrics: strategy.metrics as any,
             active: strategy.active,
@@ -166,7 +166,7 @@ export class StrategyService {
             orderBy: { version: 'desc' },
         });
 
-        return strategies.map(s => ({
+        return strategies.map((s: any) => ({
             id: s.id,
             userId: s.userId,
             version: s.version,

@@ -2,7 +2,7 @@
  * Trading Routes
  */
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { tradingService } from '../services/trading.service.js';
 import { authMiddleware, onboardingCompleteMiddleware } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error.js';
@@ -13,7 +13,7 @@ const router = Router();
 /**
  * GET /api/trading/status
  */
-router.get('/status', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     try {
         const status = await tradingService.getStatus(req.userId!);
         return successResponse(res, status);
@@ -25,7 +25,7 @@ router.get('/status', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * PUT /api/trading/enable
  */
-router.put('/enable', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req, res) => {
+router.put('/enable', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { disclaimerAccepted } = req.body;
 
     try {
@@ -39,7 +39,7 @@ router.put('/enable', authMiddleware, onboardingCompleteMiddleware, asyncHandler
 /**
  * PUT /api/trading/disable
  */
-router.put('/disable', authMiddleware, asyncHandler(async (req, res) => {
+router.put('/disable', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     try {
         const result = await tradingService.disableTrading(req.userId!);
         return successResponse(res, result, 'Trading disabled');
@@ -51,7 +51,7 @@ router.put('/disable', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * PUT /api/trading/settings
  */
-router.put('/settings', authMiddleware, asyncHandler(async (req, res) => {
+router.put('/settings', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { tradingMode, strategyMode } = req.body;
 
     try {
@@ -68,7 +68,7 @@ router.put('/settings', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * POST /api/trading/analyze
  */
-router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req, res) => {
+router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { symbol } = req.body;
 
     if (!symbol) {
@@ -86,7 +86,7 @@ router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandl
 /**
  * GET /api/trading/signals
  */
-router.get('/signals', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/signals', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { limit, symbol } = req.query;
 
     try {
@@ -103,7 +103,7 @@ router.get('/signals', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * GET /api/trading/trades
  */
-router.get('/trades', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/trades', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { limit, status } = req.query;
 
     try {
@@ -120,7 +120,7 @@ router.get('/trades', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * GET /api/trading/pnl
  */
-router.get('/pnl', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/pnl', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     try {
         const pnl = await tradingService.getPnLSummary(req.userId!);
         return successResponse(res, pnl);

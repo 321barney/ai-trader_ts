@@ -120,10 +120,8 @@ export class AsterService {
         params: Record<string, any> = {}
     ): Promise<T> {
         const timestamp = Date.now();
-        const allParams = { ...params, timestamp };
-        const queryString = new URLSearchParams(
-            Object.entries(allParams).map(([k, v]) => [k, String(v)])
-        ).toString();
+        const allParams: Record<string, string> = { ...params, timestamp: String(timestamp) };
+        const queryString = new URLSearchParams(allParams).toString();
         const signature = this.sign(queryString);
 
         const url = `${this.baseUrl}${endpoint}?${queryString}&signature=${signature}`;
@@ -141,16 +139,19 @@ export class AsterService {
             throw new Error(`AsterDex API error: ${response.status} - ${error}`);
         }
 
-        return response.json();
+        return response.json() as Promise<T>;
     }
 
     /**
      * Make public request (no signature needed)
      */
     private async publicRequest<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
-        const queryString = new URLSearchParams(
-            Object.entries(params).map(([k, v]) => [k, String(v)])
-        ).toString();
+        const stringParams: Record<string, string> = Object.entries(params).reduce((acc, [k, v]) => {
+            acc[k] = String(v);
+            return acc;
+        }, {} as Record<string, string>);
+
+        const queryString = new URLSearchParams(stringParams).toString();
 
         const url = queryString
             ? `${this.baseUrl}${endpoint}?${queryString}`
@@ -163,7 +164,7 @@ export class AsterService {
             throw new Error(`AsterDex API error: ${response.status} - ${error}`);
         }
 
-        return response.json();
+        return response.json() as Promise<T>;
     }
 
     // ============ Connection ============

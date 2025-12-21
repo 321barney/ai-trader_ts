@@ -2,7 +2,7 @@
  * Onboarding Routes
  */
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error.js';
@@ -32,7 +32,7 @@ const stepSchemas = {
 /**
  * GET /api/onboarding/status
  */
-router.get('/status', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
         where: { id: req.userId },
         select: {
@@ -68,7 +68,7 @@ router.get('/status', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * POST /api/onboarding/step
  */
-router.post('/step', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/step', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { step, data } = req.body;
 
     if (!step || step < 1 || step > 6) {
@@ -76,7 +76,7 @@ router.post('/step', authMiddleware, asyncHandler(async (req, res) => {
     }
 
     const schema = stepSchemas[step as keyof typeof stepSchemas];
-    const validation = validateSchema(schema, data);
+    const validation = validateSchema(schema as any, data);
 
     if (!validation.success) {
         return errorResponse(res, validation.error);
@@ -89,39 +89,39 @@ router.post('/step', authMiddleware, asyncHandler(async (req, res) => {
         case 1:
             updateData = {
                 ...updateData,
-                asterApiKey: validation.data.asterApiKey,
-                asterApiSecret: validation.data.asterApiSecret,
-                asterTestnet: validation.data.asterTestnet ?? true,
+                asterApiKey: (validation.data as any).asterApiKey,
+                asterApiSecret: (validation.data as any).asterApiSecret,
+                asterTestnet: (validation.data as any).asterTestnet ?? true,
             };
             break;
         case 2:
             updateData = {
                 ...updateData,
-                leverage: validation.data.leverage,
+                leverage: (validation.data as any).leverage,
             };
             break;
         case 3:
             updateData = {
                 ...updateData,
-                selectedPairs: validation.data.selectedPairs,
+                selectedPairs: (validation.data as any).selectedPairs,
             };
             break;
         case 4:
             updateData = {
                 ...updateData,
-                marketType: validation.data.marketType,
+                marketType: (validation.data as any).marketType,
             };
             break;
         case 5:
             updateData = {
                 ...updateData,
-                methodology: validation.data.methodology,
+                methodology: (validation.data as any).methodology,
             };
             break;
         case 6:
             updateData = {
                 ...updateData,
-                deepseekApiKey: validation.data.deepseekApiKey || null,
+                deepseekApiKey: (validation.data as any).deepseekApiKey || null,
                 onboardingCompleted: true,
             };
             break;
@@ -146,7 +146,7 @@ router.post('/step', authMiddleware, asyncHandler(async (req, res) => {
 /**
  * POST /api/onboarding/skip
  */
-router.post('/skip', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/skip', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { step } = req.body;
 
     if (step !== 6) {
@@ -168,7 +168,7 @@ router.post('/skip', authMiddleware, asyncHandler(async (req, res) => {
  * POST /api/onboarding/test-connection
  * Test AsterDex API connection before saving
  */
-router.post('/test-connection', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/test-connection', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { apiKey, apiSecret, testnet } = req.body;
 
     if (!apiKey || !apiSecret) {
@@ -205,7 +205,7 @@ router.post('/test-connection', authMiddleware, asyncHandler(async (req, res) =>
  * GET /api/onboarding/pairs
  * Get available trading pairs from AsterDex
  */
-router.get('/pairs', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/pairs', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
         where: { id: req.userId },
         select: { asterApiKey: true, asterApiSecret: true, asterTestnet: true },

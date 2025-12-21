@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { authRoutes, onboardingRoutes, tradingRoutes, agentRoutes } from './routes/index.js';
+import apiRouter from './routes/index.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 
 // Load environment variables
@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? ['https://aitrader.app']
+        ? ['https://aitrader.app', /\.railway\.app$/]
         : ['http://localhost:3000'],
     credentials: true,
 }));
@@ -29,10 +29,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/onboarding', onboardingRoutes);
-app.use('/api/trading', tradingRoutes);
-app.use('/api/agents', agentRoutes);
+app.use('/api', apiRouter);
 
 // Error handling
 app.use(notFoundHandler);
