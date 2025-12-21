@@ -168,7 +168,9 @@ router.post('/skip', authMiddleware, asyncHandler(async (req: Request, res: Resp
  * POST /api/onboarding/test-connection
  * Test AsterDex API connection before saving
  */
+console.log('[OnboardingRoutes] Registering POST /test-connection');
 router.post('/test-connection', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    console.log('[OnboardingRoutes] test-connection called with:', { apiKey: !!req.body.apiKey, apiSecret: !!req.body.apiSecret });
     const { apiKey, apiSecret, testnet } = req.body;
 
     if (!apiKey || !apiSecret) {
