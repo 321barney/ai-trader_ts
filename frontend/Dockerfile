@@ -13,8 +13,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build-time env var for Next.js
-ARG NEXT_PUBLIC_API_URL
+# Build-time env var for Next.js (ARG allows override, ENV sets default)
+ARG NEXT_PUBLIC_API_URL=https://backend-production-eb39.up.railway.app
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build
