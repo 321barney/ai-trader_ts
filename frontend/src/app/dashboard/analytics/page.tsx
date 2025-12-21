@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
                                     <h4 className="font-medium text-indigo-300 mb-2">Exit Timing Analysis</h4>
                                     <p className="text-sm text-gray-300">
                                         Based on your last 50 trades, you tend to exit winning trades too early.
-                                        Your captured potential profit is <strong>38%</strong>, while the target should be >50%.
+                                        Your captured potential profit is <strong>38%</strong>, while the target should be &gt;50%.
                                         Consider using a trailing stop to let winners run.
                                     </p>
                                 </div>

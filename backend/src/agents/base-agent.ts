@@ -108,7 +108,7 @@ export abstract class BaseAgent {
                 }),
             });
 
-            const data = await response.json();
+            const data = await response.json() as any;
             return data.choices?.[0]?.message?.content || '';
         } catch (error) {
             console.error(`[${this.agentType}] DeepSeek API error:`, error);
@@ -144,7 +144,7 @@ export abstract class BaseAgent {
                 userId,
                 agentType: this.agentType,
                 reasoning: result.reasoning,
-                thoughtSteps: result.thoughtSteps,
+                thoughtSteps: result.thoughtSteps as any,
                 decision: result.decision,
                 confidence: result.confidence,
                 symbol: context.symbol,
