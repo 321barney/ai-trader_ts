@@ -1,10 +1,38 @@
+"use client";
+
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const [mode, setMode] = useState<"test" | "live">("test");
+    const [userName, setUserName] = useState("Trader");
+    const [userEmail, setUserEmail] = useState("trader@example.com");
+
+    // Load mode from localStorage on mount
+    useEffect(() => {
+        const savedMode = localStorage.getItem("tradingMode") as "test" | "live";
+        if (savedMode) setMode(savedMode);
+
+        // Try to get user info
+        const token = localStorage.getItem("token");
+        if (token) {
+            // Decode JWT to get user info (basic decode, not verification)
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.email) setUserEmail(payload.email);
+            } catch { }
+        }
+    }, []);
+
+    const handleModeChange = (newMode: "test" | "live") => {
+        setMode(newMode);
+        localStorage.setItem("tradingMode", newMode);
+    };
+
     const navItems = [
         { href: "/dashboard", icon: "📊", label: "Overview" },
         { href: "/dashboard/market", icon: "🌐", label: "Market Intel" },
@@ -49,13 +77,30 @@ export default function DashboardLayout({
                     <div className="bg-[#12121a] rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                             <span className="text-sm text-gray-400">Mode</span>
-                            <span className="badge badge-success">Test</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${mode === "test"
+                                    ? "bg-green-500/20 text-green-400"
+                                    : "bg-red-500/20 text-red-400"
+                                }`}>
+                                {mode === "test" ? "TEST" : "LIVE"}
+                            </span>
                         </div>
                         <div className="flex gap-2">
-                            <button className="flex-1 py-2 px-3 rounded-lg bg-indigo-500/20 text-indigo-400 text-sm font-medium border border-indigo-500/30">
+                            <button
+                                onClick={() => handleModeChange("test")}
+                                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${mode === "test"
+                                        ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                                        : "text-gray-500 hover:bg-white/5"
+                                    }`}
+                            >
                                 Test
                             </button>
-                            <button className="flex-1 py-2 px-3 rounded-lg text-gray-500 text-sm hover:bg-white/5">
+                            <button
+                                onClick={() => handleModeChange("live")}
+                                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${mode === "live"
+                                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                        : "text-gray-500 hover:bg-white/5"
+                                    }`}
+                            >
                                 Live
                             </button>
                         </div>
@@ -66,11 +111,11 @@ export default function DashboardLayout({
                 <div className="border-t border-white/5 pt-6 mt-6">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold">
-                            T
+                            {userEmail.charAt(0).toUpperCase()}
                         </div>
                         <div>
                             <div className="text-sm font-medium text-white">Trader</div>
-                            <div className="text-xs text-gray-500">trader@example.com</div>
+                            <div className="text-xs text-gray-500 truncate max-w-[140px]">{userEmail}</div>
                         </div>
                     </div>
                 </div>
@@ -83,3 +128,4 @@ export default function DashboardLayout({
         </div>
     );
 }
+
