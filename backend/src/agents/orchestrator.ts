@@ -12,6 +12,12 @@ import { StrategyConsultantAgent, StrategyDecision } from './strategy-consultant
 import { RiskOfficerAgent, RiskAssessment } from './risk-officer.js';
 import { MarketAnalystAgent, MarketAnalysis } from './market-analyst.js';
 import { RLService, RLPrediction, RLMetrics, RLParams } from '../services/rl.service.js';
+import { prisma } from '../utils/prisma.js';
+import { OpenAIService } from '../services/openai.service.js';
+import { ClaudeService } from '../services/claude.service.js';
+import { GeminiService } from '../services/gemini.service.js';
+import { DeepSeekService } from '../services/deepseek.service.js';
+import { IAiService } from '../services/ai-service.interface.js';
 
 export interface OrchestratorDecision {
     finalDecision: 'LONG' | 'SHORT' | 'HOLD' | 'BLOCKED';
@@ -58,6 +64,25 @@ export class AgentOrchestrator {
     }
 
     /**
+     * Factory method to get the correct AI/LLM service based on config
+     */
+    private getAiService(modelConfig: string, user: any): IAiService {
+        switch (modelConfig.toLowerCase()) {
+            case 'openai':
+                return new OpenAIService(user?.openaiApiKey || undefined);
+            case 'anthropic':
+            case 'claude':
+                return new ClaudeService(user?.anthropicApiKey || undefined);
+            case 'gemini':
+            case 'google':
+                return new GeminiService(user?.geminiApiKey || undefined);
+            case 'deepseek':
+            default:
+                return new DeepSeekService(user?.deepseekApiKey || undefined);
+        }
+    }
+
+    /**
      * Check if RL service is available
      */
     public async checkRLAvailability(): Promise<boolean> {
@@ -80,11 +105,30 @@ export class AgentOrchestrator {
             await this.checkRLAvailability();
         }
 
-        // Run AI agents in parallel
+        // Fetch user config for AI models
+        const user = await prisma.user.findUnique({
+            where: { id: context.userId },
+            select: {
+                deepseekApiKey: true,
+                openaiApiKey: true,
+                anthropicApiKey: true,
+                geminiApiKey: true,
+                marketAnalystModel: true,
+                riskOfficerModel: true,
+                strategyConsultantModel: true
+            }
+        });
+
+        // Determine services for each agent
+        const marketService = this.getAiService(user?.marketAnalystModel || 'deepseek', user);
+        const riskService = this.getAiService(user?.riskOfficerModel || 'deepseek', user);
+        const strategyService = this.getAiService(user?.strategyConsultantModel || 'deepseek', user);
+
+        // Run AI agents in parallel with injected services
         const [strategyDecision, riskAssessment, marketAnalysis] = await Promise.all([
-            this.strategyAgent.decide(context),
-            this.riskAgent.decide(context),
-            this.marketAgent.decide(context),
+            this.strategyAgent.decide({ ...context, aiService: strategyService }),
+            this.riskAgent.decide({ ...context, aiService: riskService }),
+            this.marketAgent.decide({ ...context, aiService: marketService }),
         ]);
 
         // Get RL prediction if available and not in deepseek-only mode

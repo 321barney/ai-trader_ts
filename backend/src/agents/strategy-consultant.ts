@@ -133,7 +133,7 @@ TAKE_PROFIT: 44625`;
 
     public async decide(context: AgentContext): Promise<StrategyDecision> {
         const prompt = this.buildCOTPrompt(context);
-        const response = await this.callDeepSeek(prompt);
+        const response = await this.callAiModel(prompt, context.aiService);
         const thoughtSteps = this.parseCOTResponse(response);
 
         // Parse decision from response

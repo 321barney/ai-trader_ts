@@ -23,6 +23,18 @@ router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Res
 }));
 
 /**
+ * GET /api/trading/symbols
+ */
+router.get('/symbols', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const symbols = await tradingService.getSymbols();
+        return successResponse(res, symbols);
+    } catch (error: any) {
+        return errorResponse(res, error.message);
+    }
+}));
+
+/**
  * PUT /api/trading/enable
  */
 router.put('/enable', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {

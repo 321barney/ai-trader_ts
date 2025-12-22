@@ -22,6 +22,13 @@ export default function SettingsPage() {
         asterApiSecret: "",
         asterTestnet: true,
         deepseekApiKey: "",
+        openaiApiKey: "",
+        anthropicApiKey: "",
+        geminiApiKey: "",
+        // Agent Configuration
+        marketAnalystModel: "deepseek",
+        riskOfficerModel: "deepseek",
+        strategyConsultantModel: "deepseek",
     });
 
     const [loading, setLoading] = useState(true);
@@ -33,6 +40,8 @@ export default function SettingsPage() {
     // Connection test states
     const [asterTest, setAsterTest] = useState<ConnectionTest>({ testing: false, result: null });
     const [deepseekTest, setDeepseekTest] = useState<ConnectionTest>({ testing: false, result: null });
+
+    const [availablePairs, setAvailablePairs] = useState<{ symbol: string, maxLeverage?: number }[]>([]);
 
     // Test Aster connection
     const testAsterConnection = async () => {
@@ -107,7 +116,34 @@ export default function SettingsPage() {
                         asterApiSecret: user.asterApiSecret ? "••••••••" : "",
                         asterTestnet: user.asterTestnet ?? true,
                         deepseekApiKey: user.deepseekApiKey ? "••••••••" : "",
+                        openaiApiKey: user.openaiApiKey ? "••••••••" : "",
+                        anthropicApiKey: user.anthropicApiKey ? "••••••••" : "",
+                        geminiApiKey: user.geminiApiKey ? "••••••••" : "",
+                        marketAnalystModel: user.marketAnalystModel || "deepseek",
+                        riskOfficerModel: user.riskOfficerModel || "deepseek",
+                        strategyConsultantModel: user.strategyConsultantModel || "deepseek",
                     }));
+                }
+
+                // Fetch available pairs
+                const pairsRes = await fetch(`${API_BASE}/api/trading/symbols`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const pairsData = await pairsRes.json();
+                if (pairsData.success && Array.isArray(pairsData.data)) {
+                    setAvailablePairs(pairsData.data.map((p: any) => ({
+                        symbol: p.symbol,
+                        maxLeverage: p.maxLeverage
+                    })));
+                } else {
+                    // Fallback pairs
+                    setAvailablePairs([
+                        { symbol: 'BTC-USD', maxLeverage: 20 },
+                        { symbol: 'ETH-USD', maxLeverage: 20 },
+                        { symbol: 'SOL-USD', maxLeverage: 10 },
+                        { symbol: 'AVAX-USD', maxLeverage: 10 },
+                        { symbol: 'ARB-USD', maxLeverage: 10 }
+                    ]);
                 }
             } catch (err) {
                 console.error("Failed to load settings:", err);
@@ -141,10 +177,20 @@ export default function SettingsPage() {
                     // Only send API keys if they were edited (not masked)
                     ...(settings.deepseekApiKey && !settings.deepseekApiKey.includes("••••")
                         ? { deepseekApiKey: settings.deepseekApiKey } : {}),
+                    ...(settings.openaiApiKey && !settings.openaiApiKey.includes("••••")
+                        ? { openaiApiKey: settings.openaiApiKey } : {}),
+                    ...(settings.anthropicApiKey && !settings.anthropicApiKey.includes("••••")
+                        ? { anthropicApiKey: settings.anthropicApiKey } : {}),
+                    ...(settings.geminiApiKey && !settings.geminiApiKey.includes("••••")
+                        ? { geminiApiKey: settings.geminiApiKey } : {}),
                     ...(settings.asterApiKey && !settings.asterApiKey.includes("••••")
                         ? { asterApiKey: settings.asterApiKey } : {}),
                     ...(settings.asterApiSecret && !settings.asterApiSecret.includes("••••")
                         ? { asterApiSecret: settings.asterApiSecret } : {}),
+
+                    marketAnalystModel: settings.marketAnalystModel,
+                    riskOfficerModel: settings.riskOfficerModel,
+                    strategyConsultantModel: settings.strategyConsultantModel,
 
                     asterTestnet: settings.asterTestnet,
                 })
@@ -327,10 +373,20 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setEditingKey(editingKey === 'aster' ? null : 'aster')}
-                                        className="btn-secondary px-4 flex-1"
+                                        onClick={() => {
+                                            if (editingKey === 'aster') {
+                                                handleSave();
+                                                setEditingKey(null);
+                                            } else {
+                                                setEditingKey('aster');
+                                            }
+                                        }}
+                                        className={`px-4 flex-1 rounded-lg border transition-all ${editingKey === 'aster'
+                                            ? 'bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30'
+                                            : 'btn-secondary'
+                                            }`}
                                     >
-                                        {editingKey === 'aster' ? 'Done' : 'Edit Credentials'}
+                                        {editingKey === 'aster' ? 'Save & Close' : 'Edit Credentials'}
                                     </button>
                                     <button
                                         onClick={testAsterConnection}
@@ -360,6 +416,17 @@ export default function SettingsPage() {
                         </div>
 
                         {/* DeepSeek API Key */}
+                    </div>
+                </div>
+
+                {/* AI Model Keys */}
+                <div className="card glass relative">
+                    <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <span>🧠</span> AI Model Keys
+                    </h2>
+
+                    <div className="space-y-4">
+                        {/* DeepSeek */}
                         <div>
                             <label className="text-white font-medium block mb-2">DeepSeek API Key</label>
                             <div className="flex gap-2">
@@ -377,27 +444,103 @@ export default function SettingsPage() {
                                 >
                                     {editingKey === 'deepseek' ? 'Done' : 'Edit'}
                                 </button>
-                                <button
-                                    onClick={testDeepseekConnection}
-                                    disabled={deepseekTest.testing}
-                                    className="btn-secondary px-4"
-                                >
-                                    {deepseekTest.testing ? '...' : 'Test'}
-                                </button>
-                            </div>
-                            {deepseekTest.result && (
-                                <div className={`text-sm mt-2 flex items-center gap-1 ${deepseekTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
-                                    <span className={`w-2 h-2 rounded-full ${deepseekTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
-                                    {deepseekTest.result.connected ? deepseekTest.result.message : deepseekTest.result.error}
-                                </div>
-                            )}
-                            <div className="text-gray-500 text-sm mt-2">
-                                Get your key from{" "}
-                                <a href="https://platform.deepseek.com" target="_blank" className="text-indigo-400 hover:underline">
-                                    platform.deepseek.com
-                                </a>
                             </div>
                         </div>
+
+                        {/* OpenAI */}
+                        <div>
+                            <label className="text-white font-medium block mb-2">OpenAI API Key (ChatGPT)</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type={editingKey === 'openai' ? 'text' : 'password'}
+                                    value={settings.openaiApiKey}
+                                    onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
+                                    readOnly={editingKey !== 'openai'}
+                                    placeholder="sk-..."
+                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
+                                />
+                                <button
+                                    onClick={() => setEditingKey(editingKey === 'openai' ? null : 'openai')}
+                                    className="btn-secondary px-4"
+                                >
+                                    {editingKey === 'openai' ? 'Done' : 'Edit'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Anthropic */}
+                        <div>
+                            <label className="text-white font-medium block mb-2">Anthropic API Key (Claude)</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type={editingKey === 'anthropic' ? 'text' : 'password'}
+                                    value={settings.anthropicApiKey}
+                                    onChange={(e) => setSettings({ ...settings, anthropicApiKey: e.target.value })}
+                                    readOnly={editingKey !== 'anthropic'}
+                                    placeholder="sk-ant-..."
+                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
+                                />
+                                <button
+                                    onClick={() => setEditingKey(editingKey === 'anthropic' ? null : 'anthropic')}
+                                    className="btn-secondary px-4"
+                                >
+                                    {editingKey === 'anthropic' ? 'Done' : 'Edit'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Gemini */}
+                        <div>
+                            <label className="text-white font-medium block mb-2">Google Gemini API Key</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type={editingKey === 'gemini' ? 'text' : 'password'}
+                                    value={settings.geminiApiKey}
+                                    onChange={(e) => setSettings({ ...settings, geminiApiKey: e.target.value })}
+                                    readOnly={editingKey !== 'gemini'}
+                                    placeholder="AIza..."
+                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
+                                />
+                                <button
+                                    onClick={() => setEditingKey(editingKey === 'gemini' ? null : 'gemini')}
+                                    className="btn-secondary px-4"
+                                >
+                                    {editingKey === 'gemini' ? 'Done' : 'Edit'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Agent Configuration */}
+                <div className="card glass">
+                    <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <span>🤖</span> Agent Configuration
+                    </h2>
+                    <p className="text-gray-400 text-sm mb-4">Select which AI model powers each agent.</p>
+
+                    <div className="space-y-4">
+                        {[
+                            { id: 'marketAnalystModel', label: 'Market Analyst', icon: '📊' },
+                            { id: 'riskOfficerModel', label: 'Risk Officer', icon: '🛡️' },
+                            { id: 'strategyConsultantModel', label: 'Strategy Consultant', icon: '💡' }
+                        ].map((agent) => (
+                            <div key={agent.id}>
+                                <label className="text-white font-medium block mb-2 flex items-center gap-2">
+                                    <span>{agent.icon}</span> {agent.label}
+                                </label>
+                                <select
+                                    value={(settings as any)[agent.id]}
+                                    onChange={(e) => setSettings({ ...settings, [agent.id]: e.target.value })}
+                                    className="w-full px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white appearance-none cursor-pointer hover:border-white/20 transition-colors"
+                                >
+                                    <option value="deepseek">DeepSeek (Default)</option>
+                                    <option value="openai">OpenAI (GPT-4)</option>
+                                    <option value="anthropic">Anthropic (Claude 3)</option>
+                                    <option value="gemini">Google (Gemini 1.5)</option>
+                                </select>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -407,22 +550,30 @@ export default function SettingsPage() {
                         <span>💹</span> Trading Pairs
                     </h2>
 
-                    <div className="flex flex-wrap gap-2">
-                        {['BTC-USD', 'ETH-USD', 'SOL-USD', 'AVAX-USD', 'ARB-USD'].map((pair) => (
+                    <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto pr-2">
+                        {availablePairs.map((pairData) => (
                             <button
-                                key={pair}
+                                key={pairData.symbol}
                                 onClick={() => {
-                                    const pairs = settings.selectedPairs.includes(pair)
-                                        ? settings.selectedPairs.filter(p => p !== pair)
-                                        : [...settings.selectedPairs, pair];
+                                    const pairs = settings.selectedPairs.includes(pairData.symbol)
+                                        ? settings.selectedPairs.filter(p => p !== pairData.symbol)
+                                        : [...settings.selectedPairs, pairData.symbol];
                                     setSettings({ ...settings, selectedPairs: pairs });
                                 }}
-                                className={`px-4 py-2 rounded-lg border transition-all ${settings.selectedPairs.includes(pair)
+                                className={`px-4 py-2 rounded-lg border transition-all text-sm flex items-center gap-2 ${settings.selectedPairs.includes(pairData.symbol)
                                     ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
-                                    : 'bg-white/5 border-white/10 text-gray-400'
+                                    : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
                                     }`}
                             >
-                                {pair}
+                                <span>{pairData.symbol}</span>
+                                {pairData.maxLeverage && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${settings.selectedPairs.includes(pairData.symbol)
+                                            ? 'bg-indigo-500/30'
+                                            : 'bg-white/10'
+                                        }`}>
+                                        {pairData.maxLeverage}x
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>

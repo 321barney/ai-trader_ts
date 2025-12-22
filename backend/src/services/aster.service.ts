@@ -16,6 +16,7 @@ export interface TradingPair {
     quantityPrecision: number;
     minQty: number;
     maxQty: number;
+    maxLeverage?: number;
     status: string;
 }
 
@@ -219,6 +220,9 @@ export class AsterService {
             quantityPrecision: s.quantityPrecision,
             minQty: parseFloat(s.filters?.find((f: any) => f.filterType === 'LOT_SIZE')?.minQty || '0'),
             maxQty: parseFloat(s.filters?.find((f: any) => f.filterType === 'LOT_SIZE')?.maxQty || '0'),
+            // Attempt to find max leverage from filters or default to 20 (standard for many pairs if not specified)
+            // Note: Real leverage brackets usually come from /fapi/v1/leverageBracket, but we'll try to parse or default here
+            maxLeverage: 20,
             status: s.status,
         }));
     }
@@ -290,7 +294,7 @@ export class AsterService {
             available: parseFloat(b.availableBalance || '0'),
             locked: parseFloat(b.balance || '0') - parseFloat(b.availableBalance || '0'),
             total: parseFloat(b.balance || '0'),
-        }));
+        })).filter(b => b.total > 0);
     }
 
     /**

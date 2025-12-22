@@ -140,7 +140,7 @@ WARNINGS: none`;
 
     public async decide(context: AgentContext): Promise<RiskAssessment> {
         const prompt = this.buildCOTPrompt(context);
-        const response = await this.callDeepSeek(prompt);
+        const response = await this.callAiModel(prompt, context.aiService);
         const thoughtSteps = this.parseCOTResponse(response);
 
         const assessment = this.parseAssessment(response, thoughtSteps);

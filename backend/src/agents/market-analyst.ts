@@ -147,7 +147,7 @@ KEY_INSIGHTS:
 
     public async decide(context: AgentContext): Promise<MarketAnalysis> {
         const prompt = this.buildCOTPrompt(context);
-        const response = await this.callDeepSeek(prompt);
+        const response = await this.callAiModel(prompt, context.aiService);
         const thoughtSteps = this.parseCOTResponse(response);
 
         const analysis = this.parseAnalysis(response, thoughtSteps);

@@ -12,6 +12,21 @@ import { rlService } from '../services/rl.service.js';
 
 const router = Router();
 
+/**
+ * POST /api/agents/reset
+ * Clears agent decision history to reset strategy context
+ */
+router.post('/reset', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    await prisma.agentDecision.deleteMany({
+        where: { userId: req.userId }
+    });
+
+    // Also clear recent trades/signals if needed? 
+    // For now, just decisions as they form the "context"
+
+    return successResponse(res, { success: true }, 'Strategy context reset successfully');
+}));
+
 
 /**
  * GET /api/agents/decisions

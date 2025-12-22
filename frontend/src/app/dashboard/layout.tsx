@@ -44,6 +44,7 @@ export default function DashboardLayout({
         { href: "/dashboard/history", icon: "📜", label: "History" },
         { href: "/dashboard/dev", icon: "🔧", label: "Dev Area" },
         { href: "/dashboard/settings", icon: "⚙️", label: "Settings" },
+        { href: "/dashboard/tuning", icon: "🎛️", label: "Tuning" },
     ];
 
     return (
@@ -78,8 +79,8 @@ export default function DashboardLayout({
                         <div className="flex items-center justify-between mb-3">
                             <span className="text-sm text-gray-400">Mode</span>
                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${mode === "test"
-                                    ? "bg-green-500/20 text-green-400"
-                                    : "bg-red-500/20 text-red-400"
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-red-500/20 text-red-400"
                                 }`}>
                                 {mode === "test" ? "TEST" : "LIVE"}
                             </span>
@@ -88,8 +89,8 @@ export default function DashboardLayout({
                             <button
                                 onClick={() => handleModeChange("test")}
                                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${mode === "test"
-                                        ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
-                                        : "text-gray-500 hover:bg-white/5"
+                                    ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                                    : "text-gray-500 hover:bg-white/5"
                                     }`}
                             >
                                 Test
@@ -97,8 +98,8 @@ export default function DashboardLayout({
                             <button
                                 onClick={() => handleModeChange("live")}
                                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${mode === "live"
-                                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                                        : "text-gray-500 hover:bg-white/5"
+                                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                    : "text-gray-500 hover:bg-white/5"
                                     }`}
                             >
                                 Live

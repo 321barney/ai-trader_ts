@@ -26,8 +26,16 @@ model User {
   asterApiSecret   String?
   asterTestnet     Boolean @default(true)
   
-  // AI Provider
+  // AI Provider Keys
   deepseekApiKey   String?
+  openaiApiKey     String?
+  anthropicApiKey  String?
+  geminiApiKey     String?
+
+  // Agent Model Configuration (deepseek | openai | anthropic | gemini)
+  marketAnalystModel    String @default("deepseek")
+  riskOfficerModel      String @default("deepseek")
+  strategyConsultantModel String @default("deepseek")
   
   // Trading Preferences
   preferredExchange String @default("aster")

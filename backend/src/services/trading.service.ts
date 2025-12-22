@@ -5,12 +5,22 @@
 import { prisma } from '../utils/prisma.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from './rl.service.js';
+import { AsterService } from './aster.service.js';
 
 export class TradingService {
     private orchestrator: AgentOrchestrator;
+    private asterService: AsterService;
 
     constructor() {
         this.orchestrator = new AgentOrchestrator();
+        this.asterService = new AsterService();
+    }
+
+    /**
+     * Get available trading symbols
+     */
+    async getSymbols() {
+        return await this.asterService.getPairs();
     }
 
     /**
@@ -134,7 +144,15 @@ export class TradingService {
     async runAnalysis(userId: string, symbol: string) {
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { methodology: true, strategyMode: true },
+            select: {
+                methodology: true,
+                strategyMode: true,
+                tradingEnabled: true,
+                tradingMode: true,
+                asterApiKey: true,
+                asterApiSecret: true,
+                asterTestnet: true,
+            },
         });
 
         if (!user) {
@@ -147,18 +165,53 @@ export class TradingService {
         // Get RL metrics
         const rlMetrics = await rlService.getMetrics();
 
-        // Run orchestrator
+        // Initialize Aster Service with user keys
+        const asterService = new AsterService(user.asterApiKey!, user.asterApiSecret!, user.asterTestnet || true);
+
+        // Fetch Real Account Data
+        let portfolioValue = 0;
+        let openPositionsCount = 0;
+        let currentExposure = 0;
+
+        try {
+            if (user.asterApiKey && user.asterApiSecret) {
+                const balances = await asterService.getBalance();
+                const usdtBalance = balances.find(b => b.asset === 'USDT');
+                const positions = await asterService.getPositions();
+
+                // Calculate Portfolio Value (Wallet Balance + Unrealized PnL)
+                const walletBalance = usdtBalance ? usdtBalance.total : 0;
+                const unrealizedPnL = positions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
+                portfolioValue = walletBalance + unrealizedPnL;
+
+                openPositionsCount = positions.length;
+                currentExposure = positions.reduce((sum, p) => sum + (p.size * p.markPrice), 0);
+            }
+        } catch (error) {
+            console.warn(`Failed to fetch real account data for user ${userId}, using defaults:`, error);
+            // Default fallbacks if API fails or keys missing
+            portfolioValue = 50000;
+        }
+
+        // Run orchestrator with REAL context
         const decision = await this.orchestrator.analyzeAndDecide({
             userId,
             symbol,
             marketData,
             riskMetrics: {
                 ...rlMetrics,
-                portfolioValue: 50000,
-                currentExposure: 0,
-                openPositions: 0,
+                portfolioValue,
+                currentExposure,
+                openPositions: openPositionsCount,
             },
         });
+
+        if (decision.finalDecision !== 'HOLD' && decision.confidence > 70) {
+            // If trading is enabled and mode is 'trade', execute
+            if (user.tradingEnabled && user.tradingMode === 'trade') {
+                await this.executeOrder(userId, decision, symbol);
+            }
+        }
 
         return decision;
     }
@@ -166,19 +219,109 @@ export class TradingService {
     /**
      * Get market data (mock for now)
      */
+    /**
+     * Get market data from AsterDex
+     */
     private async getMarketData(symbol: string) {
-        // In production, this would call exchange API
-        return {
-            symbol,
-            currentPrice: 42500,
-            change24h: 2.5,
-            high24h: 43200,
-            low24h: 41800,
-            volume: 1500000000,
-            rsi: 52,
-            macd: 150,
-            atr: 800,
-        };
+        try {
+            // Get 24hr ticker for general stats
+            const ticker = await this.asterService.getTicker(symbol);
+
+            // Get RSI/MACD/ATR (Calculated from Klines) - Implementation simplified for now
+            // Ideally we'd calculate these using technicalindicators lib on fetched klines
+            const klines = await this.asterService.getKlines(symbol, '1h', 100);
+
+            // Simple mock indicators for now until we add a technical analysis lib
+            // In a real scenario, use 'technicalindicators' package
+            return {
+                symbol,
+                currentPrice: ticker.price,
+                change24h: ticker.priceChangePercent,
+                high24h: ticker.high24h,
+                low24h: ticker.low24h,
+                volume: ticker.volume24h,
+                rsi: 50, // Placeholder
+                macd: 0, // Placeholder
+                atr: 0,  // Placeholder
+            };
+        } catch (error) {
+            console.error(`Failed to fetch market data for ${symbol}:`, error);
+            // Fallback to mock if API fails
+            return {
+                symbol,
+                currentPrice: 42500,
+                change24h: 2.5,
+                high24h: 43200,
+                low24h: 41800,
+                volume: 1500000000,
+                rsi: 52,
+                macd: 150,
+                atr: 800,
+            };
+        }
+    }
+
+    /**
+     * Execute an order on AsterDex
+     */
+    private async executeOrder(userId: string, decision: any, symbol: string) {
+        // Fetch user secrets
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { asterApiKey: true, asterApiSecret: true, asterTestnet: true }
+        });
+
+        if (!user || !user.asterApiKey || !user.asterApiSecret) {
+            console.warn(`User ${userId} missing API keys, skipping execution`);
+            return null;
+        }
+
+        const authService = new AsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet || true);
+
+        try {
+            // Calculate quantity based on risk/portfolio (Simplified)
+            // In production: fetch balance, apply risk %
+
+            // For now, if decision is LONG/SHORT, execute min quantity
+            if (decision.finalDecision === 'LONG' || decision.finalDecision === 'SHORT') {
+                const type = 'MARKET'; // Or LIMIT if price is specified
+                const side = decision.finalDecision === 'LONG' ? 'BUY' : 'SELL';
+
+                // Fetch symbol info to get minQty/precision
+                const pairs = await this.asterService.getPairs();
+                const pairInfo = pairs.find(p => p.symbol === symbol);
+                const quantity = pairInfo ? pairInfo.minQty : 0.001; // Default fallback
+
+                console.log(`Executing ${side} order for ${symbol} quantity ${quantity}`);
+
+                const order = await authService.placeOrder({
+                    symbol,
+                    side,
+                    type,
+                    quantity,
+                    // positionSide: 'BOTH' // Default for One-Way Mode
+                });
+
+                // Log trade to DB
+                await prisma.trade.create({
+                    data: {
+                        userId,
+                        symbol,
+                        side: decision.finalDecision,
+                        entryPrice: order.avgPrice,
+                        quantity: order.executedQty,
+                        status: 'OPEN',
+                        pnl: 0
+                    }
+                });
+
+                return order;
+            }
+        } catch (error) {
+            console.error('Order execution failed:', error);
+            // Don't throw, just log execution failure
+        }
+        return null;
     }
 
     /**

@@ -7,6 +7,7 @@
 
 import { AgentType } from '@prisma/client';
 import { prisma } from '../utils/prisma.js';
+import { IAiService } from '../services/ai-service.interface.js';
 
 
 export interface ThoughtStep {
@@ -22,6 +23,7 @@ export interface AgentContext {
     marketData?: any;
     currentPosition?: any;
     riskMetrics?: any;
+    aiService?: IAiService;
 }
 
 export interface AgentDecisionResult {
@@ -35,22 +37,18 @@ export interface AgentDecisionResult {
 
 export abstract class BaseAgent {
     protected agentType: AgentType;
-    protected deepseekApiKey: string;
-    protected baseUrl: string;
 
     constructor(agentType: AgentType) {
         this.agentType = agentType;
-        this.deepseekApiKey = process.env.DEEPSEEK_API_KEY || '';
-        this.baseUrl = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
     }
 
     /**
-     * Build the Chain-of-Thought prompt for DeepSeek
+     * Build the Chain-of-Thought prompt for AI
      */
     protected abstract buildCOTPrompt(context: AgentContext): string;
 
     /**
-     * Parse DeepSeek response into structured thought steps
+     * Parse AI response into structured thought steps
      */
     protected parseCOTResponse(response: string): ThoughtStep[] {
         const steps: ThoughtStep[] = [];
@@ -76,43 +74,24 @@ export abstract class BaseAgent {
     }
 
     /**
-     * Call DeepSeek API with COT prompt
+     * Call AI Service with COT prompt
      */
-    protected async callDeepSeek(prompt: string): Promise<string> {
-        if (!this.deepseekApiKey) {
-            // Return mock response if no API key
+    protected async callAiModel(prompt: string, aiService?: IAiService): Promise<string> {
+        if (!aiService) {
+            // Return mock response if no service provided
             return this.getMockResponse();
         }
 
         try {
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.deepseekApiKey}`,
-                },
-                body: JSON.stringify({
-                    model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: this.getSystemPrompt(),
-                        },
-                        {
-                            role: 'user',
-                            content: prompt,
-                        },
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 2000,
-                }),
-            });
-
-            const data = await response.json() as any;
-            return data.choices?.[0]?.message?.content || '';
-        } catch (error) {
-            console.error(`[${this.agentType}] DeepSeek API error:`, error);
-            return this.getMockResponse();
+            return await aiService.chat([
+                { role: 'system', content: this.getSystemPrompt() },
+                { role: 'user', content: prompt }
+            ]);
+        } catch (error: any) {
+            console.error(`Error calling AI model for ${this.agentType}:`, error);
+            // Fallback to mock response or rethrow?
+            // Rethrow so the caller knows it failed
+            throw error;
         }
     }
 
@@ -147,10 +126,10 @@ export abstract class BaseAgent {
                 thoughtSteps: result.thoughtSteps as any,
                 decision: result.decision,
                 confidence: result.confidence,
-                symbol: context.symbol,
-                marketData: context.marketData,
+                symbol: context.symbol || 'UNKNOWN',
+                marketData: context.marketData || {},
                 rlAction: result.rlAction,
-                rlParams: result.rlParams,
+                rlParams: result.rlParams || {},
             },
         });
     }

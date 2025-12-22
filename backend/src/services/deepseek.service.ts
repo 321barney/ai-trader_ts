@@ -2,10 +2,7 @@
  * DeepSeek AI Service
  */
 
-export interface ChatMessage {
-    role: 'system' | 'user' | 'assistant';
-    content: string;
-}
+import { IAiService, ChatMessage, AiServiceOptions } from './ai-service.interface.js';
 
 export interface DeepSeekResponse {
     id: string;
@@ -23,13 +20,13 @@ export interface DeepSeekResponse {
     };
 }
 
-export class DeepSeekService {
+export class DeepSeekService implements IAiService {
     private apiKey: string;
     private baseUrl: string;
     private model: string;
 
-    constructor() {
-        this.apiKey = process.env.DEEPSEEK_API_KEY || '';
+    constructor(apiKey?: string) {
+        this.apiKey = apiKey || process.env.DEEPSEEK_API_KEY || '';
         this.baseUrl = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
         this.model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
     }
