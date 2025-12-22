@@ -111,6 +111,28 @@ export default function StrategyLabPage() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!selectedVersion) return;
+        if (selectedVersion.status === 'ACTIVE') {
+            alert('Cannot delete an ACTIVE strategy. Create a new active strategy first.');
+            return;
+        }
+        if (!confirm(`Are you sure you want to delete strategy v${selectedVersion.version}? This will also delete all associated backtest data.`)) {
+            return;
+        }
+        try {
+            const res = await api.del(`/api/strategies/${selectedVersion.id}`);
+            if (res.success) {
+                setVersions(versions.filter(v => v.id !== selectedVersion.id));
+                setSelectedVersion(null);
+                alert('Strategy deleted successfully');
+            }
+        } catch (error: any) {
+            console.error('Failed to delete:', error);
+            alert(error.message || 'Failed to delete strategy');
+        }
+    };
+
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <h1 className="text-3xl font-bold text-white mb-2">🧪 Strategy Lab</h1>
@@ -173,6 +195,14 @@ export default function StrategyLabPage() {
                                             <span className="text-green-400 flex items-center gap-2">
                                                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /> Live Running
                                             </span>
+                                        )}
+                                        {selectedVersion.status !== 'ACTIVE' && (
+                                            <button
+                                                onClick={handleDelete}
+                                                className="btn-secondary bg-red-500/20 text-red-400 border-red-500/50 hover:bg-red-500/30"
+                                            >
+                                                🗑️ Delete
+                                            </button>
                                         )}
                                     </div>
                                 </div>

@@ -32,13 +32,23 @@ router.post('/reset', authMiddleware, asyncHandler(async (req: Request, res: Res
  * GET /api/agents/decisions
  */
 router.get('/decisions', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
-    const { limit, agentType } = req.query;
+    const { limit, agentType, includeBacktest, sourceMode } = req.query;
+
+    const where: any = {
+        userId: req.userId,
+        ...(agentType && { agentType: agentType as any }),
+    };
+
+    // Filter by source mode if provided
+    if (sourceMode) {
+        where.sourceMode = sourceMode;
+    } else if (includeBacktest !== 'true') {
+        // By default, exclude backtest results for the live dashboard
+        where.isBacktest = false;
+    }
 
     const decisions = await prisma.agentDecision.findMany({
-        where: {
-            userId: req.userId,
-            ...(agentType && { agentType: agentType as any }),
-        },
+        where,
         orderBy: { createdAt: 'desc' },
         take: limit ? parseInt(limit as string) : 20,
     });

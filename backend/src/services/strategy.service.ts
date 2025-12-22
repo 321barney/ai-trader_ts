@@ -166,6 +166,43 @@ export class StrategyService {
             default: return { risk: 'medium', focus: ['rsi', 'macd'] };
         }
     }
+
+    /**
+     * Delete a strategy version
+     * Cannot delete ACTIVE strategies
+     */
+    async deleteStrategy(userId: string, strategyId: string) {
+        // 1. Find the strategy
+        const strategy = await prisma.strategyVersion.findUnique({
+            where: { id: strategyId }
+        });
+
+        if (!strategy) {
+            throw new Error('Strategy not found');
+        }
+
+        if (strategy.userId !== userId) {
+            throw new Error('Unauthorized - this strategy belongs to another user');
+        }
+
+        if (strategy.status === 'ACTIVE') {
+            throw new Error('Cannot delete an ACTIVE strategy. Please deactivate it first or create a new active strategy.');
+        }
+
+        // 2. Delete associated backtest sessions first
+        await prisma.backtestSession.deleteMany({
+            where: { strategyVersionId: strategyId }
+        });
+
+        // 3. Delete the strategy
+        const deleted = await prisma.strategyVersion.delete({
+            where: { id: strategyId }
+        });
+
+        console.log(`[Strategy] Deleted strategy ${strategyId} (v${strategy.version}) for user ${userId}`);
+
+        return deleted;
+    }
 }
 
 export type { StrategyVersion } from '@prisma/client';

@@ -152,4 +152,30 @@ router.put('/:id/backtest-complete', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * DELETE /api/strategies/:id
+ * Delete a strategy version (only if not ACTIVE)
+ */
+router.delete('/:id', async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId!;
+        const { id } = req.params;
+
+        const deleted = await strategyService.deleteStrategy(userId, id);
+
+        res.json({
+            success: true,
+            data: deleted,
+            message: 'Strategy deleted successfully'
+        });
+    } catch (error: any) {
+        console.error('[Strategy] Error deleting strategy:', error);
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 export { router as strategyRouter };
+
