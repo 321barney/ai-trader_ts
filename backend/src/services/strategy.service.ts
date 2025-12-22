@@ -194,7 +194,12 @@ export class StrategyService {
             where: { strategyVersionId: strategyId }
         });
 
-        // 3. Delete the strategy
+        // 3. Delete associated tracked signals
+        await prisma.trackedSignal.deleteMany({
+            where: { strategyVersionId: strategyId }
+        });
+
+        // 4. Delete the strategy
         const deleted = await prisma.strategyVersion.delete({
             where: { id: strategyId }
         });

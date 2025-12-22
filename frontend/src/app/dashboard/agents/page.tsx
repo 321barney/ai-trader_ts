@@ -41,6 +41,7 @@ export default function AgentDashboardPage() {
     const [latestDecisions, setLatestDecisions] = useState<AgentDecision[]>([]);
     const [rlStatus, setRlStatus] = useState<RLStatus | null>(null);
     const [loading, setLoading] = useState(true);
+    const [includeBacktest, setIncludeBacktest] = useState(false);
 
     const fetchAgentsData = async () => {
         try {
@@ -49,7 +50,7 @@ export default function AgentDashboardPage() {
             const headers = { Authorization: `Bearer ${token}` };
 
             // Fetch decisions for all agent types
-            const res = await fetch(`${API_BASE}/api/agents/decisions?limit=10`, { headers });
+            const res = await fetch(`${API_BASE}/api/agents/decisions?limit=10&includeBacktest=${includeBacktest}`, { headers });
             const json = await res.json();
 
             if (json.success) {
@@ -96,7 +97,7 @@ export default function AgentDashboardPage() {
         fetchAgentsData();
         const interval = setInterval(fetchAgentsData, 10000); // Poll every 10s
         return () => clearInterval(interval);
-    }, []);
+    }, [includeBacktest]);
 
     const getAgentIcon = (agent: string) => {
         if (agent.includes("Strategy")) return "🧠";
@@ -137,9 +138,26 @@ export default function AgentDashboardPage() {
     return (
         <div className="p-8">
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">AI Agent Dashboard</h1>
-                <p className="text-gray-400">View live agent reasoning and Chain-of-Thought analysis</p>
+            {/* Header */}
+            <div className="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold text-white mb-2">AI Agent Dashboard</h1>
+                    <p className="text-gray-400">View live agent reasoning and Chain-of-Thought analysis</p>
+                </div>
+                <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={includeBacktest}
+                            onChange={(e) => setIncludeBacktest(e.target.checked)}
+                            className="checkbox checkbox-primary checkbox-sm"
+                        />
+                        <span className="text-sm text-gray-300">Show Backtest History</span>
+                    </label>
+                    <div className="flex gap-2 text-sm">
+                        <span className="flex items-center gap-1 text-green-400"><span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Live System Active</span>
+                    </div>
+                </div>
             </div>
 
             {/* Agent Status Overview */}
