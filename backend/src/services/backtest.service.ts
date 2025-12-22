@@ -219,13 +219,70 @@ class BacktestService {
 
             console.log(`[Backtest] Step ${nextStep}: Agent decision = ${decision.finalDecision} (confidence: ${decision.confidence?.toFixed(2)})`);
 
-            // Save agent decision to database (marked as backtest)
+            // 1. Create Strategy Consultant Decision Record
+            if (decision.strategyDecision) {
+                await prisma.agentDecision.create({
+                    data: {
+                        userId: session.userId,
+                        agentType: 'STRATEGY_CONSULTANT',
+                        reasoning: decision.strategyDecision.reasoning || '',
+                        thoughtSteps: (decision.strategyDecision.thoughtSteps || []) as any,
+                        decision: decision.strategyDecision.decision,
+                        confidence: decision.strategyDecision.confidence,
+                        symbol: session.symbol,
+                        marketData: marketData as any,
+                        isBacktest: true,
+                        backtestSessionId: sessionId,
+                        sourceMode: 'BACKTEST'
+                    }
+                });
+            }
+
+            // 2. Create Risk Officer Decision Record
+            if (decision.riskAssessment) {
+                await prisma.agentDecision.create({
+                    data: {
+                        userId: session.userId,
+                        agentType: 'RISK_OFFICER',
+                        reasoning: decision.riskAssessment.reasoning || '',
+                        thoughtSteps: (decision.riskAssessment.thoughtSteps || []) as any,
+                        decision: decision.riskAssessment.decision,
+                        confidence: decision.riskAssessment.confidence,
+                        symbol: session.symbol,
+                        marketData: marketData as any,
+                        isBacktest: true,
+                        backtestSessionId: sessionId,
+                        sourceMode: 'BACKTEST'
+                    }
+                });
+            }
+
+            // 3. Create Market Analyst Decision Record
+            if (decision.marketAnalysis) {
+                await prisma.agentDecision.create({
+                    data: {
+                        userId: session.userId,
+                        agentType: 'MARKET_ANALYST',
+                        reasoning: decision.marketAnalysis.reasoning || '',
+                        thoughtSteps: (decision.marketAnalysis.thoughtSteps || []) as any,
+                        decision: decision.marketAnalysis.decision,
+                        confidence: decision.marketAnalysis.confidence,
+                        symbol: session.symbol,
+                        marketData: marketData as any,
+                        isBacktest: true,
+                        backtestSessionId: sessionId,
+                        sourceMode: 'BACKTEST'
+                    }
+                });
+            }
+
+            // 4. Create Orchestrator Decision Record (Final)
             const agentDecision = await prisma.agentDecision.create({
                 data: {
                     userId: session.userId,
                     agentType: 'ORCHESTRATOR',
-                    reasoning: decision.agentDecisions?.strategy?.reasoning || 'Backtest analysis',
-                    thoughtSteps: [],
+                    reasoning: decision.blockReason || decision.agentDecisions?.strategy?.reasoning || 'Backtest analysis',
+                    thoughtSteps: [], // Orchestrator doesn't have its own thoughts usually, or we could add counsel deliberation here
                     decision: decision.finalDecision,
                     confidence: decision.confidence,
                     symbol: session.symbol,
