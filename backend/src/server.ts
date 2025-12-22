@@ -60,6 +60,11 @@ app.listen(PORT, () => {
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 API Base: http://localhost:${PORT}/api`);
     printRoutes(app);
+
+    // Start Scheduler
+    import('./scheduler.js').then(({ scheduler }) => {
+        scheduler.startTradingLoop();
+    });
 });
 
 export default app;

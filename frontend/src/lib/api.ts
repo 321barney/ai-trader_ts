@@ -54,6 +54,29 @@ class ApiClient {
         return data;
     }
 
+    // Generic methods
+    public async get<T>(endpoint: string) {
+        return this.request<T>(endpoint, { method: 'GET' });
+    }
+
+    public async post<T>(endpoint: string, body?: any) {
+        return this.request<T>(endpoint, {
+            method: 'POST',
+            body: body ? JSON.stringify(body) : undefined
+        });
+    }
+
+    public async put<T>(endpoint: string, body?: any) {
+        return this.request<T>(endpoint, {
+            method: 'PUT',
+            body: body ? JSON.stringify(body) : undefined
+        });
+    }
+
+    public async del<T>(endpoint: string) {
+        return this.request<T>(endpoint, { method: 'DELETE' });
+    }
+
     // Auth
     async register(username: string, email: string, password: string) {
         return this.request<{ user: any; token: string }>('/api/auth/register', {

@@ -116,11 +116,11 @@ export default function DashboardPage() {
         <div className="p-8">
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
+                <h1 className="text-3xl font-bold text-white mb-2">📡 Command Center</h1>
                 <p className="text-gray-400">
                     {connected
-                        ? "Connected to AsterDex • Real-time data"
-                        : "Welcome! Connect your exchange in Settings to see real data."}
+                        ? "Connected to AsterDex • Live Trading Active"
+                        : "Welcome! Connect your exchange in Settings to enable live trading."}
                 </p>
             </div>
 
@@ -273,7 +273,7 @@ export default function DashboardPage() {
                 <div className="mt-6 card glass">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-lg font-bold text-white">Recent Signals</h2>
-                        <Link href="/dashboard/signals" className="text-indigo-400 text-sm hover:underline">
+                        <Link href="/dashboard/history" className="text-indigo-400 text-sm hover:underline">
                             View all
                         </Link>
                     </div>
@@ -283,7 +283,7 @@ export default function DashboardPage() {
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-white font-medium">{signal.symbol}</span>
                                     <span className={`badge ${signal.direction === "LONG" ? "badge-success" :
-                                            signal.direction === "SHORT" ? "badge-danger" : "bg-gray-500/20 text-gray-400"
+                                        signal.direction === "SHORT" ? "badge-danger" : "bg-gray-500/20 text-gray-400"
                                         }`}>
                                         {signal.direction}
                                     </span>
@@ -300,17 +300,17 @@ export default function DashboardPage() {
 
             {/* Quick Actions */}
             <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Link href="/dashboard/market" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
-                    <span className="text-xl">🎯</span>
-                    <span className="text-white font-medium">New Analysis</span>
+                <Link href="/dashboard/strategy" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
+                    <span className="text-xl">🧪</span>
+                    <span className="text-white font-medium">Strategy Lab</span>
                 </Link>
-                <Link href="/dashboard/pnl" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
+                <Link href="/dashboard/metrics" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
                     <span className="text-xl">📊</span>
-                    <span className="text-white font-medium">View PnL</span>
+                    <span className="text-white font-medium">Metrics</span>
                 </Link>
                 <Link href="/dashboard/agents" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
                     <span className="text-xl">🤖</span>
-                    <span className="text-white font-medium">Agent Settings</span>
+                    <span className="text-white font-medium">Agent HQ</span>
                 </Link>
                 <Link href="/dashboard/settings" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
                     <span className="text-xl">⚙️</span>

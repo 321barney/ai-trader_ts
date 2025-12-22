@@ -24,6 +24,7 @@ export interface AgentContext {
     currentPosition?: any;
     riskMetrics?: any;
     aiService?: IAiService;
+    methodology?: string; // SMC, ICT, etc.
 }
 
 export interface AgentDecisionResult {
@@ -75,11 +76,11 @@ export abstract class BaseAgent {
 
     /**
      * Call AI Service with COT prompt
+     * REQUIRES a configured AI Service - no mock fallback.
      */
     protected async callAiModel(prompt: string, aiService?: IAiService): Promise<string> {
         if (!aiService) {
-            // Return mock response if no service provided
-            return this.getMockResponse();
+            throw new Error(`AI Service not configured for ${this.agentType}. Please configure an LLM API key in Settings.`);
         }
 
         try {
@@ -89,8 +90,6 @@ export abstract class BaseAgent {
             ]);
         } catch (error: any) {
             console.error(`Error calling AI model for ${this.agentType}:`, error);
-            // Fallback to mock response or rethrow?
-            // Rethrow so the caller knows it failed
             throw error;
         }
     }

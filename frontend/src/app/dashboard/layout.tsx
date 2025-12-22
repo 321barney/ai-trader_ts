@@ -34,17 +34,14 @@ export default function DashboardLayout({
     };
 
     const navItems = [
-        { href: "/dashboard", icon: "📊", label: "Overview" },
-        { href: "/dashboard/market", icon: "🌐", label: "Market Intel" },
-        { href: "/dashboard/agents", icon: "🤖", label: "AI Agents" },
-        { href: "/dashboard/backtest", icon: "⏪", label: "Backtest" },
-        { href: "/dashboard/analytics", icon: "📈", label: "Analytics" },
-        { href: "/dashboard/signals", icon: "📡", label: "Signals" },
-        { href: "/dashboard/pnl", icon: "💹", label: "PnL" },
+        { href: "/dashboard", icon: "📡", label: "Command Center" },
+        { href: "/dashboard/strategy", icon: "🧪", label: "Strategy Lab" },
+        { href: "/dashboard/backtest", icon: "⏪", label: "Backtest Lab" },
+        { href: "/dashboard/metrics", icon: "📊", label: "Metrics" },
         { href: "/dashboard/history", icon: "📜", label: "History" },
-        { href: "/dashboard/dev", icon: "🔧", label: "Dev Area" },
+        { href: "/dashboard/agents", icon: "🤖", label: "Agent HQ" },
+        { href: "/dashboard/market", icon: "🌐", label: "News & Intel" },
         { href: "/dashboard/settings", icon: "⚙️", label: "Settings" },
-        { href: "/dashboard/tuning", icon: "🎛️", label: "Tuning" },
     ];
 
     return (

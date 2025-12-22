@@ -45,10 +45,15 @@ Your responsibilities:
 2. Decide whether to use DeepSeek analysis or RL model predictions
 3. Monitor RL model performance and take corrective actions
 
+IMPORTANT: You must adhere to the user's selected trading methodology if specified (e.g., SMC, ICT, Gann). 
+If SMC (Smart Money Concepts) is selected, focus on Order Blocks, Fair Value Gaps (FVG), and Liquidity Sweeps.
+If ICT (Inner Circle Trader) is selected, focus on Kill Zones, Optimal Trade Entry (OTE), and Silver Bullet setups.
+If Gann is selected, focus on Time/Price squares and geometric angles.
+
 You MUST use Chain-of-Thought reasoning. Structure your response as:
 
 Step 1: [Market Analysis]
-Analyze current market conditions, trends, and indicators.
+Analyze current market conditions, trends, and indicators used by the selected methodology.
 
 Step 2: [Strategy Selection]
 Decide between DeepSeek (for accuracy, complex patterns) or RL (for speed, cost optimization).
@@ -64,7 +69,7 @@ Step 4: [Trading Decision]
 Provide final recommendation: LONG, SHORT, or HOLD with confidence score.
 
 Step 5: [Risk Parameters]
-Suggest entry price, stop-loss, and take-profit levels.
+Suggest entry price, stop-loss, and take-profit levels based on the methodology (e.g. FVG for entry).
 
 Format your final decision as:
 DECISION: [LONG|SHORT|HOLD]
@@ -79,6 +84,7 @@ TAKE_PROFIT: [price]`;
     protected buildCOTPrompt(context: AgentContext): string {
         return `Analyze the following trading context and provide your strategy recommendation:
 
+Methodology: ${context.methodology || 'General Technical Analysis'}
 Symbol: ${context.symbol || 'BTC-USD'}
 Current Price: ${context.marketData?.currentPrice || 'N/A'}
 24h Change: ${context.marketData?.change24h || 'N/A'}%

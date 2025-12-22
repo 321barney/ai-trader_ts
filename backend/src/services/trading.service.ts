@@ -175,6 +175,14 @@ export class TradingService {
             throw new Error('User not found');
         }
 
+        // Fetch ACTIVE Strategy Version
+        const activeStrategy = await prisma.strategyVersion.findFirst({
+            where: { userId, status: 'ACTIVE' }
+        });
+
+        // Use Strategy Methodology if available, fall back to user setting
+        const methodology = activeStrategy?.baseMethodology || user.methodology || 'SMC';
+
         // Get mock market data (would be real data in production)
         const marketData = await this.getMarketData(symbol);
 
@@ -220,6 +228,7 @@ export class TradingService {
                 currentExposure,
                 openPositions: openPositionsCount,
             },
+            methodology: methodology,
         });
 
         if (decision.finalDecision !== 'HOLD' && decision.confidence > 70) {

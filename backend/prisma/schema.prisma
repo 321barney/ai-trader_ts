@@ -191,7 +191,9 @@ model StrategyVersion {
   learnings       Json     // string[] - COT learnings
   metrics         Json     // Performance metrics
   
-  active          Boolean  @default(true)
+  active          Boolean  @default(false) // Changed default to false, rely on status
+  status          StrategyStatus @default(DRAFT)
+  lastTestedAt    DateTime?
   parentVersionId String?  // For tracking evolution chain
   
   trackedSignals  TrackedSignal[]
@@ -201,6 +203,14 @@ model StrategyVersion {
   @@index([userId])
   @@index([active])
   @@index([version])
+  @@index([status])
+}
+
+enum StrategyStatus {
+  DRAFT
+  TESTED
+  ACTIVE
+  ARCHIVED
 }
 
 model TrackedSignal {
