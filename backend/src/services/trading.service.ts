@@ -183,8 +183,8 @@ export class TradingService {
         // Use Strategy Methodology if available, fall back to user setting
         const methodology = activeStrategy?.baseMethodology || user.methodology || 'SMC';
 
-        // Get mock market data (would be real data in production)
-        const marketData = await this.getMarketData(symbol);
+        // Get market data with strategy-specific analysis (SMC/ICT/Gann patterns)
+        const marketData = await this.getMarketData(symbol, methodology);
 
         // Get RL metrics
         const rlMetrics = await rlService.getMetrics();
@@ -285,9 +285,9 @@ export class TradingService {
      * Get market data (mock for now)
      */
     /**
-     * Get market data from AsterDex
+     * Get market data from AsterDex with Strategy-Specific Analysis
      */
-    private async getMarketData(symbol: string) {
+    private async getMarketData(symbol: string, methodology?: string) {
         try {
             // Get 24hr ticker for general stats
             const ticker = await this.asterService.getTicker(symbol);
@@ -300,9 +300,10 @@ export class TradingService {
             const highs = klines.map(k => k.high);
             const lows = klines.map(k => k.low);
             const closes = klines.map(k => k.close);
+            const opens = klines.map(k => k.open);
 
-            // Calculate Real Indicators
-            const indicators = TechnicalAnalysisService.analyze(highs, lows, closes);
+            // Calculate Indicators with Strategy-Specific patterns
+            const indicators = TechnicalAnalysisService.analyze(highs, lows, closes, opens, methodology);
 
             return {
                 symbol,
@@ -314,7 +315,10 @@ export class TradingService {
                 rsi: indicators.rsi,
                 macd: indicators.macd.MACD || 0,
                 atr: indicators.atr,
-                bollinger: indicators.bollinger
+                bollinger: indicators.bollinger,
+                // Strategy-specific data
+                methodology: methodology || 'GENERIC',
+                ...indicators // Include all strategy-specific fields (orderBlocks, fvg, ote, etc.)
             };
         } catch (error) {
             console.error(`Failed to fetch market data for ${symbol}:`, error);

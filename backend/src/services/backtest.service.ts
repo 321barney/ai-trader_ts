@@ -126,9 +126,17 @@ class BacktestService {
 
         if (!session) return;
 
+        // Fetch strategy version for methodology
+        const strategyVersion = await prisma.strategyVersion.findUnique({
+            where: { id: session.strategyVersionId }
+        });
+
         const msPerDay = 24 * 60 * 60 * 1000;
         const nextDate = new Date(session.currentDate!.getTime() + msPerDay);
         const nextStep = session.currentStep + 1;
+
+        // Get methodology from strategy or user setting
+        const methodology = strategyVersion?.baseMethodology || session.user.methodology || 'SMC';
 
         // Get current portfolio state
         const currentValue = session.portfolioValue || session.initialCapital;
@@ -156,11 +164,12 @@ class BacktestService {
                 // Get klines for technical analysis
                 const klines = await asterService.getKlines(session.symbol, '1h', 100);
 
-                // Calculate real indicators
+                // Calculate indicators with strategy-specific patterns
                 const highs = klines.map(k => k.high);
                 const lows = klines.map(k => k.low);
                 const closes = klines.map(k => k.close);
-                const indicators = TechnicalAnalysisService.analyze(highs, lows, closes);
+                const opens = klines.map(k => k.open);
+                const indicators = TechnicalAnalysisService.analyze(highs, lows, closes, opens, methodology);
 
                 marketData = {
                     symbol: session.symbol,
@@ -173,10 +182,12 @@ class BacktestService {
                     macd: indicators.macd.MACD || 0,
                     atr: indicators.atr,
                     bollinger: indicators.bollinger,
+                    methodology: methodology,
+                    ...indicators, // Include all strategy-specific fields
                     timestamp: nextDate
                 };
 
-                console.log(`[Backtest] Step ${nextStep}: Real data - Price: $${ticker.price}, RSI: ${indicators.rsi?.toFixed(1)}`);
+                console.log(`[Backtest] Step ${nextStep}: ${methodology} analysis - Price: $${ticker.price}, RSI: ${indicators.rsi?.toFixed(1)}`);
             } catch (fetchError) {
                 console.warn(`[Backtest] Failed to fetch real data, using last known:`, fetchError);
                 // Fallback: minimal simulated data
