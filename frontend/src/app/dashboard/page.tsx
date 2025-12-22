@@ -1,30 +1,137 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { API_BASE } from "@/lib/api";
+import Link from "next/link";
+
+interface Balance {
+    asset: string;
+    available: number;
+    total: number;
+}
+
+interface Position {
+    symbol: string;
+    side: string;
+    positionAmt: number;
+    entryPrice: number;
+    unrealizedPnl: number;
+}
+
+interface Signal {
+    symbol: string;
+    direction: string;
+    confidence: number;
+    createdAt: string;
+}
+
 export default function DashboardPage() {
-    // Mock data
-    const portfolioValue = 52340.50;
-    const dailyPnL = 1234.50;
-    const dailyPnLPercent = 2.42;
-    const openPositions = 3;
-    const activeSignals = 5;
+    const [loading, setLoading] = useState(true);
+    const [connected, setConnected] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const recentSignals = [
-        { symbol: "BTC-USD", direction: "LONG", confidence: 0.85, time: "2 min ago" },
-        { symbol: "ETH-USD", direction: "HOLD", confidence: 0.62, time: "15 min ago" },
-        { symbol: "SOL-USD", direction: "SHORT", confidence: 0.78, time: "1 hr ago" },
-    ];
+    // Portfolio data
+    const [balances, setBalances] = useState<Balance[]>([]);
+    const [totalValue, setTotalValue] = useState(0);
+    const [positions, setPositions] = useState<Position[]>([]);
+    const [signals, setSignals] = useState<Signal[]>([]);
 
-    const agentActivity = [
-        { agent: "Strategy Consultant", action: "Generated LONG signal for BTC-USD", time: "2 min ago" },
-        { agent: "Risk Officer", action: "Approved trade with 2% position size", time: "2 min ago" },
-        { agent: "Market Analyst", action: "Detected whale accumulation", time: "15 min ago" },
-    ];
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+
+    const fetchDashboardData = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setError("Not authenticated");
+            setLoading(false);
+            return;
+        }
+
+        const headers = {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+        };
+
+        try {
+            // Fetch portfolio
+            const portfolioRes = await fetch(`${API_BASE}/api/trading/portfolio`, { headers });
+            const portfolioData = await portfolioRes.json();
+
+            if (portfolioData.success && portfolioData.data.connected) {
+                setConnected(true);
+                setBalances(portfolioData.data.balance || []);
+                setTotalValue(portfolioData.data.totalValue || 0);
+            } else {
+                setError(portfolioData.data?.error || "Failed to fetch portfolio");
+            }
+
+            // Fetch positions
+            const positionsRes = await fetch(`${API_BASE}/api/trading/positions`, { headers });
+            const positionsData = await positionsRes.json();
+            if (positionsData.success) {
+                setPositions(positionsData.data.positions || []);
+            }
+
+            // Fetch signals
+            const signalsRes = await fetch(`${API_BASE}/api/trading/signals`, { headers });
+            const signalsData = await signalsRes.json();
+            if (signalsData.success) {
+                setSignals(signalsData.data || []);
+            }
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Calculate unrealized PnL from positions
+    const unrealizedPnl = positions.reduce((sum, p) => sum + (p.unrealizedPnl || 0), 0);
+
+    // Format time ago
+    const timeAgo = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+        if (diff < 60) return `${diff}s ago`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
+    };
+
+    if (loading) {
+        return (
+            <div className="p-8 flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                    <p className="text-gray-400">Loading dashboard...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-8">
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-                <p className="text-gray-400">Welcome back! Here&apos;s your trading overview.</p>
+                <p className="text-gray-400">
+                    {connected
+                        ? "Connected to AsterDex • Real-time data"
+                        : "Welcome! Connect your exchange in Settings to see real data."}
+                </p>
             </div>
+
+            {/* Error Banner */}
+            {error && !connected && (
+                <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <p className="text-yellow-400 text-sm">
+                        ⚠️ {error} — <Link href="/dashboard/settings" className="underline">Go to Settings</Link>
+                    </p>
+                </div>
+            )}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -32,143 +139,183 @@ export default function DashboardPage() {
                 <div className="card glass">
                     <div className="text-gray-400 text-sm mb-2">Portfolio Value</div>
                     <div className="text-3xl font-bold text-white">
-                        ${portfolioValue.toLocaleString()}
+                        {connected ? (
+                            <>
+                                {balances.map((b, i) => (
+                                    <span key={i} className="block">
+                                        {b.total.toFixed(2)} <span className="text-lg text-gray-400">{b.asset}</span>
+                                    </span>
+                                ))}
+                                {balances.length === 0 && "$0.00"}
+                            </>
+                        ) : (
+                            <span className="text-gray-500">--</span>
+                        )}
                     </div>
-                    <div className="text-green-400 text-sm mt-2 flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                        +{dailyPnLPercent}% today
+                    <div className="text-gray-500 text-sm mt-2">
+                        {connected ? "From AsterDex" : "Not connected"}
                     </div>
                 </div>
 
-                {/* Daily PnL */}
+                {/* Unrealized PnL */}
                 <div className="card glass">
-                    <div className="text-gray-400 text-sm mb-2">Daily PnL</div>
-                    <div className="text-3xl font-bold text-green-400">
-                        +${dailyPnL.toLocaleString()}
+                    <div className="text-gray-400 text-sm mb-2">Unrealized PnL</div>
+                    <div className={`text-3xl font-bold ${unrealizedPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {connected ? (
+                            `${unrealizedPnl >= 0 ? "+" : ""}$${unrealizedPnl.toFixed(2)}`
+                        ) : (
+                            <span className="text-gray-500">--</span>
+                        )}
                     </div>
                     <div className="text-gray-500 text-sm mt-2">
-                        Realized + Unrealized
+                        From open positions
                     </div>
                 </div>
 
                 {/* Open Positions */}
                 <div className="card glass">
                     <div className="text-gray-400 text-sm mb-2">Open Positions</div>
-                    <div className="text-3xl font-bold text-white">{openPositions}</div>
+                    <div className="text-3xl font-bold text-white">
+                        {connected ? positions.filter(p => p.positionAmt !== 0).length : "--"}
+                    </div>
                     <div className="text-gray-500 text-sm mt-2">
-                        Across 3 pairs
+                        {connected ? "Active trades" : "Not connected"}
                     </div>
                 </div>
 
                 {/* Active Signals */}
                 <div className="card glass">
                     <div className="text-gray-400 text-sm mb-2">Active Signals</div>
-                    <div className="text-3xl font-bold text-indigo-400">{activeSignals}</div>
+                    <div className="text-3xl font-bold text-indigo-400">
+                        {signals.length}
+                    </div>
                     <div className="text-gray-500 text-sm mt-2">
-                        2 pending execution
+                        AI generated
                     </div>
                 </div>
             </div>
 
             {/* Two Column Layout */}
             <div className="grid lg:grid-cols-2 gap-6">
-                {/* Recent Signals */}
+                {/* Balances */}
                 <div className="card glass">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold text-white">Recent Signals</h2>
-                        <a href="/dashboard/signals" className="text-indigo-400 text-sm hover:underline">
-                            View all
-                        </a>
+                        <h2 className="text-lg font-bold text-white">Balances</h2>
+                        <Link href="/dashboard/settings" className="text-indigo-400 text-sm hover:underline">
+                            Settings
+                        </Link>
                     </div>
-                    <div className="space-y-4">
-                        {recentSignals.map((signal, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold ${signal.direction === "LONG"
-                                            ? "bg-green-500/20 text-green-400"
-                                            : signal.direction === "SHORT"
-                                                ? "bg-red-500/20 text-red-400"
-                                                : "bg-gray-500/20 text-gray-400"
-                                        }`}>
-                                        {signal.direction === "LONG" ? "↑" : signal.direction === "SHORT" ? "↓" : "—"}
+                    <div className="space-y-3">
+                        {connected && balances.length > 0 ? (
+                            balances.map((bal, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm">
+                                            {bal.asset.substring(0, 2)}
+                                        </div>
+                                        <span className="text-white font-medium">{bal.asset}</span>
                                     </div>
-                                    <div>
-                                        <div className="text-white font-medium">{signal.symbol}</div>
-                                        <div className="text-gray-500 text-sm">{signal.time}</div>
+                                    <div className="text-right">
+                                        <div className="text-white">{bal.total.toFixed(4)}</div>
+                                        <div className="text-gray-500 text-sm">Available: {bal.available.toFixed(4)}</div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <div className={`badge ${signal.direction === "LONG"
-                                            ? "badge-success"
-                                            : signal.direction === "SHORT"
-                                                ? "badge-danger"
-                                                : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
-                                        }`}>
-                                        {signal.direction}
-                                    </div>
-                                    <div className="text-gray-500 text-sm mt-1">
-                                        {Math.round(signal.confidence * 100)}% conf
-                                    </div>
-                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-8 text-gray-500">
+                                {connected ? "No balances found" : "Connect exchange to see balances"}
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
 
-                {/* Agent Activity */}
+                {/* Open Positions */}
                 <div className="card glass">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold text-white">Agent Activity</h2>
-                        <a href="/dashboard/agents" className="text-indigo-400 text-sm hover:underline">
-                            View all
-                        </a>
+                        <h2 className="text-lg font-bold text-white">Open Positions</h2>
+                        <Link href="/dashboard/history" className="text-indigo-400 text-sm hover:underline">
+                            History
+                        </Link>
                     </div>
-                    <div className="space-y-4">
-                        {agentActivity.map((activity, i) => (
-                            <div key={i} className="flex items-start gap-4 p-4 bg-white/5 rounded-lg">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${activity.agent.includes("Strategy")
-                                        ? "bg-purple-500/20"
-                                        : activity.agent.includes("Risk")
-                                            ? "bg-emerald-500/20"
-                                            : "bg-blue-500/20"
-                                    }`}>
-                                    {activity.agent.includes("Strategy")
-                                        ? "🧠"
-                                        : activity.agent.includes("Risk")
-                                            ? "🛡️"
-                                            : "🔍"}
+                    <div className="space-y-3">
+                        {connected && positions.filter(p => p.positionAmt !== 0).length > 0 ? (
+                            positions.filter(p => p.positionAmt !== 0).map((pos, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold ${pos.side === "LONG" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+                                            }`}>
+                                            {pos.side === "LONG" ? "↑" : "↓"}
+                                        </div>
+                                        <div>
+                                            <div className="text-white font-medium">{pos.symbol}</div>
+                                            <div className="text-gray-500 text-sm">{pos.side} • {Math.abs(pos.positionAmt)}</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className={pos.unrealizedPnl >= 0 ? "text-green-400" : "text-red-400"}>
+                                            {pos.unrealizedPnl >= 0 ? "+" : ""}${pos.unrealizedPnl?.toFixed(2) || "0.00"}
+                                        </div>
+                                        <div className="text-gray-500 text-sm">Entry: ${pos.entryPrice?.toFixed(2)}</div>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <div className="text-white font-medium text-sm">{activity.agent}</div>
-                                    <div className="text-gray-400 text-sm">{activity.action}</div>
-                                    <div className="text-gray-600 text-xs mt-1">{activity.time}</div>
-                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-8 text-gray-500">
+                                {connected ? "No open positions" : "Connect exchange to see positions"}
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </div>
 
+            {/* Recent Signals */}
+            {signals.length > 0 && (
+                <div className="mt-6 card glass">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-bold text-white">Recent Signals</h2>
+                        <Link href="/dashboard/signals" className="text-indigo-400 text-sm hover:underline">
+                            View all
+                        </Link>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                        {signals.slice(0, 6).map((signal, i) => (
+                            <div key={i} className="p-4 bg-white/5 rounded-lg">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-white font-medium">{signal.symbol}</span>
+                                    <span className={`badge ${signal.direction === "LONG" ? "badge-success" :
+                                            signal.direction === "SHORT" ? "badge-danger" : "bg-gray-500/20 text-gray-400"
+                                        }`}>
+                                        {signal.direction}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-500">{timeAgo(signal.createdAt)}</span>
+                                    <span className="text-gray-400">{Math.round(signal.confidence * 100)}% conf</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Quick Actions */}
             <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button className="card glass glass-hover flex items-center gap-3 justify-center py-4">
+                <Link href="/dashboard/market" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
                     <span className="text-xl">🎯</span>
                     <span className="text-white font-medium">New Analysis</span>
-                </button>
-                <button className="card glass glass-hover flex items-center gap-3 justify-center py-4">
+                </Link>
+                <Link href="/dashboard/pnl" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
                     <span className="text-xl">📊</span>
                     <span className="text-white font-medium">View PnL</span>
-                </button>
-                <button className="card glass glass-hover flex items-center gap-3 justify-center py-4">
+                </Link>
+                <Link href="/dashboard/agents" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
                     <span className="text-xl">🤖</span>
                     <span className="text-white font-medium">Agent Settings</span>
-                </button>
-                <button className="card glass glass-hover flex items-center gap-3 justify-center py-4">
-                    <span className="text-xl">⚡</span>
-                    <span className="text-white font-medium">Trade Now</span>
-                </button>
+                </Link>
+                <Link href="/dashboard/settings" className="card glass glass-hover flex items-center gap-3 justify-center py-4">
+                    <span className="text-xl">⚙️</span>
+                    <span className="text-white font-medium">Settings</span>
+                </Link>
             </div>
         </div>
     );

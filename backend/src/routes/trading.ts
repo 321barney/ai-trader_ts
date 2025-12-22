@@ -226,5 +226,109 @@ router.post('/test-deepseek', authMiddleware, asyncHandler(async (req: Request, 
     }
 }));
 
+/**
+ * GET /api/trading/portfolio
+ * Get real portfolio data from AsterDex
+ */
+router.get('/portfolio', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        // Get user's AsterDex credentials
+        const { prisma } = await import('../utils/prisma.js');
+        const user = await prisma.user.findUnique({
+            where: { id: req.userId }
+        });
+
+        if (!user?.asterApiKey || !user?.asterApiSecret) {
+            return successResponse(res, {
+                connected: false,
+                balance: [],
+                totalValue: 0,
+                error: 'AsterDex not connected. Please add API credentials in Settings.'
+            });
+        }
+
+        // Create Aster service with user's credentials
+        const { createAsterService } = await import('../services/aster.service.js');
+        const aster = createAsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet ?? true);
+
+        // Fetch balance
+        const balances = await aster.getBalance();
+
+        // Calculate total value (assuming USDT as base)
+        const totalValue = balances.reduce((sum, b) => sum + b.total, 0);
+
+        return successResponse(res, {
+            connected: true,
+            balance: balances,
+            totalValue,
+            testnet: user.asterTestnet ?? true
+        });
+    } catch (error: any) {
+        return successResponse(res, {
+            connected: false,
+            balance: [],
+            totalValue: 0,
+            error: error.message
+        });
+    }
+}));
+
+/**
+ * GET /api/trading/positions
+ * Get open positions from AsterDex
+ */
+router.get('/positions', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { prisma } = await import('../utils/prisma.js');
+        const user = await prisma.user.findUnique({
+            where: { id: req.userId }
+        });
+
+        if (!user?.asterApiKey || !user?.asterApiSecret) {
+            return successResponse(res, {
+                positions: [],
+                error: 'AsterDex not connected'
+            });
+        }
+
+        const { createAsterService } = await import('../services/aster.service.js');
+        const aster = createAsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet ?? true);
+
+        const positions = await aster.getPositions();
+
+        return successResponse(res, {
+            positions,
+            count: positions.length
+        });
+    } catch (error: any) {
+        return successResponse(res, {
+            positions: [],
+            error: error.message
+        });
+    }
+}));
+
+/**
+ * GET /api/trading/pairs
+ * Get available trading pairs from AsterDex
+ */
+router.get('/pairs', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { asterService } = await import('../services/aster.service.js');
+        const pairs = await asterService.getPairs();
+
+        // Filter to only trading pairs
+        const activePairs = pairs.filter(p => p.status === 'TRADING');
+
+        return successResponse(res, {
+            pairs: activePairs,
+            count: activePairs.length
+        });
+    } catch (error: any) {
+        return errorResponse(res, error.message);
+    }
+}));
+
 export const tradingRouter = router;
+
 
