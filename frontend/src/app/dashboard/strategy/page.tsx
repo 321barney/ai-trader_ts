@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
 interface StrategyVersion {
@@ -14,6 +15,7 @@ interface StrategyVersion {
 }
 
 export default function StrategyLabPage() {
+    const router = useRouter();
     const [versions, setVersions] = useState<StrategyVersion[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedVersion, setSelectedVersion] = useState<StrategyVersion | null>(null);
@@ -83,19 +85,10 @@ export default function StrategyLabPage() {
         }
     };
 
-    const handleTest = async () => {
+    const handleTest = () => {
         if (!selectedVersion) return;
-        try {
-            const res = await api.put<StrategyVersion>(`/api/strategies/${selectedVersion.id}/test`, {});
-            if (res.success && res.data) {
-                setVersions(versions.map(v => v.id === selectedVersion.id ? res.data! : v));
-                setSelectedVersion(res.data);
-                alert('Strategy marked as TESTED! You can now promote it to live.');
-            }
-        } catch (error) {
-            console.error('Failed to mark as tested:', error);
-            alert('Failed to mark as tested');
-        }
+        // Redirect to Backtest Lab with this strategy pre-selected
+        router.push(`/dashboard/backtest?strategyId=${selectedVersion.id}`);
     };
 
     const handlePromote = async () => {

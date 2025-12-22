@@ -130,4 +130,26 @@ router.put('/:id/promote', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * PUT /api/strategies/:id/backtest-complete
+ * Mark strategy backtest as completed (required before marking as TESTED)
+ */
+router.put('/:id/backtest-complete', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const updated = await strategyService.markBacktestCompleted(id);
+
+        res.json({
+            success: true,
+            data: updated
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 export { router as strategyRouter };

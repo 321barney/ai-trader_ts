@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { API_BASE } from '@/lib/api';
 
 interface ReplayConfig {
@@ -22,7 +23,9 @@ interface Strategy {
     baseMethodology: string;
 }
 
-export default function BacktestPage() {
+function BacktestContent() {
+    const searchParams = useSearchParams();
+    const strategyIdFromUrl = searchParams.get('strategyId');
     const [config, setConfig] = useState<ReplayConfig>({
         initDate: '2024-01-01',
         endDate: '2024-03-31',
@@ -66,16 +69,20 @@ export default function BacktestPage() {
                 const stratData = await stratRes.json();
                 if (stratData.success && Array.isArray(stratData.data)) {
                     setStrategies(stratData.data);
-                    // Default to first DRAFT strategy
-                    const draft = stratData.data.find((s: Strategy) => s.status === 'DRAFT');
-                    if (draft) setSelectedStrategyId(draft.id);
+                    // Use strategyId from URL if present, otherwise default to first DRAFT
+                    if (strategyIdFromUrl) {
+                        setSelectedStrategyId(strategyIdFromUrl);
+                    } else {
+                        const draft = stratData.data.find((s: Strategy) => s.status === 'DRAFT');
+                        if (draft) setSelectedStrategyId(draft.id);
+                    }
                 }
             } catch (e) {
                 console.error('Failed to fetch user data:', e);
             }
         };
         fetchUserData();
-    }, []);
+    }, [strategyIdFromUrl]);
 
     // Keep ref in sync with state
     useEffect(() => {
@@ -372,14 +379,38 @@ export default function BacktestPage() {
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <button
                                     onClick={async () => {
-                                        // Mark strategy as tested and show confirmation
+                                        if (!selectedStrategyId) {
+                                            alert('No strategy selected');
+                                            return;
+                                        }
                                         try {
                                             const token = localStorage.getItem('token');
-                                            // Get active strategy ID (would need to fetch or pass from context)
-                                            alert('Strategy approved! Go to Strategy Lab to promote it to ACTIVE.');
-                                            // In full implementation: call PUT /api/strategies/:id/test
+                                            // First mark backtest as completed
+                                            await fetch(`${API_BASE}/api/strategies/${selectedStrategyId}/backtest-complete`, {
+                                                method: 'PUT',
+                                                headers: {
+                                                    Authorization: `Bearer ${token}`,
+                                                    'Content-Type': 'application/json'
+                                                }
+                                            });
+                                            // Then mark as tested
+                                            const res = await fetch(`${API_BASE}/api/strategies/${selectedStrategyId}/test`, {
+                                                method: 'PUT',
+                                                headers: {
+                                                    Authorization: `Bearer ${token}`,
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: '{}'
+                                            });
+                                            const data = await res.json();
+                                            if (data.success) {
+                                                alert('✅ Strategy approved and marked as TESTED! Go to Strategy Lab to promote it to ACTIVE.');
+                                            } else {
+                                                alert(`❌ ${data.error || 'Failed to approve'}`);
+                                            }
                                         } catch (e) {
                                             console.error(e);
+                                            alert('Failed to approve strategy');
                                         }
                                     }}
                                     className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
@@ -403,5 +434,14 @@ export default function BacktestPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+// Wrapper component with Suspense for useSearchParams
+export default function BacktestPage() {
+    return (
+        <Suspense fallback={<div className="p-6 text-white">Loading...</div>}>
+            <BacktestContent />
+        </Suspense>
     );
 }
