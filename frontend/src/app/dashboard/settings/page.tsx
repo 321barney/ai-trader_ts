@@ -145,6 +145,7 @@ export default function SettingsPage() {
                         ? { asterApiKey: settings.asterApiKey } : {}),
                     ...(settings.asterApiSecret && !settings.asterApiSecret.includes("••••")
                         ? { asterApiSecret: settings.asterApiSecret } : {}),
+
                     asterTestnet: settings.asterTestnet,
                 })
             });
