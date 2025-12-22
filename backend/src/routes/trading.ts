@@ -151,18 +151,34 @@ router.get('/pnl', authMiddleware, asyncHandler(async (req: Request, res: Respon
  * Test Aster exchange API connection
  */
 router.post('/test-aster', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
-    const { apiKey, apiSecret, testnet } = req.body;
+    let { apiKey, apiSecret, testnet } = req.body;
 
     try {
+        // If keys not provided, try to get from DB
+        if (!apiKey || !apiSecret) {
+            const { prisma } = await import('../utils/prisma.js');
+            const user = await prisma.user.findUnique({ where: { id: req.userId } });
+
+            if (user?.asterApiKey && user?.asterApiSecret) {
+                apiKey = user.asterApiKey;
+                apiSecret = user.asterApiSecret;
+                testnet = user.asterTestnet ?? true;
+            } else {
+                return successResponse(res, {
+                    connected: false,
+                    error: 'Please provide API credentials or save them in settings first'
+                });
+            }
+        }
+
         // Import Aster service dynamically to test connection
-        const { asterService } = await import('../services/aster.service.js');
+        const { createAsterService } = await import('../services/aster.service.js');
 
         // Create a test client with provided credentials
-        const testService = Object.create(asterService);
-        testService.configure(apiKey, apiSecret, testnet ?? true);
+        const testService = createAsterService(apiKey, apiSecret, testnet ?? true);
 
-        // Test by fetching account balance
-        const balance = await testService.getAccountBalance();
+        // Test by fetching balance
+        const balance = await testService.getBalance();
 
         return successResponse(res, {
             connected: true,
@@ -182,18 +198,25 @@ router.post('/test-aster', authMiddleware, asyncHandler(async (req: Request, res
  * Test DeepSeek AI API connection
  */
 router.post('/test-deepseek', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
-    const { apiKey } = req.body;
+    let { apiKey } = req.body;
 
+    // If key not provided, try to get from DB
     if (!apiKey) {
-        return successResponse(res, {
-            connected: false,
-            error: 'API key is required'
-        });
+        const { prisma } = await import('../utils/prisma.js');
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (user?.deepseekApiKey) {
+            apiKey = user.deepseekApiKey;
+        } else {
+            return successResponse(res, {
+                connected: false,
+                error: 'Please provide API key or save it in settings first'
+            });
+        }
     }
 
     try {
         // Test DeepSeek API directly
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -201,23 +224,20 @@ router.post('/test-deepseek', authMiddleware, asyncHandler(async (req: Request, 
             },
             body: JSON.stringify({
                 model: 'deepseek-chat',
-                messages: [{ role: 'user', content: 'test' }],
-                max_tokens: 5
+                messages: [{ role: 'user', content: 'Ping' }],
+                max_tokens: 1
             })
         });
 
-        if (response.ok) {
-            return successResponse(res, {
-                connected: true,
-                message: 'DeepSeek API connection successful'
-            });
-        } else {
-            const errorData = await response.json().catch(() => ({})) as any;
-            return successResponse(res, {
-                connected: false,
-                error: errorData.error?.message || `API returned ${response.status}`
-            });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error?.message || 'DeepSeek API connection failed');
         }
+
+        return successResponse(res, {
+            connected: true,
+            message: 'Successfully connected to DeepSeek AI'
+        });
     } catch (error: any) {
         return successResponse(res, {
             connected: false,

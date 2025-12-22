@@ -34,7 +34,7 @@ export default function SettingsPage() {
 
     // Test Aster connection
     const testAsterConnection = async () => {
-        if (!settings.asterApiKey || settings.asterApiKey.includes("••••")) {
+        if (!settings.asterApiKey) {
             setAsterTest({ testing: false, result: { connected: false, error: "Please enter your API key first" } });
             return;
         }
@@ -45,8 +45,9 @@ export default function SettingsPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
-                    apiKey: settings.asterApiKey,
-                    apiSecret: settings.asterApiSecret,
+                    // If masked, don't send keys so backend uses stored ones
+                    apiKey: settings.asterApiKey.includes("••••") ? undefined : settings.asterApiKey,
+                    apiSecret: settings.asterApiSecret?.includes("••••") ? undefined : settings.asterApiSecret,
                     testnet: true
                 })
             });
@@ -59,7 +60,7 @@ export default function SettingsPage() {
 
     // Test DeepSeek connection
     const testDeepseekConnection = async () => {
-        if (!settings.deepseekApiKey || settings.deepseekApiKey.includes("••••")) {
+        if (!settings.deepseekApiKey) {
             setDeepseekTest({ testing: false, result: { connected: false, error: "Please enter your API key first" } });
             return;
         }
@@ -69,7 +70,9 @@ export default function SettingsPage() {
             const res = await fetch(`${API_BASE}/api/trading/test-deepseek`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ apiKey: settings.deepseekApiKey })
+                body: JSON.stringify({
+                    apiKey: settings.deepseekApiKey.includes("••••") ? undefined : settings.deepseekApiKey
+                })
             });
             const data = await res.json();
             setDeepseekTest({ testing: false, result: data.data || data });
