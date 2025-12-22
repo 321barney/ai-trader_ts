@@ -11,6 +11,18 @@ import { successResponse, errorResponse } from '../utils/response.js';
 const router = Router();
 
 /**
+ * GET /api/trading/signals
+ */
+router.get('/signals', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const signals = await tradingService.getSignals(req.userId!);
+        return successResponse(res, signals);
+    } catch (error: any) {
+        return errorResponse(res, error.message);
+    }
+}));
+
+/**
  * GET /api/trading/status
  */
 router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Response) => {

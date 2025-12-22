@@ -6,6 +6,7 @@ import { prisma } from '../utils/prisma.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from './rl.service.js';
 import { AsterService } from './aster.service.js';
+import { TechnicalAnalysisService } from './technical-analysis.service.js';
 
 export class TradingService {
     private orchestrator: AgentOrchestrator;
@@ -227,12 +228,18 @@ export class TradingService {
             // Get 24hr ticker for general stats
             const ticker = await this.asterService.getTicker(symbol);
 
-            // Get RSI/MACD/ATR (Calculated from Klines) - Implementation simplified for now
-            // Ideally we'd calculate these using technicalindicators lib on fetched klines
+            // Get RSI/MACD/ATR (Calculated from Klines)
+            // Fetch Klines for TA (100 candles for sufficient history)
             const klines = await this.asterService.getKlines(symbol, '1h', 100);
 
-            // Simple mock indicators for now until we add a technical analysis lib
-            // In a real scenario, use 'technicalindicators' package
+            // Format data for technical analysis
+            const highs = klines.map(k => k.high);
+            const lows = klines.map(k => k.low);
+            const closes = klines.map(k => k.close);
+
+            // Calculate Real Indicators
+            const indicators = TechnicalAnalysisService.analyze(highs, lows, closes);
+
             return {
                 symbol,
                 currentPrice: ticker.price,
@@ -240,9 +247,10 @@ export class TradingService {
                 high24h: ticker.high24h,
                 low24h: ticker.low24h,
                 volume: ticker.volume24h,
-                rsi: 50, // Placeholder
-                macd: 0, // Placeholder
-                atr: 0,  // Placeholder
+                rsi: indicators.rsi,
+                macd: indicators.macd.MACD || 0,
+                atr: indicators.atr,
+                bollinger: indicators.bollinger
             };
         } catch (error) {
             console.error(`Failed to fetch market data for ${symbol}:`, error);
@@ -376,7 +384,7 @@ export class TradingService {
     async getPnLSummary(userId: string) {
         const trades = await prisma.trade.findMany({
             where: { userId, status: 'CLOSED' },
-            select: { pnl: true, closedAt: true },
+            select: { pnl: true, closedAt: true, symbol: true, methodology: true },
         });
 
         const now = new Date();
@@ -397,8 +405,52 @@ export class TradingService {
             .reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
 
         const totalPnL = trades.reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
+        const winCount = trades.filter((t: any) => (t.pnl || 0) > 0).length;
+        const winRate = trades.length > 0 ? (winCount / trades.length) * 100 : 0;
 
-        return { pnl1D, pnl7D, pnl30D, totalPnL, totalTrades: trades.length };
+        // Calculate breakdown by Pair
+        const pairStats: Record<string, { pnl: number, trades: number, wins: number }> = {};
+        trades.forEach((t: any) => {
+            if (!pairStats[t.symbol]) pairStats[t.symbol] = { pnl: 0, trades: 0, wins: 0 };
+            pairStats[t.symbol].pnl += (t.pnl || 0);
+            pairStats[t.symbol].trades += 1;
+            if ((t.pnl || 0) > 0) pairStats[t.symbol].wins += 1;
+        });
+
+        const pnlByPair = Object.entries(pairStats).map(([pair, stats]) => ({
+            pair,
+            pnl: stats.pnl,
+            trades: stats.trades,
+            winRate: Math.round((stats.wins / stats.trades) * 100)
+        })).sort((a, b) => b.pnl - a.pnl);
+
+        // Calculate breakdown by Strategy
+        const strategyStats: Record<string, { pnl: number, trades: number, wins: number }> = {};
+        trades.forEach((t: any) => {
+            const strategy = t.methodology || 'Unknown';
+            if (!strategyStats[strategy]) strategyStats[strategy] = { pnl: 0, trades: 0, wins: 0 };
+            strategyStats[strategy].pnl += (t.pnl || 0);
+            strategyStats[strategy].trades += 1;
+            if ((t.pnl || 0) > 0) strategyStats[strategy].wins += 1;
+        });
+
+        const pnlByStrategy = Object.entries(strategyStats).map(([strategy, stats]) => ({
+            strategy,
+            pnl: stats.pnl,
+            trades: stats.trades,
+            winRate: Math.round((stats.wins / stats.trades) * 100)
+        })).sort((a, b) => b.pnl - a.pnl);
+
+        return {
+            pnl1D,
+            pnl7D,
+            pnl30D,
+            totalPnL,
+            totalTrades: trades.length,
+            winRate: Math.round(winRate),
+            pnlByPair,
+            pnlByStrategy
+        };
     }
 }
 
