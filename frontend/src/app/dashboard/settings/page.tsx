@@ -304,29 +304,41 @@ export default function SettingsPage() {
                     <div className="space-y-6">
                         {/* Aster API Key */}
                         <div>
-                            <label className="text-white font-medium block mb-2">Aster API Key</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type={editingKey === 'aster' ? 'text' : 'password'}
-                                    value={settings.asterApiKey}
-                                    onChange={(e) => setSettings({ ...settings, asterApiKey: e.target.value })}
-                                    readOnly={editingKey !== 'aster'}
-                                    placeholder="Enter API key"
-                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
-                                />
-                                <button
-                                    onClick={() => setEditingKey(editingKey === 'aster' ? null : 'aster')}
-                                    className="btn-secondary px-4"
-                                >
-                                    {editingKey === 'aster' ? 'Done' : 'Edit'}
-                                </button>
-                                <button
-                                    onClick={testAsterConnection}
-                                    disabled={asterTest.testing}
-                                    className="btn-secondary px-4"
-                                >
-                                    {asterTest.testing ? '...' : 'Test'}
-                                </button>
+                            <label className="text-white font-medium block mb-2">Aster API Key & Secret</label>
+                            <div className="space-y-3">
+                                <div>
+                                    <input
+                                        type={editingKey === 'aster' ? 'text' : 'password'}
+                                        value={settings.asterApiKey}
+                                        onChange={(e) => setSettings({ ...settings, asterApiKey: e.target.value })}
+                                        readOnly={editingKey !== 'aster'}
+                                        placeholder="API Key"
+                                        className="w-full px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white mb-2"
+                                    />
+                                    <input
+                                        type={editingKey === 'aster' ? 'text' : 'password'}
+                                        value={settings.asterApiSecret}
+                                        onChange={(e) => setSettings({ ...settings, asterApiSecret: e.target.value })}
+                                        readOnly={editingKey !== 'aster'}
+                                        placeholder="API Secret"
+                                        className="w-full px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setEditingKey(editingKey === 'aster' ? null : 'aster')}
+                                        className="btn-secondary px-4 flex-1"
+                                    >
+                                        {editingKey === 'aster' ? 'Done' : 'Edit Credentials'}
+                                    </button>
+                                    <button
+                                        onClick={testAsterConnection}
+                                        disabled={asterTest.testing}
+                                        className="btn-secondary px-4 flex-1"
+                                    >
+                                        {asterTest.testing ? 'Testing...' : 'Test Connection'}
+                                    </button>
+                                </div>
                             </div>
                             <label className="flex items-center gap-2 mt-2 cursor-pointer">
                                 <input
