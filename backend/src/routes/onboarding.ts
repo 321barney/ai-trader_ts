@@ -66,6 +66,30 @@ router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Res
 }));
 
 /**
+ * POST /api/onboarding/fix
+ * Force-complete onboarding for existing users
+ */
+router.post('/fix', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    const user = await prisma.user.update({
+        where: { id: req.userId },
+        data: {
+            onboardingCompleted: true,
+            onboardingStep: 6,
+        },
+        select: {
+            id: true,
+            onboardingCompleted: true,
+        },
+    });
+
+    return successResponse(res, {
+        fixed: true,
+        onboardingCompleted: user.onboardingCompleted,
+        message: 'Onboarding marked as complete'
+    });
+}));
+
+/**
  * POST /api/onboarding/step
  */
 router.post('/step', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
@@ -116,6 +140,7 @@ router.post('/step', authMiddleware, asyncHandler(async (req: Request, res: Resp
             updateData = {
                 ...updateData,
                 methodology: (validation.data as any).methodology,
+                onboardingCompleted: true, // Mark completed at step 5 since step 6 is optional
             };
             break;
         case 6:

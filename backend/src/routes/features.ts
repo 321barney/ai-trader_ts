@@ -118,7 +118,11 @@ router.post('/replay/action/:sessionId', authMiddleware, asyncHandler(async (req
     }
 
     if (!result) {
-        return res.status(404).json({ success: false, error: 'Session not found or invalid state' });
+        return res.status(404).json({
+            success: false,
+            error: 'Session expired or not found. Sessions are stored in memory and reset on server restart. Please start a new backtest.',
+            code: 'SESSION_EXPIRED'
+        });
     }
 
     res.json({ success: true, data: result });

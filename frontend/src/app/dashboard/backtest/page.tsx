@@ -15,6 +15,13 @@ interface PortfolioSnapshot {
     value: number;
 }
 
+interface Strategy {
+    id: string;
+    version: number;
+    status: string;
+    baseMethodology: string;
+}
+
 export default function BacktestPage() {
     const [config, setConfig] = useState<ReplayConfig>({
         initDate: '2024-01-01',
@@ -29,6 +36,46 @@ export default function BacktestPage() {
     const [portfolioHistory, setPortfolioHistory] = useState<PortfolioSnapshot[]>([]);
     const [autoPlay, setAutoPlay] = useState(false);
     const autoPlayRef = useRef(autoPlay);
+
+    // User's selected pairs from settings
+    const [userPairs, setUserPairs] = useState<string[]>(['BTCUSDT', 'ETHUSDT']);
+    const [strategies, setStrategies] = useState<Strategy[]>([]);
+    const [selectedStrategyId, setSelectedStrategyId] = useState<string>('');
+
+    // Fetch user pairs and strategies on mount
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                // Fetch user settings for pairs
+                const userRes = await fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const userData = await userRes.json();
+                if (userData.success && userData.data?.tradingSettings?.pairs) {
+                    setUserPairs(userData.data.tradingSettings.pairs);
+                    if (userData.data.tradingSettings.pairs.length > 0) {
+                        setConfig(prev => ({ ...prev, symbol: userData.data.tradingSettings.pairs[0] }));
+                    }
+                }
+
+                // Fetch strategies
+                const stratRes = await fetch(`${API_BASE}/api/strategies`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const stratData = await stratRes.json();
+                if (stratData.success && Array.isArray(stratData.data)) {
+                    setStrategies(stratData.data);
+                    // Default to first DRAFT strategy
+                    const draft = stratData.data.find((s: Strategy) => s.status === 'DRAFT');
+                    if (draft) setSelectedStrategyId(draft.id);
+                }
+            } catch (e) {
+                console.error('Failed to fetch user data:', e);
+            }
+        };
+        fetchUserData();
+    }, []);
 
     // Keep ref in sync with state
     useEffect(() => {
@@ -113,13 +160,34 @@ export default function BacktestPage() {
                     <h2 className="text-lg font-semibold text-white">Simulation Config</h2>
 
                     <div className="space-y-2">
-                        <label className="text-sm text-gray-400">Symbol</label>
-                        <input
-                            type="text"
+                        <label className="text-sm text-gray-400">Symbol (from your settings)</label>
+                        <select
                             className="w-full bg-[#0a0a0f] border border-white/10 rounded px-3 py-2 text-white"
                             value={config.symbol}
                             onChange={(e) => setConfig({ ...config, symbol: e.target.value })}
-                        />
+                        >
+                            {userPairs.map(pair => (
+                                <option key={pair} value={pair}>{pair}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm text-gray-400">Strategy to Test</label>
+                        <select
+                            className="w-full bg-[#0a0a0f] border border-white/10 rounded px-3 py-2 text-white"
+                            value={selectedStrategyId}
+                            onChange={(e) => setSelectedStrategyId(e.target.value)}
+                        >
+                            {strategies.length === 0 && (
+                                <option value="">No strategies - create one first</option>
+                            )}
+                            {strategies.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    v{s.version} - {s.baseMethodology} ({s.status})
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

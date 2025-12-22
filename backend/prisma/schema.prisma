@@ -196,6 +196,7 @@ model StrategyVersion {
   active          Boolean  @default(false) // Changed default to false, rely on status
   status          StrategyStatus @default(DRAFT)
   lastTestedAt    DateTime?
+  backtestCompleted Boolean @default(false)  // Must be true before TESTED
   parentVersionId String?  // For tracking evolution chain
   
   trackedSignals  TrackedSignal[]

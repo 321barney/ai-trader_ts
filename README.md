@@ -2,109 +2,175 @@
 
 An AI-powered cryptocurrency trading platform with multi-agent decision making, self-improving strategies, and AsterDex exchange integration.
 
-## Features
+## 🌟 Core Features
 
-- **Multi-Agent AI System**: Strategy Consultant, Risk Officer, and Market Analyst agents using Chain-of-Thought reasoning
-- **Self-Improving Strategies**: Test mode with strategy evolution based on signal performance
-- **AsterDex Integration**: Full exchange connectivity for trading
-- **Signal Tracking**: Track all signals with AI reasoning, win/loss outcomes
-- **Real-time Dashboard**: Beautiful UI with agent thoughts, strategy evolution history
+| Feature | Description |
+|---------|-------------|
+| **Multi-Agent AI** | 3 specialized agents using Chain-of-Thought reasoning |
+| **Hybrid RL** | Combine LLM with trained RL model |
+| **Strategy Lifecycle** | Draft → Test → Approve → Active flow |
+| **Signal Tracking** | Monitor predictions with win/loss outcomes |
+| **Live Trading** | Auto-execute on AsterDex with risk controls |
 
-## Tech Stack
+---
 
-- **Frontend**: Next.js 15, React, TypeScript
-- **Backend**: Node.js, Express, TypeScript
-- **Database**: PostgreSQL with Prisma ORM
-- **AI**: DeepSeek API with Chain-of-Thought prompting
-- **Exchange**: AsterDex API
-
-## Project Structure
+## 🏗️ Architecture
 
 ```
-ai-trader/
-├── frontend/          # Next.js frontend
-│   └── src/app/       # App router pages
-├── backend/           # Express backend
-│   ├── src/agents/    # AI agents (Strategy, Risk, Market)
-│   ├── src/services/  # Core services
-│   ├── src/routes/    # API routes
-│   └── prisma/        # Database schema
-└── docker-compose.yml # PostgreSQL setup
+┌─────────────────────────────────────────────────────────────┐
+│                        FRONTEND                              │
+│  Next.js 15 • React 19 • TypeScript • TailwindCSS           │
+│                                                              │
+│  Pages: Dashboard, Strategy Lab, Backtest, Settings         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        BACKEND                               │
+│  Express • TypeScript • Prisma ORM • PostgreSQL             │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │  Scheduler  │  │   Routes    │  │  Services   │         │
+│  │  (5m/1m)    │  │   (REST)    │  │   (Core)    │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     AI AGENTS                                │
+│  ┌───────────────┐ ┌───────────────┐ ┌───────────────┐     │
+│  │   Strategy    │ │     Risk      │ │    Market     │     │
+│  │  Consultant   │ │   Officer     │ │   Analyst     │     │
+│  │   (LLM)       │ │   (Veto)      │ │ (Sentiment)   │     │
+│  └───────────────┘ └───────────────┘ └───────────────┘     │
+│                           │                                  │
+│                     Orchestrator                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Getting Started
+---
+
+## 🤖 AI Agents
+
+### Strategy Consultant
+- Analyzes market with SMC, ICT, or Gann methodology
+- Decides LONG / SHORT / HOLD
+- Provides entry, stop-loss, take-profit levels
+
+### Risk Officer
+- Calculates position sizing (Kelly Criterion)
+- **Veto power** on risky trades
+- Monitors portfolio exposure and drawdown
+
+### Market Analyst
+- Sentiment analysis from on-chain + social
+- Whale movement tracking
+- News event impact assessment
+
+---
+
+## 📊 Services
+
+| Service | Purpose |
+|---------|---------|
+| `AsterService` | Exchange API (pairs, OHLCV, orders, balances) |
+| `MarketDataService` | Technical indicators (RSI, MACD, EMA, ATR) |
+| `TradingService` | Analysis + execution orchestration |
+| `StrategyService` | Strategy lifecycle management |
+| `SignalTrackerService` | Track signal outcomes |
+| `PerformanceService` | Sharpe, drawdown, win rate |
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-
-- Node.js 18+
-- PostgreSQL (or use Docker)
+- Node.js 20+
+- PostgreSQL
 - AsterDex API credentials
-- DeepSeek API key
+- LLM API key (DeepSeek, OpenAI, Claude, or Gemini)
 
-### Setup
-
-1. **Clone the repository**
+### Quick Start
 ```bash
+# Clone
 git clone https://github.com/yourusername/ai-trader.git
 cd ai-trader
-```
 
-2. **Start PostgreSQL**
-```bash
+# Database
 docker-compose up -d
-```
 
-3. **Setup Backend**
-```bash
+# Backend
 cd backend
 npm install
 cp .env.example .env
-# Edit .env with your credentials
-npx prisma generate
-npx prisma migrate dev
+npx prisma generate && npx prisma db push
 npm run dev
-```
 
-4. **Setup Frontend**
-```bash
-cd frontend
+# Frontend
+cd ../frontend
 npm install
 npm run dev
 ```
 
-5. **Open the app**
-Navigate to http://localhost:3000
+---
 
-## Environment Variables
+## ⚙️ Configuration
 
-### Backend (.env)
+### Trading Modes
+| Mode | Behavior |
+|------|----------|
+| **Signal** | Generate signals only, no execution |
+| **Trade** | Auto-execute trades (requires tested strategy) |
+
+### Agent Decision Modes
+| Mode | Behavior |
+|------|----------|
+| **AI Agents** | LLM-based analysis |
+| **RL Only** | Trained model predictions |
+| **Hybrid** | AI + RL combined (consensus boost) |
+
+---
+
+## 🔒 Safety Controls
+
+1. **Strategy Must Be Tested** - Can't go live without backtest
+2. **User Approval Required** - Must approve after backtest
+3. **Drawdown Protection** - Trading stops if max drawdown exceeded
+4. **Position Sizing** - Uses configurable % of capital
+
+---
+
+## 📈 Performance Metrics
+
+- **Sharpe Ratio**: Risk-adjusted returns
+- **Sortino Ratio**: Downside risk only
+- **Max Drawdown**: Peak-to-trough loss
+- **Win Rate**: Percentage of winning trades
+- **Profit Factor**: Gross profit / gross loss
+
+---
+
+## 🐳 Deployment (Railway)
+
+Both services have Docker builds:
+- Backend: `npm run build` in Dockerfile
+- Frontend: Multi-stage build with standalone output
+
+```toml
+# railway.toml
+[[services]]
+name = "backend"
+root = "backend"
+dockerfilePath = "Dockerfile"
+
+[[services]]
+name = "frontend"
+root = "frontend"
+dockerfilePath = "Dockerfile"
 ```
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/aitrader"
-JWT_SECRET="your-jwt-secret"
-DEEPSEEK_API_KEY="your-deepseek-key"
-ASTER_API_KEY="optional-default-key"
-ASTER_API_SECRET="optional-default-secret"
-```
 
-## Trading Modes
+---
 
-| Mode | Description |
-|------|-------------|
-| **Signal** | AI generates signals, you execute manually |
-| **Trade** | AI automatically executes trades |
-| **Test** | Paper trading with strategy evolution |
-
-## AI Agents
-
-### Strategy Consultant 🎯
-Analyzes market data and generates trading decisions using SMC, ICT, or Gann methodologies.
-
-### Risk Officer 🛡️
-Validates trades against risk parameters, calculates position sizing, can veto dangerous trades.
-
-### Market Analyst 📊
-Provides sentiment analysis, on-chain data insights, and market context.
-
-## License
+## 📜 License
 
 MIT

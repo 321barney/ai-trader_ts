@@ -82,14 +82,39 @@ export class StrategyService {
     }
 
     /**
-     * Mark strategy as tested
+     * Mark strategy as tested (only if backtest was completed)
      */
     async markAsTested(versionId: string) {
+        // First verify backtest was actually completed
+        const version = await prisma.strategyVersion.findUnique({
+            where: { id: versionId }
+        });
+
+        if (!version) {
+            throw new Error('Strategy version not found');
+        }
+
+        if (!version.backtestCompleted) {
+            throw new Error('Cannot mark as tested: Please complete a backtest first');
+        }
+
         return await prisma.strategyVersion.update({
             where: { id: versionId },
             data: {
                 status: 'TESTED',
                 lastTestedAt: new Date()
+            }
+        });
+    }
+
+    /**
+     * Mark backtest as completed (called from replay service)
+     */
+    async markBacktestCompleted(versionId: string) {
+        return await prisma.strategyVersion.update({
+            where: { id: versionId },
+            data: {
+                backtestCompleted: true
             }
         });
     }
