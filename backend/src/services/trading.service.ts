@@ -240,7 +240,13 @@ export class TradingService {
                 userId,
                 agentType: 'ORCHESTRATOR',
                 reasoning: decision.agentDecisions?.strategy?.reasoning || 'Live trading analysis',
-                thoughtSteps: [],
+                thoughtSteps: [
+                    { step: 1, thought: `Market Analysis: ${decision.marketAnalysis?.reasoning?.slice(0, 200)}...` },
+                    { step: 2, thought: `Strategy Proposal: ${decision.strategyDecision?.reasoning?.slice(0, 200)}...` },
+                    { step: 3, thought: `Risk Assessment: ${decision.riskAssessment?.reasoning?.slice(0, 200)}...` },
+                    { step: 4, thought: `Counsel Consensus: ${decision.agentConsensus ? 'AGREEMENT' : 'DISAGREEMENT'}. Final Verdict: ${decision.finalDecision}` },
+                    ...(decision.counsel?.deliberation ? [{ step: 5, thought: `Deliberation: ${decision.counsel.deliberation.slice(0, 300)}...` }] : [])
+                ],
                 decision: decision.finalDecision,
                 confidence: decision.confidence,
                 symbol,

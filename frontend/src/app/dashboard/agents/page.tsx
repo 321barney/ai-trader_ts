@@ -253,7 +253,11 @@ export default function AgentDashboardPage() {
                                         </div>
                                     ))}
                                     {(!agent.thoughtSteps || agent.thoughtSteps.length === 0) && (
-                                        <div className="text-gray-500 italic">No structured thought process steps available.</div>
+                                        <div className="text-gray-500 italic p-4 bg-white/5 rounded-lg border border-dashed border-white/10 text-center">
+                                            No structured reasoning steps recorded for this decision.
+                                            <br />
+                                            <span className="text-xs opacity-75">Check the summary below for details.</span>
+                                        </div>
                                     )}
                                 </div>
                             </div>

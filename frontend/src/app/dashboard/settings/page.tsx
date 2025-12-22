@@ -105,12 +105,12 @@ export default function SettingsPage() {
                     const user = data.data;
                     setSettings(prev => ({
                         ...prev,
-                        tradingEnabled: user.tradingSettings?.enabled || false,
-                        tradingMode: user.tradingSettings?.mode || "signal",
-                        strategyMode: user.tradingSettings?.strategyMode || "hybrid",
-                        methodology: user.tradingSettings?.methodology || "SMC",
-                        leverage: user.tradingSettings?.leverage || 10,
-                        selectedPairs: user.tradingSettings?.pairs || ["BTC-USD", "ETH-USD"],
+                        tradingEnabled: user.tradingEnabled ?? false,
+                        tradingMode: user.tradingMode || "signal",
+                        strategyMode: user.strategyMode || "hybrid",
+                        methodology: user.methodology || "SMC",
+                        leverage: user.leverage || 10,
+                        selectedPairs: user.selectedPairs || ["BTC-USD", "ETH-USD"],
                         marketType: user.marketType || "perp",
                         asterApiKey: user.asterApiKey ? "••••••••" : "",
                         asterApiSecret: user.asterApiSecret ? "••••••••" : "",
