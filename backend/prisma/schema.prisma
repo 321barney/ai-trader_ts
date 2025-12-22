@@ -164,6 +164,10 @@ model Signal {
   // Link to agent decision
   agentDecisionId String?
   
+  // Backtest flag
+  isBacktest      Boolean @default(false)
+  backtestSessionId String?
+  
   createdAt       DateTime @default(now())
   executedAt      DateTime?
   
@@ -312,11 +316,16 @@ model AgentDecision {
   rlAction        String?  // modify_params | retrain | stop
   rlParams        Json?    // Modified parameters
   
+  // Backtest flag
+  isBacktest      Boolean @default(false)
+  backtestSessionId String?
+  
   createdAt       DateTime @default(now())
   
   @@index([userId])
   @@index([agentType])
   @@index([createdAt])
+  @@index([isBacktest])
 }
 
 enum AgentType {
