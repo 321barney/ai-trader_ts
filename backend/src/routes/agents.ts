@@ -75,6 +75,27 @@ router.get('/decisions/:id', authMiddleware, asyncHandler(async (req: Request, r
 }));
 
 /**
+ * POST /api/agents/debug-create
+ * Manual trigger to verify DB writes
+ */
+router.post('/debug-create', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    const decision = await prisma.agentDecision.create({
+        data: {
+            userId: req.userId!,
+            agentType: 'STRATEGY_CONSULTANT',
+            decision: 'LONG',
+            confidence: 0.95,
+            reasoning: 'Debug Manual Creation ' + new Date().toISOString(),
+            thoughtSteps: [{ step: 1, thought: 'Test thought step' }] as any,
+            isBacktest: true,
+            sourceMode: 'BACKTEST',
+            symbol: 'BTCUSDT'
+        }
+    });
+    return successResponse(res, decision);
+}));
+
+/**
  * POST /api/agents/analyze
  */
 router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
