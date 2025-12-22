@@ -202,12 +202,22 @@ class BacktestService {
                 };
             }
 
+            console.log(`[Backtest] Step ${nextStep}: Calling AI agents with ${methodology} methodology...`);
+
             // Run AI Agent analysis (in backtest mode)
             const decision = await orchestratorInstance.analyzeAndDecide({
                 symbol: session.symbol,
                 marketData: marketData,
-                userId: session.userId
+                userId: session.userId,
+                methodology: methodology,  // Pass methodology for strategy-specific analysis
+                riskMetrics: {
+                    portfolioValue: currentValue,
+                    currentExposure: 0,
+                    openPositions: 0
+                }
             });
+
+            console.log(`[Backtest] Step ${nextStep}: Agent decision = ${decision.finalDecision} (confidence: ${decision.confidence?.toFixed(2)})`);
 
             // Save agent decision to database (marked as backtest)
             const agentDecision = await prisma.agentDecision.create({
@@ -274,8 +284,19 @@ class BacktestService {
             }
 
             console.log(`[Backtest] Step ${nextStep}: ${decision.finalDecision} @ ${decision.confidence.toFixed(2)} confidence`);
-        } catch (error) {
-            console.error(`[Backtest] Agent analysis failed, using fallback:`, error);
+        } catch (error: any) {
+            console.error(`[Backtest] ⚠️ Agent analysis failed at step ${nextStep}:`, error.message || error);
+
+            // Check common issues
+            if (error.message?.includes('AI Service not configured')) {
+                console.error(`[Backtest] ❌ User ${session.userId} does not have an AI API key configured.`);
+                console.error(`[Backtest] Please configure an API key in Settings (DeepSeek, OpenAI, etc.)`);
+            } else if (error.message?.includes('API key')) {
+                console.error(`[Backtest] ❌ Invalid API key for AI service`);
+            }
+
+            console.warn(`[Backtest] Falling back to random simulation for this step.`);
+
             // Fallback: random simulation if agents fail
             const randomChange = (Math.random() - 0.48) * 0.03;
             newValue = currentValue * (1 + randomChange);
