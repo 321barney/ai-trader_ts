@@ -180,11 +180,36 @@ RL Model Metrics:
 - Max Drawdown: ${context.riskMetrics?.maxDrawdown || 'N/A'}%
 - Recent Performance: ${context.riskMetrics?.recentPerformance || 'N/A'}
 
+=== PERFORMANCE-BASED FINE-TUNING ===
+Recent Win Rate: ${context.performanceHints?.winRate?.toFixed(1) || 'N/A'}%
+Current Streak: ${context.performanceHints?.recentStreak || 'neutral'} (${context.performanceHints?.streakCount || 0} trades)
+Methodology Effectiveness: ${context.performanceHints?.methodologyEffectiveness?.toFixed(1) || 'N/A'}%
+
+${this.formatPerformanceAdjustments(context.performanceHints)}
+
 === YOUR TASK ===
 Use Chain-of-Thought reasoning following the ${methodology} methodology.
+IMPORTANT: Adjust your analysis based on the performance hints above.
 Provide your decision with specific entry, stop-loss, and take-profit based on the methodology's key levels.`;
 
         return prompt;
+    }
+
+    private formatPerformanceAdjustments(hints?: AgentContext['performanceHints']): string {
+        if (!hints) return '';
+        let result = '';
+
+        if (hints.suggestedAdjustments && hints.suggestedAdjustments.length > 0) {
+            result += `⚡ DYNAMIC ADJUSTMENTS (based on performance):\n${hints.suggestedAdjustments.map(a => `  • ${a}`).join('\n')}\n`;
+        }
+        if (hints.avoidPatterns && hints.avoidPatterns.length > 0) {
+            result += `❌ AVOID:\n${hints.avoidPatterns.map(p => `  • ${p}`).join('\n')}\n`;
+        }
+        if (hints.preferPatterns && hints.preferPatterns.length > 0) {
+            result += `✅ PREFER:\n${hints.preferPatterns.map(p => `  • ${p}`).join('\n')}\n`;
+        }
+
+        return result;
     }
 
     protected getMockResponse(): string {

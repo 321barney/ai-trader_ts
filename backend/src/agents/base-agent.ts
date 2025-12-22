@@ -25,6 +25,16 @@ export interface AgentContext {
     riskMetrics?: any;
     aiService?: IAiService;
     methodology?: string; // SMC, ICT, etc.
+    // Performance-based prompt optimization hints from orchestrator
+    performanceHints?: {
+        winRate?: number;  // Recent win rate
+        recentStreak?: 'winning' | 'losing' | 'neutral';
+        streakCount?: number;
+        methodologyEffectiveness?: number; // How well current methodology is performing
+        suggestedAdjustments?: string[];  // Dynamic hints based on performance
+        avoidPatterns?: string[];  // Patterns that have been losing
+        preferPatterns?: string[];  // Patterns that have been winning
+    };
 }
 
 export interface AgentDecisionResult {

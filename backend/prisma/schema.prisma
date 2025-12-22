@@ -182,6 +182,8 @@ model Signal {
 enum SignalStatus {
   ACTIVE
   EXECUTED
+  HIT_TP      // Take profit was hit
+  HIT_SL      // Stop loss was hit
   EXPIRED
   CANCELLED
 }

@@ -19,6 +19,20 @@ import { GeminiService } from '../services/gemini.service.js';
 import { DeepSeekService } from '../services/deepseek.service.js';
 import { IAiService } from '../services/ai-service.interface.js';
 
+// Counsel deliberation result
+export interface CounselResult {
+    deliberation: string;  // Full deliberation text
+    votes: {
+        strategy: string;
+        risk: string;
+        market: string;
+    };
+    consensus: boolean;
+    finalVerdict: 'LONG' | 'SHORT' | 'HOLD';
+    escalated: boolean;    // Should be escalated to human review
+    escalationReason?: string;
+}
+
 export interface OrchestratorDecision {
     finalDecision: 'LONG' | 'SHORT' | 'HOLD' | 'BLOCKED';
     confidence: number;
@@ -42,6 +56,9 @@ export interface OrchestratorDecision {
         risk: { reasoning: string };
         market: { reasoning: string };
     };
+
+    // Counsel deliberation result
+    counsel?: CounselResult;
 
     // RL Model integration
     rlPrediction?: RLPrediction;
@@ -91,6 +108,112 @@ export class AgentOrchestrator {
     }
 
     /**
+     * Generate performance-based hints for prompt optimization
+     * Analyzes recent trading outcomes and adjusts agent behavior dynamically
+     */
+    private async generatePerformanceHints(userId: string, methodology?: string): Promise<AgentContext['performanceHints']> {
+        try {
+            // Fetch recent signals (last 30 days, non-backtest)
+            const recentSignals = await prisma.signal.findMany({
+                where: {
+                    userId,
+                    isBacktest: false,
+                    createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50
+            });
+
+            if (recentSignals.length < 5) {
+                // Not enough data for optimization
+                return {
+                    winRate: 50,
+                    recentStreak: 'neutral',
+                    streakCount: 0,
+                    suggestedAdjustments: ['Insufficient trading history - using default strategy parameters.']
+                };
+            }
+
+            // Calculate win rate (signals that reached TP vs SL)
+            const executedSignals = recentSignals.filter(s => s.status === 'HIT_TP' || s.status === 'HIT_SL');
+            const wins = executedSignals.filter(s => s.status === 'HIT_TP').length;
+            const winRate = executedSignals.length > 0 ? (wins / executedSignals.length) * 100 : 50;
+
+            // Detect recent streak
+            let streak: 'winning' | 'losing' | 'neutral' = 'neutral';
+            let streakCount = 0;
+            for (const signal of executedSignals.slice(0, 10)) {
+                if (streakCount === 0) {
+                    streak = signal.status === 'HIT_TP' ? 'winning' : 'losing';
+                    streakCount = 1;
+                } else if ((streak === 'winning' && signal.status === 'HIT_TP') ||
+                    (streak === 'losing' && signal.status === 'HIT_SL')) {
+                    streakCount++;
+                } else {
+                    break;
+                }
+            }
+
+            // Analyze methodology effectiveness
+            const methodSignals = recentSignals.filter(s => s.methodology === methodology);
+            const methodWins = methodSignals.filter(s => s.status === 'HIT_TP').length;
+            const methodTotal = methodSignals.filter(s => s.status === 'HIT_TP' || s.status === 'HIT_SL').length;
+            const methodologyEffectiveness = methodTotal > 0 ? (methodWins / methodTotal) * 100 : 50;
+
+            // Generate dynamic adjustments based on performance
+            const suggestedAdjustments: string[] = [];
+            const avoidPatterns: string[] = [];
+            const preferPatterns: string[] = [];
+
+            // Win rate based adjustments
+            if (winRate < 40) {
+                suggestedAdjustments.push('CAUTION: Low win rate detected. Be more selective with entries.');
+                suggestedAdjustments.push('Consider waiting for stronger confirmations before entering trades.');
+                suggestedAdjustments.push('Reduce position sizes until win rate improves.');
+            } else if (winRate > 60) {
+                suggestedAdjustments.push('MOMENTUM: Strong win rate. Current approach is working well.');
+                preferPatterns.push('Continue using current strategy parameters.');
+            }
+
+            // Streak based adjustments
+            if (streak === 'losing' && streakCount >= 3) {
+                suggestedAdjustments.push(`WARNING: ${streakCount} consecutive losses. Consider reducing risk.`);
+                suggestedAdjustments.push('Wait for high-probability setups only.');
+                suggestedAdjustments.push('Avoid forcing trades - let the market come to you.');
+            } else if (streak === 'winning' && streakCount >= 3) {
+                suggestedAdjustments.push(`MOMENTUM: ${streakCount} consecutive wins. Stay disciplined.`);
+                suggestedAdjustments.push('Do not become overconfident - maintain risk management.');
+            }
+
+            // Methodology specific adjustments
+            if (methodology === 'SMC' && methodologyEffectiveness < 45) {
+                suggestedAdjustments.push('SMC patterns underperforming. Focus on fresh order blocks only.');
+                avoidPatterns.push('Avoid trading into previously tested order blocks');
+            } else if (methodology === 'ICT' && methodologyEffectiveness < 45) {
+                suggestedAdjustments.push('ICT setups underperforming. Trade only during active kill zones.');
+                avoidPatterns.push('Avoid trades outside London/NY sessions');
+            } else if (methodology === 'GANN' && methodologyEffectiveness < 45) {
+                suggestedAdjustments.push('Gann levels underperforming. Wait for price to confirm angle breaks.');
+            }
+
+            console.log(`[Orchestrator] Performance hints generated: WinRate=${winRate.toFixed(1)}%, Streak=${streak}(${streakCount}), MethodEffect=${methodologyEffectiveness.toFixed(1)}%`);
+
+            return {
+                winRate,
+                recentStreak: streak,
+                streakCount,
+                methodologyEffectiveness,
+                suggestedAdjustments,
+                avoidPatterns,
+                preferPatterns
+            };
+        } catch (error) {
+            console.error('[Orchestrator] Failed to generate performance hints:', error);
+            return { suggestedAdjustments: ['Performance analysis unavailable.'] };
+        }
+    }
+
+    /**
      * Run all agents and aggregate their decisions
      * With optional RL integration in hybrid mode
      */
@@ -124,11 +247,20 @@ export class AgentOrchestrator {
         const riskService = this.getAiService(user?.riskOfficerModel || 'deepseek', user);
         const strategyService = this.getAiService(user?.strategyConsultantModel || 'deepseek', user);
 
-        // Run AI agents in parallel with injected services
+        // Generate performance-based prompt hints for dynamic optimization
+        const performanceHints = await this.generatePerformanceHints(context.userId, context.methodology);
+
+        // Enhance context with performance hints for prompt fine-tuning
+        const enhancedContext = {
+            ...context,
+            performanceHints
+        };
+
+        // Run AI agents in parallel with injected services and performance hints
         const [strategyDecision, riskAssessment, marketAnalysis] = await Promise.all([
-            this.strategyAgent.decide({ ...context, aiService: strategyService }),
-            this.riskAgent.decide({ ...context, aiService: riskService }),
-            this.marketAgent.decide({ ...context, aiService: marketService }),
+            this.strategyAgent.decide({ ...enhancedContext, aiService: strategyService }),
+            this.riskAgent.decide({ ...enhancedContext, aiService: riskService }),
+            this.marketAgent.decide({ ...enhancedContext, aiService: marketService }),
         ]);
 
         // Get RL prediction if available and not in deepseek-only mode
@@ -147,17 +279,167 @@ export class AgentOrchestrator {
             }
         }
 
-        console.log(`[Orchestrator] All agents completed analysis`);
+        console.log(`[Orchestrator] All agents completed initial analysis`);
 
-        // Aggregate decisions with RL input
+        // ============ COUNSEL DELIBERATION PHASE ============
+        // The 3 agents now deliberate together to reach consensus
+        const counselResult = await this.conductCounsel(
+            strategyDecision,
+            riskAssessment,
+            marketAnalysis,
+            enhancedContext,
+            strategyService
+        );
+
+        console.log(`[Orchestrator] Counsel deliberation complete: ${counselResult.finalVerdict}`);
+
+        // Aggregate decisions with counsel result and RL input
         return this.aggregateDecisions(
             strategyDecision,
             riskAssessment,
             marketAnalysis,
             rlPrediction,
             rlMetrics,
-            mode
+            mode,
+            counselResult
         );
+    }
+
+    /**
+     * Conduct a counsel deliberation among the 3 agents
+     * Each agent reviews others' opinions and they vote to reach consensus
+     */
+    private async conductCounsel(
+        strategyDecision: AgentDecisionResult,
+        riskAssessment: AgentDecisionResult,
+        marketAnalysis: AgentDecisionResult,
+        context: AgentContext,
+        aiService: IAiService
+    ): Promise<CounselResult> {
+        console.log('[Counsel] Starting deliberation phase...');
+
+        // Collect initial votes
+        const initialVotes = {
+            strategy: strategyDecision.decision,
+            risk: riskAssessment.decision === 'APPROVED' ? strategyDecision.decision : 'HOLD',
+            market: this.extractMarketVote(marketAnalysis)
+        };
+
+        // Check for unanimous agreement
+        const votes = [initialVotes.strategy, initialVotes.risk, initialVotes.market];
+        const longVotes = votes.filter(v => v === 'LONG').length;
+        const shortVotes = votes.filter(v => v === 'SHORT').length;
+        const holdVotes = votes.filter(v => v === 'HOLD' || v === 'BLOCKED').length;
+
+        // If unanimous, no deliberation needed
+        if (longVotes === 3 || shortVotes === 3 || holdVotes === 3) {
+            return {
+                deliberation: 'Unanimous agreement - no deliberation needed.',
+                votes: initialVotes,
+                consensus: true,
+                finalVerdict: longVotes === 3 ? 'LONG' : shortVotes === 3 ? 'SHORT' : 'HOLD',
+                escalated: false
+            };
+        }
+
+        // Need deliberation - agents discuss disagreements
+        const deliberationPrompt = `
+=== AGENT COUNSEL DELIBERATION ===
+You are facilitating a counsel meeting among 3 AI trading agents.
+They must reach consensus on whether to take a trade.
+
+INITIAL POSITIONS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 STRATEGY CONSULTANT votes: ${initialVotes.strategy}
+Reasoning: ${strategyDecision.reasoning.substring(0, 500)}...
+
+🛡️ RISK OFFICER votes: ${initialVotes.risk}
+Reasoning: ${riskAssessment.reasoning.substring(0, 500)}...
+
+📈 MARKET ANALYST votes: ${initialVotes.market}
+Reasoning: ${marketAnalysis.reasoning.substring(0, 500)}...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CURRENT VOTE COUNT:
+- LONG: ${longVotes}/3
+- SHORT: ${shortVotes}/3
+- HOLD: ${holdVotes}/3
+
+DELIBERATION RULES:
+1. Majority (2/3) is required to take a trade
+2. Risk Officer has VETO power if risk is too high
+3. If no consensus, default to HOLD
+4. Consider the strength of each agent's conviction (confidence scores)
+
+CONFIDENCE SCORES:
+- Strategy: ${strategyDecision.confidence}
+- Risk: ${riskAssessment.confidence}
+- Market: ${marketAnalysis.confidence}
+
+Analyze the disagreement and provide:
+1. Who has the strongest argument?
+2. What concerns need to be addressed?
+3. FINAL COUNSEL VERDICT: [LONG|SHORT|HOLD]
+4. Should this be ESCALATED for human review? [YES|NO]
+5. Brief explanation of the final decision
+
+Format your response:
+DELIBERATION: [Your analysis of the discussion]
+FINAL_VERDICT: [LONG|SHORT|HOLD]
+ESCALATE: [YES|NO]
+REASON: [Why this decision was reached]`;
+
+        try {
+            const deliberation = await aiService.chat([
+                { role: 'system', content: 'You are a senior trading counsel facilitator. Your job is to help AI agents reach consensus on trading decisions.' },
+                { role: 'user', content: deliberationPrompt }
+            ]);
+
+            // Parse the deliberation result
+            const verdictMatch = deliberation.match(/FINAL_VERDICT:\s*(LONG|SHORT|HOLD)/i);
+            const escalateMatch = deliberation.match(/ESCALATE:\s*(YES|NO)/i);
+            const reasonMatch = deliberation.match(/REASON:\s*(.+?)(?:\n|$)/i);
+
+            const finalVerdict = verdictMatch ? verdictMatch[1].toUpperCase() :
+                (longVotes >= 2 ? 'LONG' : shortVotes >= 2 ? 'SHORT' : 'HOLD');
+
+            console.log(`[Counsel] Deliberation complete. Verdict: ${finalVerdict}`);
+
+            return {
+                deliberation: deliberation,
+                votes: initialVotes,
+                consensus: longVotes >= 2 || shortVotes >= 2 || holdVotes >= 2,
+                finalVerdict: finalVerdict as 'LONG' | 'SHORT' | 'HOLD',
+                escalated: escalateMatch ? escalateMatch[1].toUpperCase() === 'YES' : false,
+                escalationReason: reasonMatch ? reasonMatch[1] : undefined
+            };
+        } catch (error) {
+            console.error('[Counsel] Deliberation failed:', error);
+            // Fallback to majority vote
+            return {
+                deliberation: 'Deliberation failed - using majority vote.',
+                votes: initialVotes,
+                consensus: false,
+                finalVerdict: longVotes >= 2 ? 'LONG' : shortVotes >= 2 ? 'SHORT' : 'HOLD',
+                escalated: true,
+                escalationReason: 'Deliberation system error - human review recommended'
+            };
+        }
+    }
+
+    /**
+     * Extract market analyst's implied vote from their sentiment
+     */
+    private extractMarketVote(marketAnalysis: AgentDecisionResult): string {
+        const reasoning = marketAnalysis.reasoning.toLowerCase();
+        if (reasoning.includes('bullish') || reasoning.includes('positive sentiment')) {
+            return 'LONG';
+        } else if (reasoning.includes('bearish') || reasoning.includes('negative sentiment')) {
+            return 'SHORT';
+        }
+        return 'HOLD';
     }
 
     /**
@@ -188,7 +470,8 @@ export class AgentOrchestrator {
         market: MarketAnalysis,
         rlPrediction?: RLPrediction,
         rlMetrics?: RLMetrics,
-        mode: 'deepseek' | 'rl' | 'hybrid' = 'hybrid'
+        mode: 'deepseek' | 'rl' | 'hybrid' = 'hybrid',
+        counsel?: CounselResult
     ): OrchestratorDecision {
         // Build agent decisions object
         const agentDecisions = {
@@ -210,12 +493,69 @@ export class AgentOrchestrator {
                 readyToExecute: false,
                 blockReason: `Risk Officer blocked: ${risk.warnings.join(', ') || 'Risk too high'}`,
                 agentDecisions,
+                counsel,
                 rlPrediction,
                 rlMetrics,
                 strategyMode: mode,
             };
         }
 
+        // ============ USE COUNSEL VERDICT IF AVAILABLE ============
+        if (counsel) {
+            console.log(`[Aggregator] Using counsel verdict: ${counsel.finalVerdict}`);
+
+            // If escalated, default to HOLD and flag for human review
+            if (counsel.escalated) {
+                return {
+                    finalDecision: 'HOLD',
+                    confidence: 0.5,
+                    agentConsensus: false,
+                    strategyDecision: strategy,
+                    riskAssessment: risk,
+                    marketAnalysis: market,
+                    executionReady: false,
+                    readyToExecute: false,
+                    blockReason: `Escalated for human review: ${counsel.escalationReason || 'Agents could not reach confident consensus'}`,
+                    agentDecisions,
+                    counsel,
+                    rlPrediction,
+                    rlMetrics,
+                    strategyMode: mode,
+                };
+            }
+
+            // Use counsel verdict as the final decision
+            const counselDecision = counsel.finalVerdict;
+            const counselConfidence = counsel.consensus ? 0.85 : 0.7;
+
+            // Still check for execution readiness
+            const executionReady =
+                counselDecision !== 'HOLD' &&
+                counselConfidence > 0.6 &&
+                risk.riskLevel !== 'EXTREME';
+
+            return {
+                finalDecision: counselDecision,
+                confidence: counselConfidence,
+                agentConsensus: counsel.consensus,
+                strategyDecision: strategy,
+                riskAssessment: risk,
+                marketAnalysis: market,
+                executionReady,
+                readyToExecute: executionReady,
+                entryPrice: strategy.entryPrice,
+                stopLoss: strategy.stopLoss,
+                takeProfit: strategy.takeProfit,
+                positionSize: risk.positionSize,
+                agentDecisions,
+                counsel,
+                rlPrediction,
+                rlMetrics,
+                strategyMode: mode,
+            };
+        }
+
+        // ============ FALLBACK: Traditional aggregation (if no counsel) ============
         // Determine base decision based on mode
         let baseDecision: 'LONG' | 'SHORT' | 'HOLD';
         let baseConfidence: number;
@@ -296,6 +636,7 @@ export class AgentOrchestrator {
             takeProfit: strategy.takeProfit,
             positionSize: risk.positionSize,
             agentDecisions,
+            counsel,
             rlPrediction,
             rlMetrics,
             strategyMode: mode,
