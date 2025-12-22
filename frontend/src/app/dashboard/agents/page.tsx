@@ -18,6 +18,7 @@ interface AgentDecision {
     timestamp: string;
     symbol?: string;
     createdAt: string;
+    sourceMode?: string; // BACKTEST | SIGNAL | TRADE
 }
 
 interface RLStatus {
@@ -52,28 +53,29 @@ export default function AgentDashboardPage() {
             const json = await res.json();
 
             if (json.success) {
+                // Map agentType enum to display names
+                const agentTypeDisplayMap: Record<string, string> = {
+                    'STRATEGY_CONSULTANT': 'Strategy Consultant',
+                    'RISK_OFFICER': 'Risk Officer',
+                    'MARKET_ANALYST': 'Market Analyst',
+                    'ORCHESTRATOR': 'Orchestrator'
+                };
+
                 // Group by agent type and get latest
                 const decisions = json.data.map((d: any) => ({
                     ...d,
-                    agent: d.agentType, // Map agentType -> agent for display logic
+                    agentType: agentTypeDisplayMap[d.agentType] || d.agentType,
                     timestamp: new Date(d.createdAt).toLocaleString(),
-                    // Ensure thoughtSteps is array
                     thoughtSteps: Array.isArray(d.thoughtSteps) ? d.thoughtSteps : []
                 }));
-                // We could filter to show only latest 3 distinct agents if desired, 
-                // but for now let's just show the recent stream or latest per agent.
-                // Let's filter to get 1 latest per agent type for the "Overview" cards
-                const uniqueAgents = ['Strategy Consultant', 'Risk Officer', 'Market Analyst'];
+
+                // Get latest for each agent type (including Orchestrator)
+                const uniqueAgents = ['Strategy Consultant', 'Risk Officer', 'Market Analyst', 'Orchestrator'];
                 const latest = uniqueAgents.map(type =>
                     decisions.find((d: any) => d.agentType === type) || null
                 ).filter(Boolean);
 
-                if (latest.length > 0) {
-                    setLatestDecisions(latest);
-                } else {
-                    // Keep empty or show placeholder if no decisions ever made
-                    setLatestDecisions([]);
-                }
+                setLatestDecisions(latest.length > 0 ? latest : decisions.slice(0, 5));
             }
 
             // Fetch RL Status
@@ -99,12 +101,14 @@ export default function AgentDashboardPage() {
     const getAgentIcon = (agent: string) => {
         if (agent.includes("Strategy")) return "🧠";
         if (agent.includes("Risk")) return "🛡️";
+        if (agent.includes("Orchestrator")) return "🎯";
         return "🔍";
     };
 
     const getAgentColor = (agent: string) => {
         if (agent.includes("Strategy")) return "from-indigo-500 to-purple-600";
         if (agent.includes("Risk")) return "from-emerald-500 to-teal-600";
+        if (agent.includes("Orchestrator")) return "from-amber-500 to-orange-600";
         return "from-cyan-500 to-blue-600";
     };
 
@@ -112,6 +116,18 @@ export default function AgentDashboardPage() {
         if (decision === "LONG" || decision === "APPROVED" || decision === "BULLISH") return "badge-success";
         if (decision === "SHORT" || decision === "REJECTED" || decision === "BEARISH") return "badge-danger";
         return "badge-warning";
+    };
+
+    const getSourceModeBadge = (mode?: string) => {
+        switch (mode) {
+            case 'BACKTEST':
+                return <span className="px-2 py-0.5 text-xs font-mono bg-purple-500/20 text-purple-300 rounded">[BACKTEST]</span>;
+            case 'TRADE':
+                return <span className="px-2 py-0.5 text-xs font-mono bg-green-500/20 text-green-300 rounded">[TRADE]</span>;
+            case 'SIGNAL':
+            default:
+                return <span className="px-2 py-0.5 text-xs font-mono bg-blue-500/20 text-blue-300 rounded">[SIGNAL]</span>;
+        }
     };
 
     if (loading && latestDecisions.length === 0) {
@@ -149,8 +165,11 @@ export default function AgentDashboardPage() {
                                     <div className="text-gray-500 text-sm">{agent.timestamp}</div>
                                 </div>
                                 <div className="text-right">
-                                    <div className={`badge ${getDecisionColor(agent.decision)}`}>
-                                        {agent.decision}
+                                    <div className="flex items-center gap-2 justify-end">
+                                        {getSourceModeBadge(agent.sourceMode)}
+                                        <div className={`badge ${getDecisionColor(agent.decision)}`}>
+                                            {agent.decision}
+                                        </div>
                                     </div>
                                     <div className="text-gray-500 text-sm mt-1">
                                         {Math.round((agent.confidence || 0) * 100)}%

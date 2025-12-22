@@ -171,7 +171,8 @@ class BacktestService {
                     symbol: session.symbol,
                     marketData: marketData as any,
                     isBacktest: true,
-                    backtestSessionId: sessionId
+                    backtestSessionId: sessionId,
+                    sourceMode: 'BACKTEST'
                 }
             });
 
@@ -189,7 +190,8 @@ class BacktestService {
                         takeProfit: decision.takeProfit,
                         agentDecisionId: agentDecision.id,
                         isBacktest: true,
-                        backtestSessionId: sessionId
+                        backtestSessionId: sessionId,
+                        sourceMode: 'BACKTEST'
                     }
                 });
             }

@@ -168,6 +168,9 @@ model Signal {
   isBacktest      Boolean @default(false)
   backtestSessionId String?
   
+  // Source mode: BACKTEST | SIGNAL | TRADE
+  sourceMode      String @default("SIGNAL")
+  
   createdAt       DateTime @default(now())
   executedAt      DateTime?
   
@@ -319,6 +322,9 @@ model AgentDecision {
   // Backtest flag
   isBacktest      Boolean @default(false)
   backtestSessionId String?
+  
+  // Source mode: BACKTEST | SIGNAL | TRADE
+  sourceMode      String @default("SIGNAL")
   
   createdAt       DateTime @default(now())
   

@@ -231,6 +231,44 @@ export class TradingService {
             methodology: methodology,
         });
 
+        // Determine source mode: TRADE if executing, SIGNAL if signal-only
+        const sourceMode = (user.tradingEnabled && user.tradingMode === 'trade') ? 'TRADE' : 'SIGNAL';
+
+        // Save AgentDecision to database (live trading, not backtest)
+        const agentDecision = await prisma.agentDecision.create({
+            data: {
+                userId,
+                agentType: 'ORCHESTRATOR',
+                reasoning: decision.agentDecisions?.strategy?.reasoning || 'Live trading analysis',
+                thoughtSteps: [],
+                decision: decision.finalDecision,
+                confidence: decision.confidence,
+                symbol,
+                marketData: marketData as any,
+                isBacktest: false,
+                sourceMode: sourceMode
+            }
+        });
+
+        // Create Signal record for LONG/SHORT decisions (live trading)
+        if (decision.finalDecision === 'LONG' || decision.finalDecision === 'SHORT') {
+            await prisma.signal.create({
+                data: {
+                    userId,
+                    symbol,
+                    direction: decision.finalDecision,
+                    confidence: decision.confidence,
+                    methodology: decision.strategyMode || methodology,
+                    entryPrice: marketData.currentPrice,
+                    stopLoss: decision.stopLoss,
+                    takeProfit: decision.takeProfit,
+                    agentDecisionId: agentDecision.id,
+                    isBacktest: false,
+                    sourceMode: sourceMode
+                }
+            });
+        }
+
         if (decision.finalDecision !== 'HOLD' && decision.confidence > 70) {
             // If trading is enabled and mode is 'trade' AND we have an active strategy, execute
             if (user.tradingEnabled && user.tradingMode === 'trade' && activeStrategy) {
