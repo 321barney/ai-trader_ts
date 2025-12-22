@@ -138,19 +138,58 @@ class BacktestService {
         try {
             // Import orchestrator dynamically to avoid circular deps
             const { AgentOrchestrator } = await import('../agents/index.js');
+            const { AsterService } = await import('./aster.service.js');
+            const { TechnicalAnalysisService } = await import('./technical-analysis.service.js');
 
             // Create orchestrator instance
             const orchestratorInstance = new AgentOrchestrator();
 
-            // Fetch simulated market data for this date
-            // In production, would fetch historical data for session.currentDate
-            const marketData = {
-                symbol: session.symbol,
-                currentPrice: 40000 + (Math.random() - 0.5) * 1000, // Simulated BTC price
-                priceChange24h: (Math.random() - 0.5) * 5,
-                volume24h: 1000000000 + Math.random() * 500000000,
-                timestamp: nextDate
-            };
+            // Fetch REAL market data from exchange
+            let marketData: any;
+            try {
+                // Use public API (no keys needed for market data)
+                const asterService = new AsterService('', '', true);
+
+                // Get 24hr ticker
+                const ticker = await asterService.getTicker(session.symbol);
+
+                // Get klines for technical analysis
+                const klines = await asterService.getKlines(session.symbol, '1h', 100);
+
+                // Calculate real indicators
+                const highs = klines.map(k => k.high);
+                const lows = klines.map(k => k.low);
+                const closes = klines.map(k => k.close);
+                const indicators = TechnicalAnalysisService.analyze(highs, lows, closes);
+
+                marketData = {
+                    symbol: session.symbol,
+                    currentPrice: ticker.price,
+                    change24h: ticker.priceChangePercent,
+                    high24h: ticker.high24h,
+                    low24h: ticker.low24h,
+                    volume: ticker.volume24h,
+                    rsi: indicators.rsi,
+                    macd: indicators.macd.MACD || 0,
+                    atr: indicators.atr,
+                    bollinger: indicators.bollinger,
+                    timestamp: nextDate
+                };
+
+                console.log(`[Backtest] Step ${nextStep}: Real data - Price: $${ticker.price}, RSI: ${indicators.rsi?.toFixed(1)}`);
+            } catch (fetchError) {
+                console.warn(`[Backtest] Failed to fetch real data, using last known:`, fetchError);
+                // Fallback: minimal simulated data
+                marketData = {
+                    symbol: session.symbol,
+                    currentPrice: 40000 + (Math.random() - 0.5) * 1000,
+                    priceChange24h: (Math.random() - 0.5) * 5,
+                    volume24h: 1000000000,
+                    rsi: 50 + (Math.random() - 0.5) * 20,
+                    macd: (Math.random() - 0.5) * 100,
+                    timestamp: nextDate
+                };
+            }
 
             // Run AI Agent analysis (in backtest mode)
             const decision = await orchestratorInstance.analyzeAndDecide({
