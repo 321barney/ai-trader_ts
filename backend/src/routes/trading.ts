@@ -85,7 +85,14 @@ router.put('/settings', authMiddleware, asyncHandler(async (req: Request, res: R
         selectedPairs,
         asterApiKey,
         asterApiSecret,
-        deepseekApiKey
+        asterTestnet,
+        deepseekApiKey,
+        openaiApiKey,
+        anthropicApiKey,
+        geminiApiKey,
+        marketAnalystModel,
+        riskOfficerModel,
+        strategyConsultantModel
     } = req.body;
 
     try {
@@ -98,7 +105,14 @@ router.put('/settings', authMiddleware, asyncHandler(async (req: Request, res: R
             selectedPairs,
             asterApiKey,
             asterApiSecret,
+            asterTestnet,
             deepseekApiKey,
+            openaiApiKey,
+            anthropicApiKey,
+            geminiApiKey,
+            marketAnalystModel,
+            riskOfficerModel,
+            strategyConsultantModel
         });
         return successResponse(res, result, 'Settings updated');
     } catch (error: any) {
