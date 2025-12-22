@@ -16,9 +16,11 @@ export default function SettingsPage() {
         methodology: "SMC",
         leverage: 10,
         selectedPairs: ["BTC-USD", "ETH-USD"],
+        marketType: "perp",
         // API Keys
         asterApiKey: "",
         asterApiSecret: "",
+        asterTestnet: true,
         deepseekApiKey: "",
     });
 
@@ -100,8 +102,10 @@ export default function SettingsPage() {
                         methodology: user.tradingSettings?.methodology || "SMC",
                         leverage: user.tradingSettings?.leverage || 10,
                         selectedPairs: user.tradingSettings?.pairs || ["BTC-USD", "ETH-USD"],
+                        marketType: user.marketType || "perp",
                         asterApiKey: user.asterApiKey ? "••••••••" : "",
                         asterApiSecret: user.asterApiSecret ? "••••••••" : "",
+                        asterTestnet: user.asterTestnet ?? true,
                         deepseekApiKey: user.deepseekApiKey ? "••••••••" : "",
                     }));
                 }
@@ -131,7 +135,9 @@ export default function SettingsPage() {
                     strategyMode: settings.strategyMode,
                     methodology: settings.methodology,
                     leverage: settings.leverage,
+
                     selectedPairs: settings.selectedPairs,
+                    marketType: settings.marketType,
                     // Only send API keys if they were edited (not masked)
                     ...(settings.deepseekApiKey && !settings.deepseekApiKey.includes("••••")
                         ? { deepseekApiKey: settings.deepseekApiKey } : {}),
@@ -139,6 +145,7 @@ export default function SettingsPage() {
                         ? { asterApiKey: settings.asterApiKey } : {}),
                     ...(settings.asterApiSecret && !settings.asterApiSecret.includes("••••")
                         ? { asterApiSecret: settings.asterApiSecret } : {}),
+                    asterTestnet: settings.asterTestnet,
                 })
             });
 
@@ -224,6 +231,28 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
+                        {/* Market Type */}
+                        <div>
+                            <label className="text-white font-medium block mb-3">Market Type</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                {['perp', 'spot'].map((type) => (
+                                    <button
+                                        key={type}
+                                        onClick={() => setSettings({ ...settings, marketType: type })}
+                                        className={`p-4 rounded-lg border transition-all ${settings.marketType === type
+                                            ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                                            : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                                            }`}
+                                    >
+                                        <div className="font-bold capitalize flex items-center gap-2 justify-center">
+                                            <span>{type === 'perp' ? '📈' : '💰'}</span>
+                                            {type === 'perp' ? 'Perpetual Futures' : 'Spot Trading'}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Strategy Mode */}
                         <div>
                             <label className="text-white font-medium block mb-3">Strategy Mode</label>
@@ -299,6 +328,16 @@ export default function SettingsPage() {
                                     {asterTest.testing ? '...' : 'Test'}
                                 </button>
                             </div>
+                            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.asterTestnet}
+                                    onChange={(e) => setSettings({ ...settings, asterTestnet: e.target.checked })}
+                                    className="w-4 h-4 rounded bg-[#1a1a25] border-white/10"
+                                />
+                                <span className="text-sm text-gray-400">Use Testnet</span>
+                            </label>
+
                             {asterTest.result && (
                                 <div className={`text-sm mt-2 flex items-center gap-1 ${asterTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
                                     <span className={`w-2 h-2 rounded-full ${asterTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
@@ -408,8 +447,8 @@ export default function SettingsPage() {
                 >
                     {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Changes'}
                 </button>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 

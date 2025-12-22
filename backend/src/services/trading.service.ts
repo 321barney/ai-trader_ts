@@ -93,7 +93,9 @@ export class TradingService {
         selectedPairs?: string[];
         asterApiKey?: string;
         asterApiSecret?: string;
+        asterTestnet?: boolean;
         deepseekApiKey?: string;
+        marketType?: string;
     }) {
         // Build update data, only include non-undefined values
         const updateData: Record<string, any> = {};
@@ -104,8 +106,10 @@ export class TradingService {
         if (settings.methodology !== undefined) updateData.methodology = settings.methodology;
         if (settings.leverage !== undefined) updateData.leverage = settings.leverage;
         if (settings.selectedPairs !== undefined) updateData.selectedPairs = settings.selectedPairs;
+        if (settings.marketType !== undefined) updateData.marketType = settings.marketType;
         if (settings.asterApiKey !== undefined) updateData.asterApiKey = settings.asterApiKey;
         if (settings.asterApiSecret !== undefined) updateData.asterApiSecret = settings.asterApiSecret;
+        if (settings.asterTestnet !== undefined) updateData.asterTestnet = settings.asterTestnet;
         if (settings.deepseekApiKey !== undefined) updateData.deepseekApiKey = settings.deepseekApiKey;
 
         const user = await prisma.user.update({
