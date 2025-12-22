@@ -8,9 +8,8 @@
  * - News chronology enforcement
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma.js';
+import { asterService } from './aster.service.js';
 
 export interface ReplayConfig {
     initDate: string;          // Start date: "2024-01-01"
@@ -363,18 +362,59 @@ export class HistoricalReplayService {
     }
 
     /**
-     * Load historical data for symbols
+     * Load historical data for symbols from AsterDex
      */
     async loadHistoricalData(
         symbols: string[],
         startDate: string,
         endDate: string
     ): Promise<void> {
+        console.log(`[Replay] Loading historical data for ${symbols.join(', ')} from ${startDate} to ${endDate}`);
+
         for (const symbol of symbols) {
-            // In production, fetch from database or API
-            // For now, generate mock data
-            const data = this.generateMockData(symbol, startDate, endDate);
-            historicalData.set(symbol, data);
+            try {
+                // Calculate how many days of data we need
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+                // Fetch daily klines from AsterDex (limit 1500 per request)
+                const limit = Math.min(daysDiff + 50, 1500); // Extra buffer for indicators
+                const klines = await asterService.getKlines(symbol, '1d', limit);
+
+                console.log(`[Replay] Fetched ${klines.length} klines for ${symbol}`);
+
+                // Convert klines to ReplayMarketData format
+                const data: ReplayMarketData[] = klines
+                    .filter(k => {
+                        const klineDate = new Date(k.openTime);
+                        return klineDate >= start && klineDate <= end;
+                    })
+                    .map(k => ({
+                        symbol,
+                        date: new Date(k.openTime).toISOString().split('T')[0],
+                        open: k.open,
+                        high: k.high,
+                        low: k.low,
+                        close: k.close,
+                        volume: k.volume,
+                    }));
+
+                if (data.length > 0) {
+                    historicalData.set(symbol, data);
+                    console.log(`[Replay] Stored ${data.length} data points for ${symbol}`);
+                } else {
+                    // Fallback to mock data if no klines returned
+                    console.log(`[Replay] No klines for ${symbol}, using mock data`);
+                    const mockData = this.generateMockData(symbol, startDate, endDate);
+                    historicalData.set(symbol, mockData);
+                }
+            } catch (error: any) {
+                console.error(`[Replay] Error fetching klines for ${symbol}:`, error.message);
+                // Fallback to mock data on error
+                const mockData = this.generateMockData(symbol, startDate, endDate);
+                historicalData.set(symbol, mockData);
+            }
         }
     }
 

@@ -149,19 +149,28 @@ router.post('/step', authMiddleware, asyncHandler(async (req: Request, res: Resp
 router.post('/skip', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { step } = req.body;
 
-    if (step !== 6) {
-        return errorResponse(res, 'Only step 6 (DeepSeek) can be skipped');
+    // Allow skipping step 1 (exchange) and step 6 (deepseek)
+    if (step !== 1 && step !== 6) {
+        return errorResponse(res, 'Only step 1 (Exchange) and 6 (DeepSeek) can be skipped');
+    }
+
+    const updateData: any = { onboardingStep: step + 1 };
+
+    // If skipping last step, complete onboarding
+    if (step === 6) {
+        updateData.onboardingCompleted = true;
     }
 
     const user = await prisma.user.update({
         where: { id: req.userId },
-        data: {
-            onboardingStep: 6,
-            onboardingCompleted: true,
-        },
+        data: updateData,
     });
 
-    return successResponse(res, { completed: user.onboardingCompleted });
+    return successResponse(res, {
+        step,
+        nextStep: step < 6 ? step + 1 : null,
+        completed: user.onboardingCompleted
+    });
 }));
 
 /**

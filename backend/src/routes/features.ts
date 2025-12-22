@@ -91,6 +91,13 @@ router.post('/replay/start', authMiddleware, asyncHandler(async (req: Request, r
     const userId = req.user.userId;
     const config = req.body; // ReplayConfig
 
+    // Load real historical data from AsterDex
+    await historicalReplayService.loadHistoricalData(
+        config.symbols || [config.symbol],
+        config.initDate,
+        config.endDate
+    );
+
     const session = historicalReplayService.createSession(userId, config);
     res.json({ success: true, data: session });
 }));

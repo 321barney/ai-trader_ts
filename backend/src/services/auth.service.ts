@@ -147,7 +147,13 @@ export class AuthService {
                 tradingMode: true,
                 strategyMode: true,
                 methodology: true,
+                leverage: true,
                 selectedPairs: true,
+                // API keys (returned as boolean check for security)
+                asterApiKey: true,
+                asterApiSecret: true,
+                asterTestnet: true,
+                deepseekApiKey: true,
                 createdAt: true,
                 lastLogin: true,
             },
@@ -157,7 +163,13 @@ export class AuthService {
             throw new Error('User not found');
         }
 
-        return user;
+        // For security, don't expose full keys - just indicate if they're set
+        return {
+            ...user,
+            asterApiKey: user.asterApiKey ? '••••••••' : null,
+            asterApiSecret: user.asterApiSecret ? '••••••••' : null,
+            deepseekApiKey: user.deepseekApiKey ? '••••••••' : null,
+        };
     }
 
     /**

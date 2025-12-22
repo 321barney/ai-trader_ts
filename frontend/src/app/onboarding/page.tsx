@@ -113,19 +113,109 @@ export default function OnboardingPage() {
         }
     };
 
+    const saveStep = async (step: number) => {
+        setIsLoading(true);
+        try {
+            const token = localStorage.getItem("token");
+            let stepData = {};
+
+            // Prepare data based on step
+            switch (step) {
+                case 1:
+                    stepData = {
+                        asterApiKey: data.asterApiKey,
+                        asterApiSecret: data.asterApiSecret,
+                        asterTestnet: data.asterTestnet
+                    };
+                    break;
+                case 2:
+                    stepData = { leverage: Number(data.leverage) };
+                    break;
+                case 3:
+                    stepData = { selectedPairs: data.selectedPairs };
+                    break;
+                case 4:
+                    stepData = { marketType: data.marketType };
+                    break;
+                case 5:
+                    stepData = { methodology: data.methodology };
+                    break;
+                case 6:
+                    stepData = { deepseekApiKey: data.deepseekApiKey };
+                    break;
+            }
+
+            const res = await fetch(`${API_BASE}/api/onboarding/step`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ step, data: stepData })
+            });
+
+            const result = await res.json();
+            if (!result.success) {
+                throw new Error(result.error || "Failed to save step");
+            }
+
+            return true;
+        } catch (error: any) {
+            console.error("Save error:", error);
+            // setConnectionResult({ connected: false, error: error.message });
+            // Show error in UI
+            alert(`Error saving step: ${error.message}`);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSkip = async () => {
+        if (currentStep !== 1 && currentStep !== 6) return;
+
+        setIsLoading(true);
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE}/api/onboarding/skip`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ step: currentStep })
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                if (result.data.completed) {
+                    router.push("/dashboard");
+                } else {
+                    setCurrentStep(currentStep + 1);
+                }
+            } else {
+                alert(result.error || "Failed to skip step");
+            }
+        } catch (err) {
+            console.error("Skip error:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleNext = async () => {
+        // Validation
+        if (currentStep === 1 && !data.asterApiKey) {
+            return alert("Please enter API Key or skip this step");
+        }
+
+        const success = await saveStep(currentStep);
+        if (!success) return;
+
         if (currentStep < totalSteps) {
             setCurrentStep(currentStep + 1);
         } else {
-            // Complete onboarding
-            setIsLoading(true);
-            try {
-                // Would call API here
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                router.push("/dashboard");
-            } finally {
-                setIsLoading(false);
-            }
+            router.push("/dashboard");
         }
     };
 
@@ -450,12 +540,23 @@ export default function OnboardingPage() {
                                     Back
                                 </button>
                             )}
+
+                            {(currentStep === 1 || currentStep === 6) && (
+                                <button
+                                    onClick={handleSkip}
+                                    disabled={isLoading}
+                                    className="btn-secondary flex-1 py-3 text-gray-400 hover:text-white border-dashed"
+                                >
+                                    Skip This
+                                </button>
+                            )}
+
                             <button
                                 onClick={handleNext}
                                 disabled={isLoading}
                                 className="btn-primary flex-1 py-3 disabled:opacity-50"
                             >
-                                {isLoading ? "Completing..." : currentStep === totalSteps ? "Complete Setup" : "Continue"}
+                                {isLoading ? "Saving..." : currentStep === totalSteps ? "Complete Setup" : "Continue"}
                             </button>
                         </div>
                     </div>
