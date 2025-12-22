@@ -82,16 +82,96 @@ TAKE_PROFIT: [price]`;
     }
 
     protected buildCOTPrompt(context: AgentContext): string {
-        return `Analyze the following trading context and provide your strategy recommendation:
+        const md = context.marketData || {};
+        const methodology = context.methodology || 'General Technical Analysis';
 
-Methodology: ${context.methodology || 'General Technical Analysis'}
+        // Base market data section
+        let prompt = `Analyze the following trading context and provide your strategy recommendation:
+
+=== MARKET CONTEXT ===
+Methodology: ${methodology}
 Symbol: ${context.symbol || 'BTC-USD'}
-Current Price: ${context.marketData?.currentPrice || 'N/A'}
-24h Change: ${context.marketData?.change24h || 'N/A'}%
-Volume: ${context.marketData?.volume || 'N/A'}
-RSI: ${context.marketData?.rsi || 'N/A'}
-MACD: ${context.marketData?.macd || 'N/A'}
+Current Price: $${md.currentPrice?.toLocaleString() || 'N/A'}
+24h Change: ${md.change24h?.toFixed(2) || 'N/A'}%
+Volume: ${md.volume?.toLocaleString() || 'N/A'}
+ATR (Volatility): ${md.atr?.toFixed(2) || 'N/A'}
 
+=== STANDARD INDICATORS ===
+RSI (14): ${md.rsi?.toFixed(1) || 'N/A'}
+MACD: ${md.macd?.toFixed(2) || 'N/A'}
+Bollinger Upper: ${md.bollinger?.upper?.toFixed(2) || 'N/A'}
+Bollinger Lower: ${md.bollinger?.lower?.toFixed(2) || 'N/A'}`;
+
+        // Add methodology-specific data
+        if (methodology?.toUpperCase() === 'SMC') {
+            prompt += `
+
+=== SMC (Smart Money Concepts) ANALYSIS ===
+Break of Structure: ${md.breakOfStructure?.direction || 'NONE'} at $${md.breakOfStructure?.level?.toLocaleString() || 'N/A'}
+SMC Bias: ${md.smcBias || 'NEUTRAL'}
+
+Order Blocks (Recent 5):
+${md.orderBlocks?.length > 0
+                    ? md.orderBlocks.map((ob: any) => `  - ${ob.type}: $${ob.low?.toFixed(2)} - $${ob.high?.toFixed(2)} (strength: ${(ob.strength * 100).toFixed(1)}%)`).join('\n')
+                    : '  No significant order blocks detected'}
+
+Fair Value Gaps (Imbalances):
+${md.fairValueGaps?.length > 0
+                    ? md.fairValueGaps.map((fvg: any) => `  - ${fvg.type} FVG: $${fvg.low?.toFixed(2)} - $${fvg.high?.toFixed(2)} (size: $${fvg.size?.toFixed(2)})`).join('\n')
+                    : '  No unfilled FVGs detected'}
+
+SMC Entry Criteria:
+- Look for price to tap into bullish order blocks for LONG entries
+- Look for price to tap into bearish order blocks for SHORT entries
+- Fair Value Gaps are magnets - price tends to fill them`;
+        }
+
+        if (methodology?.toUpperCase() === 'ICT') {
+            prompt += `
+
+=== ICT (Inner Circle Trader) ANALYSIS ===
+Optimal Trade Entry (OTE) Zone: $${md.ote?.oteZoneLow?.toFixed(2) || 'N/A'} - $${md.ote?.oteZoneHigh?.toFixed(2) || 'N/A'}
+OTE Direction: ${md.ote?.direction || 'N/A'}
+Kill Zone Active: ${md.killZone?.zone || 'NONE'} (${md.killZone?.active ? 'ACTIVE - High probability trades!' : 'Not active'})
+ICT Bias: ${md.ictBias || 'NEUTRAL'}
+
+Order Blocks (ICT Style):
+${md.orderBlocks?.length > 0
+                    ? md.orderBlocks.map((ob: any) => `  - ${ob.type}: $${ob.low?.toFixed(2)} - $${ob.high?.toFixed(2)}`).join('\n')
+                    : '  No significant order blocks'}
+
+Fair Value Gaps:
+${md.fairValueGaps?.length > 0
+                    ? md.fairValueGaps.map((fvg: any) => `  - ${fvg.type}: $${fvg.low?.toFixed(2)} - $${fvg.high?.toFixed(2)}`).join('\n')
+                    : '  No FVGs detected'}
+
+ICT Entry Criteria:
+- Best entries during Kill Zones (London/NY open)
+- Look for OTE (61.8%-79% retracement) for entries
+- Avoid trading outside kill zones unless strong setup`;
+        }
+
+        if (methodology?.toUpperCase() === 'GANN') {
+            prompt += `
+
+=== GANN ANALYSIS ===
+Gann 1x1 Angle: $${md.gannLevels?.angle1x1?.toFixed(2) || 'N/A'}
+Gann 2x1 Angle: $${md.gannLevels?.angle2x1?.toFixed(2) || 'N/A'}
+Gann 1x2 Angle: $${md.gannLevels?.angle1x2?.toFixed(2) || 'N/A'}
+Gann Bias: ${md.gannBias || 'NEUTRAL'}
+
+Square of 9 Levels (Support/Resistance):
+${md.gannSquare9?.map((level: number) => `  $${level.toFixed(2)}`).join('\n') || '  N/A'}
+
+Gann Entry Criteria:
+- Price above 1x1 angle = Bullish, look for LONG
+- Price below 1x1 angle = Bearish, look for SHORT
+- Square of 9 levels are natural support/resistance`;
+        }
+
+        prompt += `
+
+=== POSITION & RISK ===
 Current Position: ${context.currentPosition ? JSON.stringify(context.currentPosition) : 'None'}
 
 RL Model Metrics:
@@ -100,7 +180,11 @@ RL Model Metrics:
 - Max Drawdown: ${context.riskMetrics?.maxDrawdown || 'N/A'}%
 - Recent Performance: ${context.riskMetrics?.recentPerformance || 'N/A'}
 
-Use Chain-of-Thought reasoning to analyze and decide.`;
+=== YOUR TASK ===
+Use Chain-of-Thought reasoning following the ${methodology} methodology.
+Provide your decision with specific entry, stop-loss, and take-profit based on the methodology's key levels.`;
+
+        return prompt;
     }
 
     protected getMockResponse(): string {

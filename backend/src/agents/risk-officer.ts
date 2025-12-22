@@ -76,23 +76,45 @@ WARNINGS: [comma-separated list or "none"]`;
     }
 
     protected buildCOTPrompt(context: AgentContext): string {
+        const md = context.marketData || {};
+        const rm = context.riskMetrics || {};
+        const methodology = context.methodology || 'Technical';
+
         return `Evaluate the risk of the following proposed trade:
 
+=== TRADE DETAILS ===
 Symbol: ${context.symbol || 'BTC-USD'}
 Proposed Direction: ${context.currentPosition?.direction || 'LONG'}
-Entry Price: ${context.currentPosition?.entryPrice || context.marketData?.currentPrice}
-Current Price: ${context.marketData?.currentPrice || 'N/A'}
+Entry Price: $${(context.currentPosition?.entryPrice || md.currentPrice)?.toLocaleString() || 'N/A'}
+Current Price: $${md.currentPrice?.toLocaleString() || 'N/A'}
+Methodology: ${methodology}
 
-Portfolio Size: $${context.riskMetrics?.portfolioValue || 50000}
-Current Exposure: ${context.riskMetrics?.currentExposure || 0}%
-Open Positions: ${context.riskMetrics?.openPositions || 0}
+=== PORTFOLIO STATUS ===
+Portfolio Size: $${rm.portfolioValue?.toLocaleString() || '50,000'}
+Current Exposure: ${rm.currentExposure || 0}%
+Open Positions: ${rm.openPositions || 0}
 
-Market Volatility (ATR): ${context.marketData?.atr || 'N/A'}
-24h Price Range: ${context.marketData?.high24h || 'N/A'} - ${context.marketData?.low24h || 'N/A'}
+=== VOLATILITY & RANGE ===
+ATR (14): $${md.atr?.toFixed(2) || 'N/A'}
+24h High: $${md.high24h?.toLocaleString() || 'N/A'}
+24h Low: $${md.low24h?.toLocaleString() || 'N/A'}
+24h Range: $${((md.high24h - md.low24h) || 0).toFixed(2)}
+Bollinger Width: $${((md.bollinger?.upper - md.bollinger?.lower) || 0).toFixed(2)}
 
-Recent Losses: ${context.riskMetrics?.recentLosses || 0}
-Current Drawdown: ${context.riskMetrics?.currentDrawdown || 0}%
+=== STRATEGY KEY LEVELS ===
+${md.orderBlocks?.length > 0 ? `Nearest Order Block: $${md.orderBlocks[0]?.low?.toFixed(2)} - $${md.orderBlocks[0]?.high?.toFixed(2)}` : ''}
+${md.ote ? `ICT OTE Zone: $${md.ote.oteZoneLow?.toFixed(2)} - $${md.ote.oteZoneHigh?.toFixed(2)}` : ''}
+${md.gannLevels ? `Gann 1x1 Level: $${md.gannLevels.angle1x1?.toFixed(2)}` : ''}
+${md.fairValueGaps?.length > 0 ? `Nearest FVG: $${md.fairValueGaps[0]?.low?.toFixed(2)} - $${md.fairValueGaps[0]?.high?.toFixed(2)}` : ''}
 
+=== RISK STATUS ===
+Recent Losses: ${rm.recentLosses || 0}
+Current Drawdown: ${rm.currentDrawdown || 0}%
+Max Allowed Drawdown: 20%
+
+=== YOUR TASK ===
+Calculate appropriate stop-loss using ${methodology} key levels (Order Blocks, FVG, Gann angles).
+Ensure minimum 1:2 risk/reward ratio.
 Use Chain-of-Thought reasoning to assess risk and provide recommendations.`;
     }
 

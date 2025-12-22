@@ -81,22 +81,44 @@ KEY_INSIGHTS: [bullet points]`;
     }
 
     protected buildCOTPrompt(context: AgentContext): string {
+        const md = context.marketData || {};
+        const methodology = context.methodology || 'Technical Analysis';
+
         return `Analyze the market for the following symbol:
 
+=== MARKET OVERVIEW ===
 Symbol: ${context.symbol || 'BTC-USD'}
-Current Price: ${context.marketData?.currentPrice || 'N/A'}
-24h Change: ${context.marketData?.change24h || 'N/A'}%
-Volume Change: ${context.marketData?.volumeChange || 'N/A'}%
+Methodology in Use: ${methodology}
+Current Price: $${md.currentPrice?.toLocaleString() || 'N/A'}
+24h Change: ${md.change24h?.toFixed(2) || 'N/A'}%
+24h High: $${md.high24h?.toLocaleString() || 'N/A'}
+24h Low: $${md.low24h?.toLocaleString() || 'N/A'}
+Volume: ${md.volume?.toLocaleString() || 'N/A'}
 
-Recent On-Chain Data (if available):
-- Exchange Netflow: ${context.marketData?.exchangeNetflow || 'N/A'}
-- Whale Transactions: ${context.marketData?.whaleTransactions || 'N/A'}
-- Active Addresses: ${context.marketData?.activeAddresses || 'N/A'}
+=== TECHNICAL INDICATORS ===
+RSI (14): ${md.rsi?.toFixed(1) || 'N/A'} ${md.rsi > 70 ? '(OVERBOUGHT)' : md.rsi < 30 ? '(OVERSOLD)' : '(NEUTRAL)'}
+MACD: ${md.macd?.toFixed(2) || 'N/A'}
+ATR (Volatility): $${md.atr?.toFixed(2) || 'N/A'}
+Bollinger Bands: $${md.bollinger?.lower?.toFixed(2) || 'N/A'} - $${md.bollinger?.upper?.toFixed(2) || 'N/A'}
 
-Recent News Sentiment: ${context.marketData?.newsSentiment || 'N/A'}
-Social Volume: ${context.marketData?.socialVolume || 'N/A'}
+=== STRATEGY-SPECIFIC BIAS ===
+${md.smcBias ? `SMC Bias: ${md.smcBias}` : ''}
+${md.ictBias ? `ICT Bias: ${md.ictBias}` : ''}
+${md.gannBias ? `Gann Bias: ${md.gannBias}` : ''}
+${md.breakOfStructure?.direction ? `Structure: ${md.breakOfStructure.direction}` : ''}
+${md.killZone?.active ? `Kill Zone: ${md.killZone.zone} (ACTIVE)` : ''}
 
-Use your search capabilities to gather additional data and provide comprehensive analysis.
+=== ON-CHAIN DATA ===
+Exchange Netflow: ${md.exchangeNetflow || 'N/A'}
+Whale Transactions (24h): ${md.whaleTransactions || 'N/A'}
+Active Addresses: ${md.activeAddresses || 'N/A'}
+
+=== SENTIMENT ===
+News Sentiment: ${md.newsSentiment || 'N/A'}
+Social Volume: ${md.socialVolume || 'N/A'}
+
+Use your search capabilities to gather additional data.
+Provide analysis aligned with the ${methodology} methodology.
 Use Chain-of-Thought reasoning throughout.`;
     }
 
