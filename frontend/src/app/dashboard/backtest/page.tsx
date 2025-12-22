@@ -135,15 +135,27 @@ export default function BacktestPage() {
                 body: JSON.stringify({ action: 'advance', steps: 1 })
             });
             const data = await res.json();
-            if (data.success) {
-                if (data.data.status === 'completed') setStatus('completed');
-                setCurrentDate(data.data.currentDate);
-                const newValue = data.data.portfolio.totalValue;
-                setPortfolioValue(newValue);
-                setPortfolioHistory(prev => [...prev, { date: data.data.currentDate, value: newValue }]);
+
+            if (!data.success) {
+                // Stop auto play on error (e.g., session expired)
+                setAutoPlay(false);
+                setStatus('idle');
+                setSessionId(null);
+                if (data.code === 'SESSION_EXPIRED') {
+                    alert('Session expired. Please start a new backtest.');
+                }
+                return;
             }
+
+            if (data.data.status === 'completed') setStatus('completed');
+            setCurrentDate(data.data.currentDate);
+            const newValue = data.data.portfolio.totalValue;
+            setPortfolioValue(newValue);
+            setPortfolioHistory(prev => [...prev, { date: data.data.currentDate, value: newValue }]);
         } catch (error) {
             console.error('Failed to advance time:', error);
+            // Stop auto play on network error
+            setAutoPlay(false);
         }
     };
 
