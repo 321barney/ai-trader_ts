@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { API_BASE } from "@/lib/api";
 
 interface ThoughtStep {
     step: number;
@@ -8,64 +9,92 @@ interface ThoughtStep {
 }
 
 interface AgentDecision {
-    agent: string;
+    id: string;
+    agentType: string;
     decision: string;
     confidence: number;
     reasoning: string;
     thoughtSteps: ThoughtStep[];
     timestamp: string;
     symbol?: string;
+    createdAt: string;
+}
+
+interface RLStatus {
+    available: boolean;
+    sharpeRatio?: number;
+    winRate?: number;
+    totalEpisodes?: number;
+    training: {
+        isTraining: boolean;
+        currentEpisode?: number;
+        totalEpisodes?: number;
+        progress?: number;
+    };
 }
 
 export default function AgentDashboardPage() {
     const [expandedAgent, setExpandedAgent] = useState<string | null>("Strategy Consultant");
+    // const [agentDecisions, setAgentDecisions] = useState<AgentDecision[]>([]); // Use if we want detailed history list
+    // For now, we want the LATEST decision for each agent to display as "Current Status"
+    const [latestDecisions, setLatestDecisions] = useState<AgentDecision[]>([]);
+    const [rlStatus, setRlStatus] = useState<RLStatus | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Mock agent data with COT
-    const agentDecisions: AgentDecision[] = [
-        {
-            agent: "Strategy Consultant",
-            decision: "LONG",
-            confidence: 0.72,
-            symbol: "BTC-USD",
-            timestamp: "2 minutes ago",
-            reasoning: "Based on market analysis and RL performance, recommending hybrid strategy.",
-            thoughtSteps: [
-                { step: 1, thought: "Market Analysis: Analyzing BTC-USD. RSI at 52 (neutral), MACD showing bullish crossover forming. Volume is average. Overall sentiment cautiously optimistic." },
-                { step: 2, thought: "Strategy Selection: Given moderate volatility and clear technical patterns, using DeepSeek for pattern analysis. RL model for execution timing optimization." },
-                { step: 3, thought: "RL Performance Review: Sharpe Ratio at 1.2 - performing well. Win rate 58% acceptable. No parameter changes needed." },
-                { step: 4, thought: "Trading Decision: Bullish MACD crossover + neutral RSI with room to grow = LONG position. Confidence moderate due to average volume." },
-                { step: 5, thought: "Risk Parameters: Entry at 42,500 (above current for breakout confirmation). Stop-loss at 41,650 (2% below). Take-profit at 44,625 (5% above)." },
-            ],
-        },
-        {
-            agent: "Risk Officer",
-            decision: "APPROVED",
-            confidence: 0.85,
-            symbol: "BTC-USD",
-            timestamp: "2 minutes ago",
-            reasoning: "Trade approved with standard risk parameters.",
-            thoughtSteps: [
-                { step: 1, thought: "Trade Analysis: Reviewing proposed LONG on BTC-USD. Entry price reasonable at current market level. Aligns with trend direction." },
-                { step: 2, thought: "Volatility Assessment: ATR indicates moderate volatility. 24h range 3% within normal bounds. Risk manageable with standard parameters." },
-                { step: 3, thought: "Position Sizing: Portfolio $50,000. Max risk 2% = $1,000. With 2.5% stop-loss, optimal position is 4% of portfolio ($2,000)." },
-                { step: 4, thought: "Risk Assessment: Overall MEDIUM risk. Moderate volatility, acceptable position size, good 1:2.5 risk/reward. Trade APPROVED." },
-            ],
-        },
-        {
-            agent: "Market Analyst",
-            decision: "BULLISH",
-            confidence: 0.65,
-            symbol: "BTC-USD",
-            timestamp: "5 minutes ago",
-            reasoning: "On-chain data supports accumulation thesis.",
-            thoughtSteps: [
-                { step: 1, thought: "On-Chain Analysis: Whale activity detected - 3 large transfers (>1000 BTC) in 24h, 2 moving to cold storage. Net exchange outflow 5,200 BTC (bullish accumulation signal)." },
-                { step: 2, thought: "News Analysis: ETF inflows continue showing institutional interest. No major regulatory concerns. Layer 2 adoption increasing." },
-                { step: 3, thought: "Social Sentiment: Twitter/X sentiment 0.35 (slightly bullish). Reddit moderately positive. Fear & Greed at 62 (Greed - watch for overbought)." },
-                { step: 4, thought: "Synthesis: Overall BULLISH. On-chain strongly supports accumulation. Institutional interest steady. Social sentiment positive but not euphoric." },
-            ],
-        },
-    ];
+    const fetchAgentsData = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+            const headers = { Authorization: `Bearer ${token}` };
+
+            // Fetch decisions for all agent types
+            const res = await fetch(`${API_BASE}/api/agents/decisions?limit=10`, { headers });
+            const json = await res.json();
+
+            if (json.success) {
+                // Group by agent type and get latest
+                const decisions = json.data.map((d: any) => ({
+                    ...d,
+                    agent: d.agentType, // Map agentType -> agent for display logic
+                    timestamp: new Date(d.createdAt).toLocaleString(),
+                    // Ensure thoughtSteps is array
+                    thoughtSteps: Array.isArray(d.thoughtSteps) ? d.thoughtSteps : []
+                }));
+                // We could filter to show only latest 3 distinct agents if desired, 
+                // but for now let's just show the recent stream or latest per agent.
+                // Let's filter to get 1 latest per agent type for the "Overview" cards
+                const uniqueAgents = ['Strategy Consultant', 'Risk Officer', 'Market Analyst'];
+                const latest = uniqueAgents.map(type =>
+                    decisions.find((d: any) => d.agentType === type) || null
+                ).filter(Boolean);
+
+                if (latest.length > 0) {
+                    setLatestDecisions(latest);
+                } else {
+                    // Keep empty or show placeholder if no decisions ever made
+                    setLatestDecisions([]);
+                }
+            }
+
+            // Fetch RL Status
+            const rlRes = await fetch(`${API_BASE}/api/agents/rl/status`, { headers });
+            const rlJson = await rlRes.json();
+            if (rlJson.success) {
+                setRlStatus(rlJson.data);
+            }
+
+        } catch (error) {
+            console.error("Failed to fetch agent data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAgentsData();
+        const interval = setInterval(fetchAgentsData, 10000); // Poll every 10s
+        return () => clearInterval(interval);
+    }, []);
 
     const getAgentIcon = (agent: string) => {
         if (agent.includes("Strategy")) return "🧠";
@@ -85,58 +114,69 @@ export default function AgentDashboardPage() {
         return "badge-warning";
     };
 
+    if (loading && latestDecisions.length === 0) {
+        return <div className="p-8 text-center text-gray-500">Loading Agents...</div>;
+    }
+
     return (
         <div className="p-8">
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">AI Agent Dashboard</h1>
-                <p className="text-gray-400">View agent reasoning and Chain-of-Thought analysis</p>
+                <p className="text-gray-400">View live agent reasoning and Chain-of-Thought analysis</p>
             </div>
 
             {/* Agent Status Overview */}
-            <div className="grid grid-cols-3 gap-6 mb-8">
-                {agentDecisions.map((agent) => (
-                    <div
-                        key={agent.agent}
-                        className={`card glass glass-hover cursor-pointer ${expandedAgent === agent.agent ? 'ring-2 ring-indigo-500/50' : ''}`}
-                        onClick={() => setExpandedAgent(expandedAgent === agent.agent ? null : agent.agent)}
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getAgentColor(agent.agent)} flex items-center justify-center text-2xl`}>
-                                {getAgentIcon(agent.agent)}
-                            </div>
-                            <div className="flex-1">
-                                <div className="text-white font-bold">{agent.agent}</div>
-                                <div className="text-gray-500 text-sm">{agent.timestamp}</div>
-                            </div>
-                            <div className="text-right">
-                                <div className={`badge ${getDecisionColor(agent.decision)}`}>
-                                    {agent.decision}
+            {latestDecisions.length === 0 ? (
+                <div className="text-center py-12 bg-[#12121a] rounded-xl border border-white/5 mb-8">
+                    <p className="text-gray-400">No agent decisions recorded yet.</p>
+                    <p className="text-sm text-gray-600 mt-2">Start a trading analysis to see agents in action.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {latestDecisions.map((agent: any) => (
+                        <div
+                            key={agent.id}
+                            className={`card glass glass-hover cursor-pointer ${expandedAgent === agent.agentType ? 'ring-2 ring-indigo-500/50' : ''}`}
+                            onClick={() => setExpandedAgent(expandedAgent === agent.agentType ? null : agent.agentType)}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getAgentColor(agent.agentType || '')} flex items-center justify-center text-2xl`}>
+                                    {getAgentIcon(agent.agentType || '')}
                                 </div>
-                                <div className="text-gray-500 text-sm mt-1">
-                                    {Math.round(agent.confidence * 100)}%
+                                <div className="flex-1">
+                                    <div className="text-white font-bold">{agent.agentType}</div>
+                                    <div className="text-gray-500 text-sm">{agent.timestamp}</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className={`badge ${getDecisionColor(agent.decision)}`}>
+                                        {agent.decision}
+                                    </div>
+                                    <div className="text-gray-500 text-sm mt-1">
+                                        {Math.round((agent.confidence || 0) * 100)}%
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* Expanded Agent Detail */}
-            {expandedAgent && (
+            {expandedAgent && latestDecisions.find(a => a.agentType === expandedAgent) && (
                 <div className="card glass">
-                    {agentDecisions.filter(a => a.agent === expandedAgent).map((agent) => (
-                        <div key={agent.agent}>
+                    {latestDecisions.filter(a => a.agentType === expandedAgent).map((agent: any) => (
+                        <div key={agent.id}>
                             {/* Agent Header */}
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${getAgentColor(agent.agent)} flex items-center justify-center text-3xl`}>
-                                        {getAgentIcon(agent.agent)}
+                                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${getAgentColor(agent.agentType || '')} flex items-center justify-center text-3xl`}>
+                                        {getAgentIcon(agent.agentType || '')}
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-white">{agent.agent}</h2>
+                                        <h2 className="text-2xl font-bold text-white">{agent.agentType}</h2>
                                         <div className="text-gray-400">
-                                            {agent.symbol} • {agent.timestamp}
+                                            {agent.symbol || 'General'} • {agent.timestamp}
                                         </div>
                                     </div>
                                 </div>
@@ -145,7 +185,7 @@ export default function AgentDashboardPage() {
                                         {agent.decision}
                                     </div>
                                     <div className="text-gray-400 mt-2">
-                                        Confidence: {Math.round(agent.confidence * 100)}%
+                                        Confidence: {Math.round((agent.confidence || 0) * 100)}%
                                     </div>
                                 </div>
                             </div>
@@ -156,7 +196,7 @@ export default function AgentDashboardPage() {
                                     <span className="text-indigo-400">🔗</span> Chain of Thought
                                 </h3>
                                 <div className="space-y-4">
-                                    {agent.thoughtSteps.map((step, i) => (
+                                    {agent.thoughtSteps && agent.thoughtSteps.map((step: ThoughtStep, i: number) => (
                                         <div key={i} className="flex gap-4">
                                             <div className="flex-shrink-0">
                                                 <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-sm">
@@ -175,6 +215,9 @@ export default function AgentDashboardPage() {
                                             </div>
                                         </div>
                                     ))}
+                                    {(!agent.thoughtSteps || agent.thoughtSteps.length === 0) && (
+                                        <div className="text-gray-500 italic">No structured thought process steps available.</div>
+                                    )}
                                 </div>
                             </div>
 
@@ -197,31 +240,22 @@ export default function AgentDashboardPage() {
                     <div className="grid grid-cols-4 gap-4">
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Status</div>
-                            <div className="text-green-400 font-bold">Active</div>
+                            <div className={rlStatus?.available ? "text-green-400 font-bold" : "text-gray-500 font-bold"}>
+                                {rlStatus?.training?.isTraining ? 'Training...' : rlStatus?.available ? 'Active' : 'Offline'}
+                            </div>
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Sharpe Ratio</div>
-                            <div className="text-white font-bold">1.24</div>
+                            <div className="text-white font-bold">{rlStatus?.sharpeRatio?.toFixed(2) || 'N/A'}</div>
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Win Rate</div>
-                            <div className="text-white font-bold">58%</div>
+                            <div className="text-white font-bold">{rlStatus?.winRate ? (rlStatus.winRate * 100).toFixed(1) + '%' : 'N/A'}</div>
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
-                            <div className="text-gray-400 text-sm">Last Action</div>
-                            <div className="text-gray-300 font-bold text-sm">None</div>
+                            <div className="text-gray-400 text-sm">Episodes</div>
+                            <div className="text-gray-300 font-bold text-sm">{rlStatus?.totalEpisodes || 0}</div>
                         </div>
-                    </div>
-                    <div className="flex gap-4 mt-4">
-                        <button className="btn-secondary flex-1 py-3">
-                            Modify Parameters
-                        </button>
-                        <button className="btn-secondary flex-1 py-3">
-                            Retrain Model
-                        </button>
-                        <button className="bg-red-500/10 border border-red-500/30 text-red-400 flex-1 py-3 rounded-lg font-medium hover:bg-red-500/20 transition-colors">
-                            Stop RL
-                        </button>
                     </div>
                 </div>
             )}

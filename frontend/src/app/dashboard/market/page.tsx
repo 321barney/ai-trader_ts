@@ -52,6 +52,30 @@ export default function MarketPage() {
         }
     };
 
+    // Calculate aggregate sentiment
+    const sentimentStats = news.length > 0 ? news.reduce((acc, item) => {
+        if (item.sentiment === 'positive') acc.score += 1;
+        if (item.sentiment === 'negative') acc.score -= 1;
+        return acc;
+    }, { score: 0 }) : { score: 0 };
+
+    const avgScore = news.length > 0 ? sentimentStats.score / news.length : 0; // -1 to 1
+    const sentimentPercentage = ((avgScore + 1) / 2) * 100; // 0 to 100%
+
+    let sentimentLabel = 'Neutral';
+    let sentimentColor = 'text-gray-400';
+    let barColor = 'bg-gray-500';
+
+    if (avgScore > 0.2) {
+        sentimentLabel = 'Bullish';
+        sentimentColor = 'text-green-400';
+        barColor = 'bg-green-500';
+    } else if (avgScore < -0.2) {
+        sentimentLabel = 'Bearish';
+        sentimentColor = 'text-red-400';
+        barColor = 'bg-red-500';
+    }
+
     return (
         <div className="p-6 space-y-6">
             <header className="flex justify-between items-center">
@@ -64,7 +88,7 @@ export default function MarketPage() {
                         type="text"
                         placeholder="Search symbol or topic..."
                         className="bg-[#1a1a23] border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
-                        value={symbol || query} // Simplified for demo
+                        value={query !== 'crypto market' ? query : (symbol || query)}
                         onChange={(e) => {
                             setSymbol(e.target.value.toUpperCase());
                             setQuery(e.target.value);
@@ -105,6 +129,9 @@ export default function MarketPage() {
                             </div>
                         ))
                     )}
+                    {!loading && news.length === 0 && (
+                        <div className="text-center py-10 text-gray-500">No news found. Try a different search.</div>
+                    )}
                 </div>
 
                 {/* Sentiment Gauge & Stats */}
@@ -112,14 +139,20 @@ export default function MarketPage() {
                     <div className="bg-[#12121a] border border-white/5 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Market Sentiment</h3>
                         <div className="flex flex-col items-center justify-center py-6">
-                            <div className="text-4xl font-bold text-green-400 mb-2">Bullish</div>
+                            <div className={`text-4xl font-bold ${sentimentColor} mb-2`}>{sentimentLabel}</div>
                             <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
-                                <div className="bg-green-500 h-full w-[75%] rounded-full"></div>
+                                <div
+                                    className={`${barColor} h-full rounded-full transition-all duration-500`}
+                                    style={{ width: `${Math.max(5, Math.min(95, sentimentPercentage))}%` }}
+                                ></div>
                             </div>
                             <div className="flex justify-between w-full text-xs text-gray-500 mt-2">
                                 <span>Bearish</span>
                                 <span>Neutral</span>
                                 <span>Bullish</span>
+                            </div>
+                            <div className="text-xs text-gray-600 mt-4 text-center">
+                                Based on {news.length} recent articles
                             </div>
                         </div>
                     </div>
@@ -127,10 +160,14 @@ export default function MarketPage() {
                     <div className="bg-[#12121a] border border-white/5 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Trending Topics</h3>
                         <div className="flex flex-wrap gap-2">
-                            {['Bitcoin', 'Inflation', 'NVIDIA', 'Ethereum', 'AI', 'FedRate'].map(tag => (
-                                <span key={tag} className="px-3 py-1 bg-white/5 rounded-full text-sm text-gray-300 hover:bg-white/10 cursor-pointer">
+                            {['Bitcoin', 'Inflation', 'NVIDIA', 'Ethereum', 'AI', 'FedRate'].map((tag) => (
+                                <button
+                                    key={tag}
+                                    onClick={() => { setQuery(tag); setSymbol(''); fetchNews(); }}
+                                    className="px-3 py-1 bg-white/5 rounded-full text-sm text-gray-300 hover:bg-white/10 cursor-pointer border border-transparent hover:border-white/10 transition-all"
+                                >
                                     #{tag}
-                                </span>
+                                </button>
                             ))}
                         </div>
                     </div>

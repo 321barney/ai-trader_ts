@@ -154,6 +154,12 @@ export class AuthService {
                 asterApiSecret: true,
                 asterTestnet: true,
                 deepseekApiKey: true,
+                openaiApiKey: true,
+                anthropicApiKey: true,
+                geminiApiKey: true,
+                marketAnalystModel: true,
+                riskOfficerModel: true,
+                strategyConsultantModel: true,
                 createdAt: true,
                 lastLogin: true,
             },
@@ -169,6 +175,9 @@ export class AuthService {
             asterApiKey: user.asterApiKey ? '••••••••' : null,
             asterApiSecret: user.asterApiSecret ? '••••••••' : null,
             deepseekApiKey: user.deepseekApiKey ? '••••••••' : null,
+            openaiApiKey: user.openaiApiKey ? '••••••••' : null,
+            anthropicApiKey: user.anthropicApiKey ? '••••••••' : null,
+            geminiApiKey: user.geminiApiKey ? '••••••••' : null,
         };
     }
 

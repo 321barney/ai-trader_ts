@@ -106,7 +106,13 @@ export class TradingService {
         asterApiSecret?: string;
         asterTestnet?: boolean;
         deepseekApiKey?: string;
+        openaiApiKey?: string;
+        anthropicApiKey?: string;
+        geminiApiKey?: string;
         marketType?: string;
+        marketAnalystModel?: string;
+        riskOfficerModel?: string;
+        strategyConsultantModel?: string;
     }) {
         // Build update data, only include non-undefined values
         const updateData: Record<string, any> = {};
@@ -122,6 +128,12 @@ export class TradingService {
         if (settings.asterApiSecret !== undefined) updateData.asterApiSecret = settings.asterApiSecret;
         if (settings.asterTestnet !== undefined) updateData.asterTestnet = settings.asterTestnet;
         if (settings.deepseekApiKey !== undefined) updateData.deepseekApiKey = settings.deepseekApiKey;
+        if (settings.openaiApiKey !== undefined) updateData.openaiApiKey = settings.openaiApiKey;
+        if (settings.anthropicApiKey !== undefined) updateData.anthropicApiKey = settings.anthropicApiKey;
+        if (settings.geminiApiKey !== undefined) updateData.geminiApiKey = settings.geminiApiKey;
+        if (settings.marketAnalystModel !== undefined) updateData.marketAnalystModel = settings.marketAnalystModel;
+        if (settings.riskOfficerModel !== undefined) updateData.riskOfficerModel = settings.riskOfficerModel;
+        if (settings.strategyConsultantModel !== undefined) updateData.strategyConsultantModel = settings.strategyConsultantModel;
 
         const user = await prisma.user.update({
             where: { id: userId },
@@ -133,6 +145,9 @@ export class TradingService {
                 methodology: true,
                 leverage: true,
                 selectedPairs: true,
+                marketAnalystModel: true,
+                riskOfficerModel: true,
+                strategyConsultantModel: true
             }
         });
 

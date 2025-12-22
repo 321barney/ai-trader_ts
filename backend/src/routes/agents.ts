@@ -74,34 +74,15 @@ router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandl
         return errorResponse(res, 'Symbol is required');
     }
 
-    const orchestrator = new AgentOrchestrator();
-
-    // Mock market data
-    const marketData = {
-        currentPrice: 42500,
-        change24h: 2.5,
-        rsi: 52,
-        macd: 150,
-        volume: 1500000000,
-    };
-
-    // Get RL metrics
-    const rlMetrics = await rlService.getMetrics();
-
-    const result = await orchestrator.analyzeAndDecide({
-        userId: req.userId!,
-        symbol,
-        marketData,
-        riskMetrics: {
-            ...rlMetrics,
-            portfolioValue: 50000,
-            currentExposure: 0,
-            openPositions: 0,
-        },
-    });
-
-    return successResponse(res, result);
+    try {
+        const { tradingService } = await import('../services/trading.service.js');
+        const result = await tradingService.runAnalysis(req.userId!, symbol);
+        return successResponse(res, result);
+    } catch (error: any) {
+        return errorResponse(res, error.message);
+    }
 }));
+
 
 /**
  * GET /api/agents/rl/status
