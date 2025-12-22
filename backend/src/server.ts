@@ -64,6 +64,7 @@ app.listen(PORT, () => {
     // Start Scheduler
     import('./scheduler.js').then(({ scheduler }) => {
         scheduler.startTradingLoop();
+        scheduler.startSignalMonitoring();
     });
 });
 

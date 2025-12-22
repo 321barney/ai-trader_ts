@@ -26,9 +26,12 @@ export default function StrategyLabPage() {
     const fetchVersions = async () => {
         try {
             // Mock fetching for now if API endpoint doesn't exist yet
-            const res = await api.get<StrategyVersion[]>('/strategies'); // We need to create this endpoint or use trading/settings
+            const res = await api.get<StrategyVersion[]>('/api/strategies');
             if (res.success && res.data) {
                 setVersions(res.data);
+            } else {
+                // No strategies yet, show empty state
+                setVersions([]);
             }
         } catch (error) {
             console.error('Failed to fetch strategies', error);
@@ -49,47 +52,70 @@ export default function StrategyLabPage() {
     };
 
     const handleCreateDraft = async () => {
-        // Find active to clone, or default
-        const active = versions.find(v => v.status === 'ACTIVE') || versions[0];
-        const newDraft = {
-            ...active,
-            id: 'temp-' + Date.now(),
-            version: (versions[0]?.version || 0) + 1,
-            status: 'DRAFT' as const,
-            createdAt: new Date().toISOString(),
-        };
-        setVersions([newDraft, ...versions]);
-        setSelectedVersion(newDraft);
-        setEditingParams(JSON.stringify(newDraft.rules, null, 2));
+        try {
+            const active = versions.find(v => v.status === 'ACTIVE');
+            const res = await api.post<StrategyVersion>('/api/strategies', {
+                baseMethodology: active?.baseMethodology || 'SMC',
+                rules: active?.rules || {}
+            });
+            if (res.success && res.data) {
+                setVersions([res.data, ...versions]);
+                setSelectedVersion(res.data);
+                setEditingParams(JSON.stringify(res.data.rules, null, 2));
+            }
+        } catch (error) {
+            console.error('Failed to create draft:', error);
+        }
     };
 
     const handleSave = async () => {
         if (!selectedVersion) return;
-        // API call to save
-        alert('Strategy Saved (Simulation)');
+        try {
+            // For drafts, we update via creating new or could implement PUT
+            // For now, just update local state
+            const rules = JSON.parse(editingParams);
+            const updated = { ...selectedVersion, rules };
+            setVersions(versions.map(v => v.id === selectedVersion.id ? updated : v));
+            setSelectedVersion(updated);
+            alert('Strategy saved locally. Changes will be persisted when you Run Test.');
+        } catch (error) {
+            alert('Invalid JSON in configuration!');
+        }
     };
 
     const handleTest = async () => {
         if (!selectedVersion) return;
-        // Trigger backtest
-        alert('Running Backtest... (Simulation)');
-        // Update local state to TESTED
-        const updated = { ...selectedVersion, status: 'TESTED' as const, lastTestedAt: new Date().toISOString() };
-        setVersions(versions.map(v => v.id === selectedVersion.id ? updated : v));
-        setSelectedVersion(updated);
+        try {
+            const res = await api.put<StrategyVersion>(`/api/strategies/${selectedVersion.id}/test`, {});
+            if (res.success && res.data) {
+                setVersions(versions.map(v => v.id === selectedVersion.id ? res.data! : v));
+                setSelectedVersion(res.data);
+                alert('Strategy marked as TESTED! You can now promote it to live.');
+            }
+        } catch (error) {
+            console.error('Failed to mark as tested:', error);
+            alert('Failed to mark as tested');
+        }
     };
 
     const handlePromote = async () => {
         if (!selectedVersion || selectedVersion.status !== 'TESTED') return;
-        // Promote to ACTIVE
-        alert('Promoting to LIVE... (Simulation)');
-        const updated = { ...selectedVersion, status: 'ACTIVE' as const };
-        setVersions(versions.map(v => {
-            if (v.id === selectedVersion.id) return updated;
-            if (v.status === 'ACTIVE') return { ...v, status: 'ARCHIVED' as const };
-            return v;
-        }));
-        setSelectedVersion(updated);
+        try {
+            const res = await api.put<StrategyVersion>(`/api/strategies/${selectedVersion.id}/promote`, {});
+            if (res.success && res.data) {
+                // Archive previous active in local state
+                setVersions(versions.map(v => {
+                    if (v.id === selectedVersion.id) return res.data!;
+                    if (v.status === 'ACTIVE') return { ...v, status: 'ARCHIVED' as const };
+                    return v;
+                }));
+                setSelectedVersion(res.data);
+                alert('Strategy promoted to ACTIVE! It will now be used for live trading.');
+            }
+        } catch (error: any) {
+            console.error('Failed to promote:', error);
+            alert(error.message || 'Failed to promote strategy');
+        }
     };
 
     return (

@@ -6,10 +6,14 @@ import cron from 'node-cron';
 import { prisma } from './utils/prisma.js';
 import { tradingService } from './services/trading.service.js';
 import { strategyService } from './services/strategy.service.js';
+import { signalTrackerService } from './services/signal-tracker.service.js';
+import { AsterService } from './services/aster.service.js';
 
 export class Scheduler {
     private tradingJob: cron.ScheduledTask | null = null;
+    private signalMonitorJob: cron.ScheduledTask | null = null;
     private isRunning = false;
+    private isMonitoring = false;
 
     constructor() {
         // Initialize jobs
@@ -43,6 +47,44 @@ export class Scheduler {
     }
 
     /**
+     * Start signal monitoring loop
+     * Checks pending signals every minute
+     */
+    public startSignalMonitoring() {
+        if (this.signalMonitorJob) return;
+
+        console.log('[Scheduler] Starting signal monitoring (every 1m)...');
+
+        this.signalMonitorJob = cron.schedule('* * * * *', async () => {
+            if (this.isMonitoring) return;
+
+            this.isMonitoring = true;
+            try {
+                const updated = await signalTrackerService.updateAllPendingSignals();
+                if (updated > 0) {
+                    console.log(`[Scheduler] Updated ${updated} signals.`);
+                }
+            } catch (error) {
+                console.error('[Scheduler] Signal monitoring failed:', error);
+            } finally {
+                this.isMonitoring = false;
+            }
+        });
+    }
+
+    /**
+     * Stop all jobs
+     */
+    public stopAll() {
+        this.stopTradingLoop();
+        if (this.signalMonitorJob) {
+            this.signalMonitorJob.stop();
+            this.signalMonitorJob = null;
+            console.log('[Scheduler] Signal monitoring stopped.');
+        }
+    }
+
+    /**
      * Stop the trading loop
      */
     public stopTradingLoop() {
@@ -65,7 +107,15 @@ export class Scheduler {
                 tradingEnabled: true,
                 status: 'ACTIVE'
             },
-            select: { id: true, username: true, selectedPairs: true }
+            select: {
+                id: true,
+                username: true,
+                selectedPairs: true,
+                asterApiKey: true,
+                asterApiSecret: true,
+                asterTestnet: true,
+                maxDrawdownPercent: true,
+            }
         });
 
         console.log(`[Scheduler] Found ${users.length} active traders.`);
@@ -75,19 +125,41 @@ export class Scheduler {
             // 2a. Check if user has an ACTIVE strategy
             const activeStrategy = await strategyService.getActiveStrategy(user.id);
 
-            // Safety Check: If no active strategy, or it's not tested (if strictly enforced), skip
             if (!activeStrategy) {
                 console.warn(`[Scheduler] User ${user.username} enabled but no ACTIVE strategy. Skipping.`);
                 continue;
             }
 
-            // 2b. Iterate over selected pairs
+            // 2b. Drawdown check - Skip if max drawdown exceeded
+            if (user.asterApiKey && user.asterApiSecret) {
+                try {
+                    const aster = new AsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet || true);
+                    const balances = await aster.getBalance();
+                    const usdtBalance = balances.find(b => b.asset === 'USDT');
+
+                    if (usdtBalance) {
+                        // Simple check: if unrealized PnL is very negative, skip
+                        // In production: track initial balance and compare
+                        const positions = await aster.getPositions();
+                        const unrealizedPnL = positions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
+                        const currentBalance = usdtBalance.total + unrealizedPnL;
+                        const drawdownPercent = ((usdtBalance.total - currentBalance) / usdtBalance.total) * 100;
+
+                        if (drawdownPercent > (user.maxDrawdownPercent || 15)) {
+                            console.warn(`[Scheduler] User ${user.username} drawdown ${drawdownPercent.toFixed(1)}% exceeds max ${user.maxDrawdownPercent}%. Skipping.`);
+                            continue;
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`[Scheduler] Could not check drawdown for ${user.username}:`, err);
+                }
+            }
+
+            // 2c. Iterate over selected pairs
             const pairs = user.selectedPairs as string[] || [];
             for (const symbol of pairs) {
                 try {
                     console.log(`[Scheduler] Analyzing ${symbol} for ${user.username}...`);
-                    // runAnalysis will use the Active Strategy's methodology logic 
-                    // (Need to ensure TradingService fetches methodology from strategy, not just user settings)
                     await tradingService.runAnalysis(user.id, symbol);
                 } catch (err) {
                     console.error(`[Scheduler] Error analyzing ${symbol} for ${user.username}:`, err);

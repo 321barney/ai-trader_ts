@@ -61,13 +61,8 @@ export class StrategyService {
 
         if (!version) throw new Error('Version not found');
         if (version.status !== 'TESTED' && version.status !== 'ACTIVE') {
-            // In strict mode, we'd throw. For "Dev Area", we might warn.
-            // But per plan: "Live trading requires a tested/verified strategy."
-            // So better to enforce or at least tag it. 
-            // Currently forcing user to have run a test.
-            if (process.env.STRICT_STRATEGY_MODE === 'true') {
-                throw new Error('Strategy must be tested before activation');
-            }
+            // Enforce: Strategy must be tested (approved) before activation
+            throw new Error('Strategy must be tested and approved before activation. Please run a backtest first.');
         }
 
         // 2. Transaction to update

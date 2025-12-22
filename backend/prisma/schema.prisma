@@ -45,8 +45,10 @@ model User {
   leverage          Int    @default(10)
   
   // Risk Parameters
-  maxPositionSize   Float  @default(5)   // % of portfolio
-  maxRiskPerTrade   Float  @default(2)   // % of portfolio
+  maxPositionSize       Float  @default(5)   // % of portfolio per position
+  maxRiskPerTrade       Float  @default(2)   // % of portfolio risk per trade
+  tradingCapitalPercent Float  @default(10)  // % of total capital to use for trading
+  maxDrawdownPercent    Float  @default(15)  // Max allowed drawdown before stopping
   
   // Trading Controls
   tradingEnabled       Boolean @default(false)

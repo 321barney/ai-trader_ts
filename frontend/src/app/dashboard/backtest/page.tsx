@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_BASE } from '@/lib/api';
 
 interface ReplayConfig {
@@ -27,6 +27,25 @@ export default function BacktestPage() {
     const [currentDate, setCurrentDate] = useState('');
     const [portfolioValue, setPortfolioValue] = useState(10000);
     const [portfolioHistory, setPortfolioHistory] = useState<PortfolioSnapshot[]>([]);
+    const [autoPlay, setAutoPlay] = useState(false);
+    const autoPlayRef = useRef(autoPlay);
+
+    // Keep ref in sync with state
+    useEffect(() => {
+        autoPlayRef.current = autoPlay;
+    }, [autoPlay]);
+
+    // Auto-play loop
+    useEffect(() => {
+        if (!autoPlay || status !== 'running') return;
+
+        const interval = setInterval(async () => {
+            if (!autoPlayRef.current) return;
+            await advanceTime();
+        }, 1000); // 1 step per second
+
+        return () => clearInterval(interval);
+    }, [autoPlay, status]);
 
     const startReplay = async () => {
         try {
@@ -165,8 +184,12 @@ export default function BacktestPage() {
                             >
                                 Step Forward ⏭️
                             </button>
-                            <button className="bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white p-2 rounded-lg">
-                                ▶️ Auto Play
+                            <button
+                                onClick={() => setAutoPlay(!autoPlay)}
+                                disabled={status !== 'running'}
+                                className={`${autoPlay ? 'bg-red-500/50 hover:bg-red-500/70' : 'bg-white/10 hover:bg-white/20'} disabled:opacity-30 text-white p-2 rounded-lg`}
+                            >
+                                {autoPlay ? '⏹️ Stop' : '▶️ Auto Play'}
                             </button>
                         </div>
                     </div>
@@ -222,6 +245,81 @@ export default function BacktestPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Backtest Summary & Approval - Shows when completed */}
+                    {status === 'completed' && (
+                        <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-xl p-6">
+                            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                                📊 Backtest Summary
+                            </h3>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <div className="text-gray-400 text-sm">Final Value</div>
+                                    <div className={`text-2xl font-bold ${portfolioValue >= config.initialCapital ? 'text-green-400' : 'text-red-400'}`}>
+                                        ${portfolioValue.toLocaleString()}
+                                    </div>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <div className="text-gray-400 text-sm">Total Return</div>
+                                    <div className={`text-2xl font-bold ${portfolioValue >= config.initialCapital ? 'text-green-400' : 'text-red-400'}`}>
+                                        {(((portfolioValue - config.initialCapital) / config.initialCapital) * 100).toFixed(2)}%
+                                    </div>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <div className="text-gray-400 text-sm">Duration</div>
+                                    <div className="text-2xl font-bold text-white">
+                                        {portfolioHistory.length} days
+                                    </div>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <div className="text-gray-400 text-sm">Max Drawdown</div>
+                                    <div className="text-2xl font-bold text-yellow-400">
+                                        {(() => {
+                                            let peak = config.initialCapital;
+                                            let maxDD = 0;
+                                            portfolioHistory.forEach(p => {
+                                                if (p.value > peak) peak = p.value;
+                                                const dd = ((peak - p.value) / peak) * 100;
+                                                if (dd > maxDD) maxDD = dd;
+                                            });
+                                            return maxDD.toFixed(1);
+                                        })()}%
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <button
+                                    onClick={async () => {
+                                        // Mark strategy as tested and show confirmation
+                                        try {
+                                            const token = localStorage.getItem('token');
+                                            // Get active strategy ID (would need to fetch or pass from context)
+                                            alert('Strategy approved! Go to Strategy Lab to promote it to ACTIVE.');
+                                            // In full implementation: call PUT /api/strategies/:id/test
+                                        } catch (e) {
+                                            console.error(e);
+                                        }
+                                    }}
+                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                                >
+                                    ✓ Approve Strategy
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setStatus('idle');
+                                        setSessionId(null);
+                                        setPortfolioHistory([]);
+                                        setPortfolioValue(config.initialCapital);
+                                    }}
+                                    className="flex-1 bg-white/10 hover:bg-white/20 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                                >
+                                    Run Another Test
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

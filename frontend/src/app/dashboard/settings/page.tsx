@@ -302,12 +302,12 @@ export default function SettingsPage() {
 
                         {/* Strategy Mode */}
                         <div>
-                            <label className="text-white font-medium block mb-3">Strategy Mode</label>
+                            <label className="text-white font-medium block mb-3">Agent Decision Mode</label>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
-                                    { id: 'deepseek', label: 'DeepSeek', desc: 'AI Analysis' },
-                                    { id: 'rl', label: 'RL Model', desc: 'Cost Efficient' },
-                                    { id: 'hybrid', label: 'Hybrid', desc: 'Best of Both' },
+                                    { id: 'deepseek', label: 'AI Agents', desc: 'LLM Analysis' },
+                                    { id: 'rl', label: 'RL Only', desc: 'Trained Model' },
+                                    { id: 'hybrid', label: 'Hybrid', desc: 'AI + RL Combined' },
                                 ].map((mode) => (
                                     <button
                                         key={mode.id}
@@ -568,8 +568,8 @@ export default function SettingsPage() {
                                 <span>{pairData.symbol}</span>
                                 {pairData.maxLeverage && (
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${settings.selectedPairs.includes(pairData.symbol)
-                                            ? 'bg-indigo-500/30'
-                                            : 'bg-white/10'
+                                        ? 'bg-indigo-500/30'
+                                        : 'bg-white/10'
                                         }`}>
                                         {pairData.maxLeverage}x
                                     </span>

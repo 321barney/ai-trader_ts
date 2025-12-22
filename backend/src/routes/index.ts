@@ -4,6 +4,7 @@ import { onboardingRouter } from './onboarding.js';
 import { tradingRouter } from './trading.js';
 import { agentRouter } from './agents.js';
 import { featureRouter } from './features.js';
+import { strategyRouter } from './strategy.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/onboarding', onboardingRouter);
 router.use('/trading', tradingRouter);
 router.use('/agents', agentRouter);
 router.use('/features', featureRouter);
+router.use('/strategies', strategyRouter);
 
 export default router;

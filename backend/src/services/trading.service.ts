@@ -232,9 +232,11 @@ export class TradingService {
         });
 
         if (decision.finalDecision !== 'HOLD' && decision.confidence > 70) {
-            // If trading is enabled and mode is 'trade', execute
-            if (user.tradingEnabled && user.tradingMode === 'trade') {
+            // If trading is enabled and mode is 'trade' AND we have an active strategy, execute
+            if (user.tradingEnabled && user.tradingMode === 'trade' && activeStrategy) {
                 await this.executeOrder(userId, decision, symbol);
+            } else if (user.tradingEnabled && user.tradingMode === 'trade' && !activeStrategy) {
+                console.warn(`[TradingService] User ${userId} wants to trade but no ACTIVE strategy. Skipping execution.`);
             }
         }
 
@@ -297,7 +299,7 @@ export class TradingService {
      * Execute an order on AsterDex
      */
     private async executeOrder(userId: string, decision: any, symbol: string) {
-        // Fetch user secrets
+        // Fetch user secrets and trading config
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -305,7 +307,9 @@ export class TradingService {
                 asterApiSecret: true,
                 asterTestnet: true,
                 leverage: true,
-                methodology: true
+                methodology: true,
+                tradingCapitalPercent: true,
+                maxDrawdownPercent: true,
             }
         });
 
@@ -317,27 +321,48 @@ export class TradingService {
         const authService = new AsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet || true);
 
         try {
-            // Calculate quantity based on risk/portfolio (Simplified)
-            // In production: fetch balance, apply risk %
+            // Get current balance to calculate position size
+            const balances = await authService.getBalance();
+            const usdtBalance = balances.find(b => b.asset === 'USDT');
+            const availableBalance = usdtBalance ? usdtBalance.available : 0;
 
-            // For now, if decision is LONG/SHORT, execute min quantity
+            if (availableBalance <= 0) {
+                console.warn(`User ${userId} has no available balance, skipping execution`);
+                return null;
+            }
+
+            // Calculate position size based on tradingCapitalPercent
+            const capitalPercent = user.tradingCapitalPercent || 10; // Default 10%
+            const positionUSDT = (availableBalance * capitalPercent) / 100;
+
+            // For now, if decision is LONG/SHORT, execute calculated quantity
             if (decision.finalDecision === 'LONG' || decision.finalDecision === 'SHORT') {
-                const type = 'MARKET'; // Or LIMIT if price is specified
+                const type = 'MARKET';
                 const side = decision.finalDecision === 'LONG' ? 'BUY' : 'SELL';
 
-                // Fetch symbol info to get minQty/precision
+                // Fetch current price to calculate quantity
+                const currentPrice = decision.entryPrice || (await authService.getPrice(symbol));
+                const leverage = user.leverage || 10;
+
+                // Calculate quantity: (USDT amount * leverage) / price
+                const rawQuantity = (positionUSDT * leverage) / currentPrice;
+
+                // Get symbol precision
                 const pairs = await this.asterService.getPairs();
                 const pairInfo = pairs.find(p => p.symbol === symbol);
-                const quantity = pairInfo ? pairInfo.minQty : 0.001; // Default fallback
+                const stepSize = (pairInfo as any)?.stepSize || pairInfo?.minQty || 0.001;
+                const minQty = pairInfo?.minQty || 0.001;
 
-                console.log(`Executing ${side} order for ${symbol} quantity ${quantity}`);
+                // Round quantity to step size
+                const quantity = Math.max(minQty, Math.floor(rawQuantity / stepSize) * stepSize);
+
+                console.log(`[Execute] ${side} ${symbol} | Balance: $${availableBalance.toFixed(2)} | ${capitalPercent}% = $${positionUSDT.toFixed(2)} | Qty: ${quantity}`);
 
                 const order = await authService.placeOrder({
                     symbol,
                     side,
                     type,
                     quantity,
-                    // positionSide: 'BOTH' // Default for One-Way Mode
                 });
 
                 // Log trade to DB
@@ -350,7 +375,7 @@ export class TradingService {
                         quantity: order.executedQty,
                         status: 'OPEN',
                         pnl: 0,
-                        leverage: user.leverage || 10,
+                        leverage: leverage,
                         methodology: user.methodology || 'SMC'
                     }
                 });
@@ -359,7 +384,6 @@ export class TradingService {
             }
         } catch (error) {
             console.error('Order execution failed:', error);
-            // Don't throw, just log execution failure
         }
         return null;
     }
