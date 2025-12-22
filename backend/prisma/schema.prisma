@@ -69,6 +69,7 @@ model User {
   strategyVersions StrategyVersion[]
   trackedSignals   TrackedSignal[]
   testSessions     TestSession[]
+  backtestSessions BacktestSession[]
   
   // Timestamps
   createdAt DateTime @default(now())
@@ -353,5 +354,54 @@ model RLModelStatus {
   updatedAt       DateTime @updatedAt
   
   @@index([modelName])
+}
+
+// ============================================
+// BACKTESTING (Backend-Driven)
+// ============================================
+
+model BacktestSession {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  strategyVersionId String
+  
+  // Configuration
+  symbol            String
+  initDate          DateTime
+  endDate           DateTime
+  initialCapital    Float
+  
+  // Progress
+  status            BacktestStatus  @default(PENDING)
+  currentDate       DateTime?
+  currentStep       Int     @default(0)
+  totalSteps        Int     @default(0)
+  
+  // Results
+  portfolioValue    Float?
+  portfolioHistory  Json?   // Array of {date, value}
+  trades            Json?   // Array of simulated trades
+  
+  // Metrics (calculated on completion)
+  totalReturn       Float?
+  maxDrawdown       Float?
+  winRate           Float?
+  sharpeRatio       Float?
+  
+  createdAt         DateTime @default(now())
+  completedAt       DateTime?
+  
+  @@index([userId])
+  @@index([strategyVersionId])
+  @@index([status])
+}
+
+enum BacktestStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
 }
 

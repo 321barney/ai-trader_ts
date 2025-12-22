@@ -66,6 +66,11 @@ app.listen(PORT, () => {
         scheduler.startTradingLoop();
         scheduler.startSignalMonitoring();
     });
+
+    // Resume interrupted backtests
+    import('./services/backtest.service.js').then(({ backtestService }) => {
+        backtestService.resumeInterruptedBacktests();
+    });
 });
 
 export default app;

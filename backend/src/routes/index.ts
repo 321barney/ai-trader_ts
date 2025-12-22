@@ -5,6 +5,7 @@ import { tradingRouter } from './trading.js';
 import { agentRouter } from './agents.js';
 import { featureRouter } from './features.js';
 import { strategyRouter } from './strategy.js';
+import { backtestRouter } from './backtest.js';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/trading', tradingRouter);
 router.use('/agents', agentRouter);
 router.use('/features', featureRouter);
 router.use('/strategies', strategyRouter);
+router.use('/backtest', backtestRouter);
 
 export default router;
