@@ -230,7 +230,7 @@ router.post('/test-deepseek', authMiddleware, asyncHandler(async (req: Request, 
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json() as any;
             throw new Error(error.error?.message || 'DeepSeek API connection failed');
         }
 
