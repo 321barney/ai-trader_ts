@@ -268,7 +268,13 @@ export class TradingService {
         // Fetch user secrets
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { asterApiKey: true, asterApiSecret: true, asterTestnet: true }
+            select: {
+                asterApiKey: true,
+                asterApiSecret: true,
+                asterTestnet: true,
+                leverage: true,
+                methodology: true
+            }
         });
 
         if (!user || !user.asterApiKey || !user.asterApiSecret) {
@@ -311,7 +317,9 @@ export class TradingService {
                         entryPrice: order.avgPrice,
                         quantity: order.executedQty,
                         status: 'OPEN',
-                        pnl: 0
+                        pnl: 0,
+                        leverage: user.leverage || 10,
+                        methodology: user.methodology || 'SMC'
                     }
                 });
 
@@ -377,18 +385,18 @@ export class TradingService {
         const day30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
         const pnl1D = trades
-            .filter(t => t.closedAt && t.closedAt >= day1)
-            .reduce((sum, t) => sum + (t.pnl || 0), 0);
+            .filter((t: any) => t.closedAt && t.closedAt >= day1)
+            .reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
 
         const pnl7D = trades
-            .filter(t => t.closedAt && t.closedAt >= day7)
-            .reduce((sum, t) => sum + (t.pnl || 0), 0);
+            .filter((t: any) => t.closedAt && t.closedAt >= day7)
+            .reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
 
         const pnl30D = trades
-            .filter(t => t.closedAt && t.closedAt >= day30)
-            .reduce((sum, t) => sum + (t.pnl || 0), 0);
+            .filter((t: any) => t.closedAt && t.closedAt >= day30)
+            .reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
 
-        const totalPnL = trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+        const totalPnL = trades.reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
 
         return { pnl1D, pnl7D, pnl30D, totalPnL, totalTrades: trades.length };
     }
