@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { API_BASE } from "@/lib/api";
+import { api, API_BASE } from "@/lib/api";
 
 interface ThoughtStep {
     step: number;
@@ -45,7 +45,7 @@ export default function AgentDashboardPage() {
 
     const fetchAgentsData = async () => {
         try {
-            const token = localStorage.getItem("token");
+            const token = api.getAccessToken();
             if (!token) return;
             const headers = { Authorization: `Bearer ${token}` };
 
@@ -136,7 +136,7 @@ export default function AgentDashboardPage() {
     const runAnalysis = async () => {
         setRunningAnalysis(true);
         try {
-            const token = localStorage.getItem("token");
+            const token = api.getAccessToken();
             const res = await fetch(`${API_BASE}/api/trading/analyze`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

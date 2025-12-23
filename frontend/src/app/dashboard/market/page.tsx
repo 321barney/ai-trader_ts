@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { API_BASE } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 
 interface NewsItem {
     title: string;
@@ -21,7 +21,7 @@ export default function MarketPage() {
     const fetchNews = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
+            const token = api.getAccessToken();
             const endpoint = symbol
                 ? `${API_BASE}/api/features/market/news?symbol=${symbol}`
                 : `${API_BASE}/api/features/market/news?query=${query}`;

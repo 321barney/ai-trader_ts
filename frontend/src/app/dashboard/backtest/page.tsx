@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { API_BASE } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 
 interface BacktestSession {
     id: string;
@@ -47,7 +47,7 @@ function BacktestContent() {
     // Fetch user data and check for active backtest
     useEffect(() => {
         const fetchData = async () => {
-            const token = localStorage.getItem('token');
+            const token = api.getAccessToken();
             if (!token) return;
 
             try {
@@ -56,10 +56,11 @@ function BacktestContent() {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const userData = await userRes.json();
-                if (userData.success && userData.data?.tradingSettings?.pairs) {
-                    setUserPairs(userData.data.tradingSettings.pairs);
-                    if (userData.data.tradingSettings.pairs.length > 0) {
-                        setConfig(prev => ({ ...prev, symbol: userData.data.tradingSettings.pairs[0] }));
+                // Read selectedPairs from user data (correct path)
+                if (userData.success && userData.data?.selectedPairs && Array.isArray(userData.data.selectedPairs)) {
+                    setUserPairs(userData.data.selectedPairs);
+                    if (userData.data.selectedPairs.length > 0) {
+                        setConfig(prev => ({ ...prev, symbol: userData.data.selectedPairs[0] }));
                     }
                 }
 
@@ -96,7 +97,7 @@ function BacktestContent() {
 
     // Poll for status updates
     const pollStatus = async (sessionId: string) => {
-        const token = localStorage.getItem('token');
+        const token = api.getAccessToken();
         const poll = async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/backtest/status/${sessionId}`, {
@@ -126,7 +127,7 @@ function BacktestContent() {
 
         setIsStarting(true);
         try {
-            const token = localStorage.getItem('token');
+            const token = api.getAccessToken();
             const res = await fetch(`${API_BASE}/api/backtest/start`, {
                 method: 'POST',
                 headers: {
@@ -159,7 +160,7 @@ function BacktestContent() {
     // Pause backtest
     const pauseBacktest = async () => {
         if (!session) return;
-        const token = localStorage.getItem('token');
+        const token = api.getAccessToken();
         await fetch(`${API_BASE}/api/backtest/pause/${session.id}`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` }
@@ -170,7 +171,7 @@ function BacktestContent() {
     // Resume backtest
     const resumeBacktest = async () => {
         if (!session) return;
-        const token = localStorage.getItem('token');
+        const token = api.getAccessToken();
         await fetch(`${API_BASE}/api/backtest/resume/${session.id}`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` }
@@ -183,7 +184,7 @@ function BacktestContent() {
     const approveStrategy = async () => {
         if (!selectedStrategyId) return;
         try {
-            const token = localStorage.getItem('token');
+            const token = api.getAccessToken();
             const res = await fetch(`${API_BASE}/api/strategies/${selectedStrategyId}/test`, {
                 method: 'PUT',
                 headers: {
@@ -323,9 +324,9 @@ function BacktestContent() {
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-gray-400">Progress</span>
                                 <span className={`px-2 py-0.5 rounded text-xs font-mono ${session.status === 'COMPLETED' ? 'bg-green-500/20 text-green-400' :
-                                        session.status === 'RUNNING' ? 'bg-blue-500/20 text-blue-400' :
-                                            session.status === 'PAUSED' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                'bg-gray-500/20 text-gray-400'
+                                    session.status === 'RUNNING' ? 'bg-blue-500/20 text-blue-400' :
+                                        session.status === 'PAUSED' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            'bg-gray-500/20 text-gray-400'
                                     }`}>{session.status}</span>
                             </div>
                             <div className="w-full bg-white/10 rounded-full h-3">

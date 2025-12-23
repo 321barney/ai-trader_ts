@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { api, API_BASE } from "@/lib/api";
 
 interface Trade {
     id: string;
@@ -49,7 +49,7 @@ export default function TradeHistoryPage() {
     const fetchTrades = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem("token");
+            const token = api.getAccessToken();
             if (!token) return;
 
             const res = await fetch(`${API_BASE}/api/trading/trades?limit=50`, {
@@ -69,7 +69,7 @@ export default function TradeHistoryPage() {
     const fetchSignals = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem("token");
+            const token = api.getAccessToken();
             if (!token) return;
 
             const res = await fetch(`${API_BASE}/api/trading/signals?limit=100`, {

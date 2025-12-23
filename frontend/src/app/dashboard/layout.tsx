@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
 export default function DashboardLayout({
     children,
@@ -17,8 +18,8 @@ export default function DashboardLayout({
         const savedMode = localStorage.getItem("tradingMode") as "test" | "live";
         if (savedMode) setMode(savedMode);
 
-        // Try to get user info
-        const token = localStorage.getItem("token");
+        // Try to get user info from token
+        const token = api.getAccessToken();
         if (token) {
             // Decode JWT to get user info (basic decode, not verification)
             try {
