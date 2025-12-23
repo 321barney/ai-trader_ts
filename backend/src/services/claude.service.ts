@@ -12,7 +12,7 @@ export class ClaudeService implements IAiService {
     constructor(apiKey?: string) {
         this.apiKey = apiKey || process.env.ANTHROPIC_API_KEY || '';
         this.baseUrl = 'https://api.anthropic.com/v1';
-        this.model = 'claude-3-opus-20240229';
+        this.model = 'claude-3-sonnet-20240229';
     }
 
     /**
