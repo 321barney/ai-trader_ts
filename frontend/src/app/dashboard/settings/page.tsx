@@ -29,6 +29,7 @@ export default function SettingsPage() {
         marketAnalystModel: "deepseek",
         riskOfficerModel: "deepseek",
         strategyConsultantModel: "deepseek",
+        orchestratorModel: "deepseek",
     });
 
     const [loading, setLoading] = useState(true);
@@ -117,6 +118,7 @@ export default function SettingsPage() {
                         marketAnalystModel: user.marketAnalystModel || "deepseek",
                         riskOfficerModel: user.riskOfficerModel || "deepseek",
                         strategyConsultantModel: user.strategyConsultantModel || "deepseek",
+                        orchestratorModel: user.orchestratorModel || "deepseek",
                     }));
                 }
 
@@ -176,6 +178,7 @@ export default function SettingsPage() {
                 marketAnalystModel: settings.marketAnalystModel,
                 riskOfficerModel: settings.riskOfficerModel,
                 strategyConsultantModel: settings.strategyConsultantModel,
+                orchestratorModel: settings.orchestratorModel,
 
                 asterTestnet: settings.asterTestnet,
             });
@@ -558,7 +561,8 @@ export default function SettingsPage() {
                         {[
                             { id: 'marketAnalystModel', label: 'Market Analyst', icon: '📊' },
                             { id: 'riskOfficerModel', label: 'Risk Officer', icon: '🛡️' },
-                            { id: 'strategyConsultantModel', label: 'Strategy Consultant', icon: '💡' }
+                            { id: 'strategyConsultantModel', label: 'Strategy Consultant', icon: '💡' },
+                            { id: 'orchestratorModel', label: 'Orchestrator', icon: '🎼' }
                         ].map((agent) => (
                             <div key={agent.id}>
                                 <label className="text-white font-medium block mb-2 flex items-center gap-2">

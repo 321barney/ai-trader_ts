@@ -36,6 +36,7 @@ model User {
   marketAnalystModel    String @default("deepseek")
   riskOfficerModel      String @default("deepseek")
   strategyConsultantModel String @default("deepseek")
+  orchestratorModel       String @default("deepseek")
   
   // Trading Preferences
   preferredExchange String @default("aster")

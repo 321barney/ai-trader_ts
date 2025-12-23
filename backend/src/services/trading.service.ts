@@ -113,6 +113,7 @@ export class TradingService {
         marketAnalystModel?: string;
         riskOfficerModel?: string;
         strategyConsultantModel?: string;
+        orchestratorModel?: string;
     }) {
         // Build update data, only include non-undefined values
         const updateData: Record<string, any> = {};
@@ -134,6 +135,7 @@ export class TradingService {
         if (settings.marketAnalystModel !== undefined) updateData.marketAnalystModel = settings.marketAnalystModel;
         if (settings.riskOfficerModel !== undefined) updateData.riskOfficerModel = settings.riskOfficerModel;
         if (settings.strategyConsultantModel !== undefined) updateData.strategyConsultantModel = settings.strategyConsultantModel;
+        if (settings.orchestratorModel !== undefined) updateData.orchestratorModel = settings.orchestratorModel;
 
         const user = await prisma.user.update({
             where: { id: userId },
@@ -147,7 +149,8 @@ export class TradingService {
                 selectedPairs: true,
                 marketAnalystModel: true,
                 riskOfficerModel: true,
-                strategyConsultantModel: true
+                strategyConsultantModel: true,
+                orchestratorModel: true
             }
         });
 

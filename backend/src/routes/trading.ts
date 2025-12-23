@@ -92,7 +92,8 @@ router.put('/settings', authMiddleware, asyncHandler(async (req: Request, res: R
         geminiApiKey,
         marketAnalystModel,
         riskOfficerModel,
-        strategyConsultantModel
+        strategyConsultantModel,
+        orchestratorModel
     } = req.body;
 
     try {
@@ -112,7 +113,8 @@ router.put('/settings', authMiddleware, asyncHandler(async (req: Request, res: R
             geminiApiKey,
             marketAnalystModel,
             riskOfficerModel,
-            strategyConsultantModel
+            strategyConsultantModel,
+            orchestratorModel
         });
         return successResponse(res, result, 'Settings updated');
     } catch (error: any) {

@@ -465,23 +465,44 @@ class BacktestService {
             }
         });
 
-        // Mark strategy backtest as completed
-        await prisma.strategyVersion.update({
-            where: { id: session.strategyVersionId },
-            data: { backtestCompleted: true }
-        });
+        // Mark strategy backtest as completed (Legacy StrategyVersion support)
+        // Wrap in try-catch because versionId might be a TradingModel ID (new architecture)
+        try {
+            await prisma.strategyVersion.update({
+                where: { id: session.strategyVersionId },
+                data: { backtestCompleted: true }
+            });
+        } catch (error) {
+            // Ignore error if StrategyVersion not found - likely using new TradingModel
+            console.log(`[Backtest] Note: Could not update StrategyVersion ${session.strategyVersionId} (likely a TradingModel)`);
+        }
 
         // Update TradingModel status to PENDING_APPROVAL for council deliberation
-        await prisma.tradingModel.update({
-            where: { id: session.strategyVersionId },
-            data: {
-                status: 'PENDING_APPROVAL',
-                winRate: winRate,
-                sharpeRatio: sharpeRatio,
-                totalReturn: totalReturn,
-                maxDrawdown: maxDrawdown
-            }
-        });
+        try {
+            await prisma.tradingModel.update({
+                where: { id: session.strategyVersionId },
+                data: {
+                    status: 'PENDING_APPROVAL',
+                    winRate: winRate,
+                    sharpeRatio: sharpeRatio,
+                    totalReturn: totalReturn,
+                    maxDrawdown: maxDrawdown,
+                    backtestResults: {
+                        portfolioHistory: history,
+                        trades: trades,
+                        metrics: {
+                            totalReturn,
+                            maxDrawdown,
+                            winRate,
+                            sharpeRatio
+                        }
+                    }
+                }
+            });
+            console.log(`[Backtest] Updated TradingModel ${session.strategyVersionId} status to PENDING_APPROVAL`);
+        } catch (error) {
+            console.error(`[Backtest] Warning: Could not update TradingModel ${session.strategyVersionId}:`, error);
+        }
 
         console.log(`[Backtest] Session ${sessionId} completed. Return: ${totalReturn.toFixed(2)}%. Model status -> PENDING_APPROVAL`);
     }
