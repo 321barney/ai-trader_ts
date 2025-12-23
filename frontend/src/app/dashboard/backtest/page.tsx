@@ -274,20 +274,45 @@ function BacktestContent() {
                         {tradingModels.map((model) => (
                             <div key={model.id} className={`bg-[#12121a] border rounded-xl p-5 ${model.isActive ? 'border-green-500/50' : 'border-white/10'
                                 }`}>
-                                {/* Header with version and status */}
+                                {/* Header with version, status, and delete */}
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
                                         <div className="text-white font-bold text-lg">v{model.version}</div>
                                         <div className="text-sm text-gray-400">{model.methodology}</div>
                                     </div>
-                                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${model.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
-                                        model.status === 'APPROVED' ? 'bg-blue-500/20 text-blue-400' :
-                                            model.status === 'PENDING_APPROVAL' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                model.status === 'BACKTESTING' ? 'bg-purple-500/20 text-purple-400' :
-                                                    model.status === 'DRAFT' ? 'bg-gray-500/20 text-gray-400' :
-                                                        'bg-gray-500/20 text-gray-400'
-                                        }`}>
-                                        {model.status}
+                                    <div className="flex items-center gap-2">
+                                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${model.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
+                                            model.status === 'APPROVED' ? 'bg-blue-500/20 text-blue-400' :
+                                                model.status === 'PENDING_APPROVAL' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                    model.status === 'BACKTESTING' ? 'bg-purple-500/20 text-purple-400' :
+                                                        model.status === 'DRAFT' ? 'bg-gray-500/20 text-gray-400' :
+                                                            'bg-gray-500/20 text-gray-400'
+                                            }`}>
+                                            {model.status}
+                                        </div>
+                                        {!model.isActive && (
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm(`Delete strategy v${model.version}? This cannot be undone.`)) return;
+                                                    const token = api.getAccessToken();
+                                                    const res = await fetch(`${API_BASE}/api/models/${model.id}`, {
+                                                        method: 'DELETE',
+                                                        headers: { Authorization: `Bearer ${token}` }
+                                                    });
+                                                    if (res.ok) {
+                                                        alert('Strategy deleted');
+                                                        window.location.reload();
+                                                    } else {
+                                                        const data = await res.json();
+                                                        alert(`Failed: ${data.message || 'Unknown error'}`);
+                                                    }
+                                                }}
+                                                className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                                title="Delete strategy"
+                                            >
+                                                🗑️
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 

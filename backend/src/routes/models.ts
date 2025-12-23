@@ -90,6 +90,43 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 });
 
 /**
+ * DELETE /api/models/:id
+ * Delete a model (only if not active)
+ */
+router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const model = await db.tradingModel.findFirst({
+            where: {
+                id: req.params.id,
+                userId: req.userId
+            }
+        });
+
+        if (!model) {
+            return errorResponse(res, 'Model not found', 404);
+        }
+
+        if (model.isActive) {
+            return errorResponse(res, 'Cannot delete an active model. Deactivate it first.');
+        }
+
+        // Delete related backtest sessions first
+        await db.backtestSession.deleteMany({
+            where: { strategyVersionId: req.params.id }
+        });
+
+        // Delete the model
+        await db.tradingModel.delete({
+            where: { id: req.params.id }
+        });
+
+        return successResponse(res, { deleted: true }, 'Model deleted successfully');
+    } catch (error: any) {
+        return errorResponse(res, error.message, 500);
+    }
+});
+
+/**
  * POST /api/models
  * Create a new draft model
  */
