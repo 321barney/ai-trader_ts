@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { api, API_BASE } from "@/lib/api";
 
 const METHODOLOGIES = [
@@ -12,6 +13,7 @@ const METHODOLOGIES = [
 const TIMEFRAMES = ['5m', '15m', '1h', '4h'];
 
 export default function StrategyLabPage() {
+    const router = useRouter();
     const [methodology, setMethodology] = useState('SMC');
     const [selectedTimeframes, setSelectedTimeframes] = useState(['1h', '4h']);
     const [userRecommendation, setUserRecommendation] = useState('');
@@ -60,23 +62,8 @@ export default function StrategyLabPage() {
             const data = await res.json();
             if (data.success) {
                 setResult({ model: data.data, status: 'created' });
-                // Auto-start backtest
-                const backtestRes = await fetch(`${API_BASE}/api/models/${data.data.id}/backtest`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        symbol: 'BTCUSDT',
-                        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-                        endDate: new Date().toISOString()
-                    })
-                });
-                const btData = await backtestRes.json();
-                if (btData.success) {
-                    setResult({ model: btData.data, status: 'backtesting' });
-                }
+                // Redirect to Backtest Hub for configuration
+                router.push(`/dashboard/backtest?strategyId=${data.data.id}`);
             } else {
                 alert(data.error || 'Failed to create model');
             }
