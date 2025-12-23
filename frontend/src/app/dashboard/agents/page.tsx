@@ -165,8 +165,8 @@ export default function AgentDashboardPage() {
             {/* Header */}
             <div className="mb-8 flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">AI Agent Dashboard</h1>
-                    <p className="text-gray-400">View live agent reasoning and Chain-of-Thought analysis</p>
+                    <h1 className="text-3xl font-bold text-white mb-2">🏛️ Agent Council</h1>
+                    <p className="text-gray-400">3-Agent deliberation with orchestrator consensus</p>
                 </div>
                 <div className="flex items-center gap-6">
                     <button

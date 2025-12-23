@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import NotificationsBell from "@/components/NotificationsBell";
 
 export default function DashboardLayout({
     children,
@@ -35,13 +36,14 @@ export default function DashboardLayout({
     };
 
     const navItems = [
-        { href: "/dashboard", icon: "📡", label: "Command Center" },
-        { href: "/dashboard/strategy", icon: "🧪", label: "Strategy Lab" },
-        { href: "/dashboard/backtest", icon: "⏪", label: "Backtest Lab" },
-        { href: "/dashboard/metrics", icon: "📊", label: "Metrics" },
+        { href: "/dashboard", icon: "📡", label: "Dashboard" },
+        { href: "/dashboard/strategy-lab", icon: "🧪", label: "Strategy Lab" },
+        { href: "/dashboard/backtest", icon: "📊", label: "Backtest Hub" },
+        { href: "/dashboard/command", icon: "🎮", label: "Command Centre" },
+        { href: "/dashboard/agents", icon: "🏛️", label: "Agent HQ" },
+        { href: "/dashboard/performance", icon: "📈", label: "Performance" },
+        { href: "/dashboard/risk", icon: "🛡️", label: "Risk" },
         { href: "/dashboard/history", icon: "📜", label: "History" },
-        { href: "/dashboard/agents", icon: "🤖", label: "Agent HQ" },
-        { href: "/dashboard/market", icon: "🌐", label: "News & Intel" },
         { href: "/dashboard/settings", icon: "⚙️", label: "Settings" },
     ];
 
@@ -108,14 +110,17 @@ export default function DashboardLayout({
 
                 {/* User */}
                 <div className="border-t border-white/5 pt-6 mt-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold">
-                            {userEmail.charAt(0).toUpperCase()}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold">
+                                {userEmail.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div className="text-sm font-medium text-white">Trader</div>
+                                <div className="text-xs text-gray-500 truncate max-w-[100px]">{userEmail}</div>
+                            </div>
                         </div>
-                        <div>
-                            <div className="text-sm font-medium text-white">Trader</div>
-                            <div className="text-xs text-gray-500 truncate max-w-[140px]">{userEmail}</div>
-                        </div>
+                        <NotificationsBell />
                     </div>
                 </div>
             </aside>

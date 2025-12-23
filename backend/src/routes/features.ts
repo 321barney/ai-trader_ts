@@ -70,15 +70,12 @@ router.get('/analytics/performance', authMiddleware, asyncHandler(async (req: Re
 
 router.post('/analytics/analyze-trade', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { tradeId } = req.body;
-    // In a real app, you'd fetch the trade from DB first
-    // For now, we accept full trade object for testing
-    const trade = req.body.trade;
 
-    if (!trade) {
-        return res.status(400).json({ success: false, error: 'Trade data required' });
+    if (!tradeId) {
+        return res.status(400).json({ success: false, error: 'Trade ID required' });
     }
 
-    const analysis = await postTradeAnalysisService.analyzeTrade(trade);
+    const analysis = await postTradeAnalysisService.analyzeTradeWithAI(tradeId);
     res.json({ success: true, data: analysis });
 }));
 
@@ -91,28 +88,30 @@ router.post('/replay/start', authMiddleware, asyncHandler(async (req: Request, r
     const userId = req.user.userId;
     const config = req.body; // ReplayConfig
 
-    // Load real historical data from AsterDex
-    await historicalReplayService.loadHistoricalData(
-        config.symbols || [config.symbol],
-        config.initDate,
-        config.endDate
-    );
+    const replayId = await historicalReplayService.createReplay(userId, {
+        symbol: config.symbol,
+        startDate: new Date(config.initDate || config.startDate),
+        endDate: new Date(config.endDate),
+        speed: config.speed || 1,
+        initialCapital: config.initialCapital || 10000
+    });
 
-    const session = historicalReplayService.createSession(userId, config);
-    res.json({ success: true, data: session });
+    res.json({ success: true, data: { replayId } });
 }));
 
 router.post('/replay/action/:sessionId', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const { action, steps } = req.body; // action: 'start', 'pause', 'advance'
+    const { action } = req.body; // action: 'start', 'pause', 'stop'
 
     let result;
     if (action === 'start') {
-        result = historicalReplayService.startSession(sessionId);
+        await historicalReplayService.startReplay(sessionId);
+        result = historicalReplayService.getState(sessionId);
     } else if (action === 'pause') {
-        result = historicalReplayService.pauseSession(sessionId);
-    } else if (action === 'advance') {
-        result = historicalReplayService.advanceTime(sessionId, steps || 1);
+        historicalReplayService.pauseReplay(sessionId);
+        result = historicalReplayService.getState(sessionId);
+    } else if (action === 'stop') {
+        result = historicalReplayService.stopReplay(sessionId);
     } else {
         return res.status(400).json({ success: false, error: 'Invalid action' });
     }
@@ -120,7 +119,7 @@ router.post('/replay/action/:sessionId', authMiddleware, asyncHandler(async (req
     if (!result) {
         return res.status(404).json({
             success: false,
-            error: 'Session expired or not found. Sessions are stored in memory and reset on server restart. Please start a new backtest.',
+            error: 'Session expired or not found.',
             code: 'SESSION_EXPIRED'
         });
     }
@@ -130,32 +129,29 @@ router.post('/replay/action/:sessionId', authMiddleware, asyncHandler(async (req
 
 router.get('/replay/session/:sessionId', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const summary = historicalReplayService.getSessionSummary(sessionId);
+    const state = historicalReplayService.getState(sessionId);
+    const stats = historicalReplayService.getStatistics(sessionId);
 
-    if (!summary.session) {
+    if (!state) {
         return res.status(404).json({ success: false, error: 'Session not found' });
     }
 
-    res.json({ success: true, data: summary });
+    res.json({ success: true, data: { state, stats } });
 }));
 
 router.post('/replay/trade/:sessionId', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
-    const { symbol, side, quantity, reasoning } = req.body;
+    const { side, price, size } = req.body;
 
-    const result = historicalReplayService.executeTrade(
-        sessionId,
-        symbol,
-        side,
-        quantity,
-        reasoning
-    );
-
-    if (!result.success) {
-        return res.status(400).json({ success: false, error: result.error });
+    if (side === 'LONG' || side === 'SHORT') {
+        historicalReplayService.openPosition(sessionId, side, price, size);
+    } else {
+        // Close position - index 0 for simplicity
+        historicalReplayService.closePosition(sessionId, 0, price);
     }
 
-    res.json({ success: true, data: result.trade });
+    const state = historicalReplayService.getState(sessionId);
+    res.json({ success: true, data: state });
 }));
 
 // ============================================

@@ -26,6 +26,21 @@ interface Strategy {
     baseMethodology: string;
 }
 
+interface TradingModel {
+    id: string;
+    version: number;
+    methodology: string;
+    status: string;
+    isActive: boolean;
+    winRate?: number;
+    sharpeRatio?: number;
+    maxDrawdown?: number;
+    totalReturn?: number;
+    currentDrawdown?: number;
+    approvedBy?: string[];
+    createdAt: string;
+}
+
 function BacktestContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -43,6 +58,7 @@ function BacktestContent() {
     const [selectedStrategyId, setSelectedStrategyId] = useState<string>('');
     const [userPairs, setUserPairs] = useState<string[]>(['BTCUSDT', 'ETHUSDT']);
     const [isStarting, setIsStarting] = useState(false);
+    const [tradingModels, setTradingModels] = useState<TradingModel[]>([]);
 
     // Fetch user data and check for active backtest
     useEffect(() => {
@@ -87,6 +103,15 @@ function BacktestContent() {
                 if (activeData.success && activeData.data) {
                     // Resume polling for active backtest
                     pollStatus(activeData.data.id);
+                }
+
+                // Fetch trading models
+                const modelsRes = await fetch(`${API_BASE}/api/models`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const modelsData = await modelsRes.json();
+                if (modelsData.success && Array.isArray(modelsData.data)) {
+                    setTradingModels(modelsData.data);
                 }
             } catch (e) {
                 console.error('Failed to fetch data:', e);
@@ -420,6 +445,86 @@ function BacktestContent() {
                     )}
                 </div>
             </div>
+
+            {/* Trading Models Section */}
+            {tradingModels.length > 0 && (
+                <div className="mt-8">
+                    <h2 className="text-xl font-bold text-white mb-4">📊 Strategy Models</h2>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {tradingModels.map((model) => (
+                            <div key={model.id} className={`bg-[#12121a] border rounded-xl p-5 ${model.isActive ? 'border-green-500/50' : 'border-white/10'
+                                }`}>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <div className="text-white font-bold">v{model.version}</div>
+                                        <div className="text-sm text-gray-400">{model.methodology}</div>
+                                    </div>
+                                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${model.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
+                                            model.status === 'APPROVED' ? 'bg-blue-500/20 text-blue-400' :
+                                                model.status === 'PENDING_APPROVAL' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                    model.status === 'BACKTESTING' ? 'bg-purple-500/20 text-purple-400' :
+                                                        'bg-gray-500/20 text-gray-400'
+                                        }`}>
+                                        {model.status}
+                                    </div>
+                                </div>
+
+                                {/* Metrics */}
+                                <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                                    <div className="bg-white/5 rounded-lg p-2">
+                                        <div className="text-gray-500">Win Rate</div>
+                                        <div className="text-white font-bold">{model.winRate?.toFixed(1) || '-'}%</div>
+                                    </div>
+                                    <div className="bg-white/5 rounded-lg p-2">
+                                        <div className="text-gray-500">Sharpe</div>
+                                        <div className="text-white font-bold">{model.sharpeRatio?.toFixed(2) || '-'}</div>
+                                    </div>
+                                    <div className="bg-white/5 rounded-lg p-2">
+                                        <div className="text-gray-500">Return</div>
+                                        <div className={`font-bold ${(model.totalReturn || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {model.totalReturn?.toFixed(1) || '-'}%
+                                        </div>
+                                    </div>
+                                    <div className="bg-white/5 rounded-lg p-2">
+                                        <div className="text-gray-500">Drawdown</div>
+                                        <div className="text-red-400 font-bold">{model.maxDrawdown?.toFixed(1) || '-'}%</div>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                {model.status === 'APPROVED' && !model.isActive && (
+                                    <button
+                                        onClick={async () => {
+                                            const token = api.getAccessToken();
+                                            const res = await fetch(`${API_BASE}/api/models/${model.id}/activate`, {
+                                                method: 'POST',
+                                                headers: { Authorization: `Bearer ${token}` }
+                                            });
+                                            if (res.ok) {
+                                                alert('Model activated!');
+                                                window.location.reload();
+                                            }
+                                        }}
+                                        className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 font-bold"
+                                    >
+                                        🚀 Activate for Trading
+                                    </button>
+                                )}
+                                {model.isActive && (
+                                    <div className="text-center py-2 text-green-400 font-bold">
+                                        ✅ Currently Active
+                                    </div>
+                                )}
+                                {model.status === 'PENDING_APPROVAL' && (
+                                    <div className="text-center py-2 text-yellow-400 text-sm">
+                                        Awaiting council approval...
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

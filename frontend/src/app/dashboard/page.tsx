@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { api, API_BASE } from "@/lib/api";
 import Link from "next/link";
 import ModelStatusWidget from "@/components/ModelStatusWidget";
+import PositionsWidget from "@/components/PositionsWidget";
+import PortfolioWidget from "@/components/PortfolioWidget";
 
 interface Balance {
     asset: string;
@@ -200,6 +202,12 @@ export default function DashboardPage() {
             {/* Model Status Widget */}
             <div className="mb-6">
                 <ModelStatusWidget />
+            </div>
+
+            {/* Portfolio & Positions Widgets */}
+            <div className="grid lg:grid-cols-2 gap-6 mb-6">
+                <PortfolioWidget />
+                <PositionsWidget />
             </div>
 
             {/* Two Column Layout */}

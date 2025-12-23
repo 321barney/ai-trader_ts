@@ -485,3 +485,70 @@ enum TradingModelStatus {
   RETRAINING      // 15% drawdown triggered retrain
   RETIRED         // Replaced by newer model
 }
+
+// ============================================
+// POSITION TRACKING
+// ============================================
+
+model Position {
+  id            String   @id @default(uuid())
+  userId        String
+  symbol        String
+  side          String   // LONG | SHORT
+  
+  // Entry
+  entryPrice    Float
+  size          Float
+  
+  // Current State
+  currentPrice  Float?
+  unrealizedPnl Float?
+  unrealizedPnlPercent Float?
+  
+  // Exit Targets
+  stopLoss      Float?
+  takeProfit    Float?
+  trailingStop  Float?   // % distance
+  
+  // Exit
+  exitPrice     Float?
+  realizedPnl   Float?
+  realizedPnlPercent Float?
+  closeReason   String?  // HIT_TP | HIT_SL | MANUAL | LIQUIDATED
+  
+  // Status
+  status        String   @default("OPEN") // OPEN | CLOSED | LIQUIDATED
+  
+  // Linked Signal
+  signalId      String?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  closedAt      DateTime?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([symbol])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  
+  type      String   // TRADE_EXECUTED | SIGNAL_GENERATED | TP_HIT | SL_HIT | DRAWDOWN_WARNING
+  title     String
+  message   String
+  data      String?  // JSON stringified
+  
+  read      Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([read])
+}
+

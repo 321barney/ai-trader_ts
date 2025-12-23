@@ -1,585 +1,263 @@
 /**
  * Historical Replay Service
  * 
- * Enables backtesting with:
- * - Temporal control framework
- * - Anti-look-ahead data filtering
- * - Date range simulation
- * - News chronology enforcement
+ * Replay past market conditions:
+ * - Strategy testing on historical data
+ * - What-if analysis
+ * - Learning from past patterns
  */
 
 import { prisma } from '../utils/prisma.js';
 import { asterService } from './aster.service.js';
 
+const db = prisma as any;
+
 export interface ReplayConfig {
-    initDate: string;          // Start date: "2024-01-01"
-    endDate: string;           // End date: "2024-12-31"
-    speed: number;             // Replay speed: 1x, 2x, 10x
-    symbols: string[];         // Symbols to include
-    initialCapital: number;    // Starting capital
-    mode: 'daily' | 'hourly';  // Time granularity
+    symbol: string;
+    startDate: Date;
+    endDate: Date;
+    speed: number; // 1x, 2x, 10x, etc.
+    initialCapital: number;
 }
 
-export interface ReplaySession {
+export interface ReplayState {
     id: string;
-    userId: string;
     config: ReplayConfig;
-    currentDate: Date;
-    status: 'pending' | 'running' | 'paused' | 'completed';
-    portfolio: ReplayPortfolio;
-    stats: ReplayStats;
-    createdAt: Date;
-}
-
-export interface ReplayPortfolio {
-    cash: number;
+    currentTime: Date;
+    capital: number;
     positions: ReplayPosition[];
-    totalValue: number;
-    dailyPnL: number;
-    totalPnL: number;
+    trades: ReplayTrade[];
+    isRunning: boolean;
+    progress: number; // 0-100
 }
 
 export interface ReplayPosition {
     symbol: string;
-    quantity: number;
+    side: 'LONG' | 'SHORT';
     entryPrice: number;
-    currentPrice: number;
-    unrealizedPnL: number;
-    entryDate: string;
+    entryTime: Date;
+    size: number;
+    unrealizedPnl: number;
 }
 
-export interface ReplayStats {
-    totalTrades: number;
-    winningTrades: number;
-    losingTrades: number;
-    totalDays: number;
-    currentDay: number;
-    highWaterMark: number;
-    maxDrawdown: number;
-}
-
-export interface ReplayMarketData {
+export interface ReplayTrade {
     symbol: string;
-    date: string;
+    side: 'LONG' | 'SHORT';
+    entryPrice: number;
+    exitPrice: number;
+    entryTime: Date;
+    exitTime: Date;
+    pnl: number;
+    size: number;
+}
+
+export interface CandleData {
+    timestamp: Date;
     open: number;
     high: number;
     low: number;
     close: number;
     volume: number;
-    // Technical indicators (calculated up to this date only)
-    rsi?: number;
-    macd?: { line: number; signal: number; histogram: number };
-    ema20?: number;
-    ema50?: number;
-    atr?: number;
 }
 
-export interface ReplayTrade {
-    id: string;
-    sessionId: string;
-    symbol: string;
-    side: 'BUY' | 'SELL';
-    quantity: number;
-    price: number;
-    date: string;
-    reasoning?: string;
-    agentDecision?: any;
-}
+class HistoricalReplayService {
+    private replays: Map<string, ReplayState> = new Map();
+    private intervals: Map<string, NodeJS.Timeout> = new Map();
 
-// In-memory session storage (use Redis in production)
-const sessions = new Map<string, ReplaySession>();
-
-// Mock historical data (in production, load from database/files)
-const historicalData = new Map<string, ReplayMarketData[]>();
-
-export class HistoricalReplayService {
     /**
      * Create a new replay session
      */
-    createSession(userId: string, config: ReplayConfig): ReplaySession {
-        const sessionId = `replay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    async createReplay(userId: string, config: ReplayConfig): Promise<string> {
+        const replayId = `replay-${userId}-${Date.now()}`;
 
-        const session: ReplaySession = {
-            id: sessionId,
-            userId,
+        const state: ReplayState = {
+            id: replayId,
             config,
-            currentDate: new Date(config.initDate),
-            status: 'pending',
-            portfolio: {
-                cash: config.initialCapital,
-                positions: [],
-                totalValue: config.initialCapital,
-                dailyPnL: 0,
-                totalPnL: 0,
-            },
-            stats: {
-                totalTrades: 0,
-                winningTrades: 0,
-                losingTrades: 0,
-                totalDays: this.calculateTradingDays(config.initDate, config.endDate),
-                currentDay: 0,
-                highWaterMark: config.initialCapital,
-                maxDrawdown: 0,
-            },
-            createdAt: new Date(),
+            currentTime: config.startDate,
+            capital: config.initialCapital,
+            positions: [],
+            trades: [],
+            isRunning: false,
+            progress: 0
         };
 
-        sessions.set(sessionId, session);
-        return session;
+        this.replays.set(replayId, state);
+        console.log(`[Replay] Created session ${replayId}`);
+
+        return replayId;
     }
 
     /**
-     * Start or resume a replay session
+     * Start replay playback
      */
-    startSession(sessionId: string): ReplaySession | null {
-        const session = sessions.get(sessionId);
-        if (!session) return null;
+    async startReplay(replayId: string): Promise<void> {
+        const state = this.replays.get(replayId);
+        if (!state) throw new Error('Replay not found');
 
-        session.status = 'running';
-        return session;
-    }
+        state.isRunning = true;
 
-    /**
-     * Pause a running session
-     */
-    pauseSession(sessionId: string): ReplaySession | null {
-        const session = sessions.get(sessionId);
-        if (!session) return null;
+        // Calculate step interval based on speed
+        const baseInterval = 1000; // 1 second per candle at 1x
+        const interval = baseInterval / state.config.speed;
 
-        session.status = 'paused';
-        return session;
-    }
+        const tick = async () => {
+            if (!state.isRunning) return;
 
-    /**
-     * Advance time in the simulation
-     */
-    advanceTime(sessionId: string, steps: number = 1): ReplaySession | null {
-        const session = sessions.get(sessionId);
-        if (!session || session.status !== 'running') return null;
+            // Advance time
+            state.currentTime = new Date(state.currentTime.getTime() + 60000); // +1 minute
 
-        for (let i = 0; i < steps; i++) {
-            // Move to next trading day
-            const nextDate = this.getNextTradingDay(session.currentDate);
-
-            // Check if we've reached the end
-            if (nextDate > new Date(session.config.endDate)) {
-                session.status = 'completed';
-                break;
+            // Check if replay complete
+            if (state.currentTime >= state.config.endDate) {
+                this.stopReplay(replayId);
+                return;
             }
 
-            session.currentDate = nextDate;
-            session.stats.currentDay++;
+            // Update progress
+            const totalMs = state.config.endDate.getTime() - state.config.startDate.getTime();
+            const elapsedMs = state.currentTime.getTime() - state.config.startDate.getTime();
+            state.progress = Math.min(100, (elapsedMs / totalMs) * 100);
 
-            // Update portfolio with current prices
-            this.updatePortfolioValues(session);
-        }
-
-        return session;
-    }
-
-    /**
-     * Get market data at the current simulation time
-     * ANTI-LOOK-AHEAD: Only returns data up to currentDate
-     */
-    getDataAtTime(
-        sessionId: string,
-        symbol: string
-    ): ReplayMarketData | null {
-        const session = sessions.get(sessionId);
-        if (!session) return null;
-
-        // Get historical data for symbol
-        const symbolData = historicalData.get(symbol) || [];
-
-        // Filter to only include data before current date (anti-look-ahead)
-        const validData = symbolData.filter(
-            d => new Date(d.date) <= session.currentDate
-        );
-
-        if (validData.length === 0) return null;
-
-        // Return the most recent valid data point
-        const currentData = validData[validData.length - 1];
-
-        // Calculate technical indicators using only historical data
-        const indicators = this.calculateIndicators(validData);
-
-        return {
-            ...currentData,
-            ...indicators,
+            // Update position P/L (would need historical price data)
+            // For now, simulate with small random changes
+            for (const pos of state.positions) {
+                const change = (Math.random() - 0.5) * 0.001 * pos.entryPrice;
+                pos.unrealizedPnl += change * pos.size;
+            }
         };
+
+        this.intervals.set(replayId, setInterval(tick, interval));
+        console.log(`[Replay] Started ${replayId} at ${state.config.speed}x speed`);
     }
 
     /**
-     * Get historical data range for a symbol
-     * ANTI-LOOK-AHEAD: Only returns data up to currentDate
+     * Pause replay
      */
-    getHistoricalRange(
-        sessionId: string,
-        symbol: string,
-        lookbackDays: number
-    ): ReplayMarketData[] {
-        const session = sessions.get(sessionId);
-        if (!session) return [];
-
-        const symbolData = historicalData.get(symbol) || [];
-
-        // Filter to only include data before current date
-        const validData = symbolData.filter(
-            d => new Date(d.date) <= session.currentDate
-        );
-
-        // Return last N days
-        return validData.slice(-lookbackDays);
+    pauseReplay(replayId: string): void {
+        const state = this.replays.get(replayId);
+        if (state) {
+            state.isRunning = false;
+        }
+        const interval = this.intervals.get(replayId);
+        if (interval) {
+            clearInterval(interval);
+            this.intervals.delete(replayId);
+        }
     }
 
     /**
-     * Execute a trade in the simulation
+     * Stop and cleanup replay
      */
-    executeTrade(
-        sessionId: string,
-        symbol: string,
-        side: 'BUY' | 'SELL',
-        quantity: number,
-        reasoning?: string
-    ): { success: boolean; trade?: ReplayTrade; error?: string } {
-        const session = sessions.get(sessionId);
-        if (!session) {
-            return { success: false, error: 'Session not found' };
-        }
+    stopReplay(replayId: string): ReplayState | null {
+        this.pauseReplay(replayId);
+        const state = this.replays.get(replayId);
 
-        if (session.status !== 'running') {
-            return { success: false, error: 'Session not running' };
-        }
-
-        // Get current price
-        const marketData = this.getDataAtTime(sessionId, symbol);
-        if (!marketData) {
-            return { success: false, error: 'No market data available' };
-        }
-
-        const price = marketData.close;
-        const totalCost = price * quantity;
-
-        if (side === 'BUY') {
-            // Check if we have enough cash
-            if (totalCost > session.portfolio.cash) {
-                return { success: false, error: 'Insufficient funds' };
-            }
-
-            // Execute buy
-            session.portfolio.cash -= totalCost;
-
-            // Add or update position
-            const existingPos = session.portfolio.positions.find(p => p.symbol === symbol);
-            if (existingPos) {
-                // Average up/down
-                const totalQty = existingPos.quantity + quantity;
-                existingPos.entryPrice = (existingPos.entryPrice * existingPos.quantity + price * quantity) / totalQty;
-                existingPos.quantity = totalQty;
-            } else {
-                session.portfolio.positions.push({
-                    symbol,
-                    quantity,
-                    entryPrice: price,
-                    currentPrice: price,
-                    unrealizedPnL: 0,
-                    entryDate: session.currentDate.toISOString().split('T')[0],
+        // Close any remaining positions at current price
+        if (state) {
+            for (const pos of state.positions) {
+                state.trades.push({
+                    symbol: pos.symbol,
+                    side: pos.side,
+                    entryPrice: pos.entryPrice,
+                    exitPrice: pos.entryPrice + pos.unrealizedPnl / pos.size,
+                    entryTime: pos.entryTime,
+                    exitTime: state.currentTime,
+                    pnl: pos.unrealizedPnl,
+                    size: pos.size
                 });
+                state.capital += pos.unrealizedPnl;
             }
-        } else {
-            // SELL
-            const existingPos = session.portfolio.positions.find(p => p.symbol === symbol);
-            if (!existingPos || existingPos.quantity < quantity) {
-                return { success: false, error: 'Insufficient position' };
-            }
-
-            // Calculate P/L
-            const pnl = (price - existingPos.entryPrice) * quantity;
-            session.portfolio.cash += totalCost;
-
-            // Update stats
-            session.stats.totalTrades++;
-            if (pnl > 0) {
-                session.stats.winningTrades++;
-            } else {
-                session.stats.losingTrades++;
-            }
-
-            // Update position
-            existingPos.quantity -= quantity;
-            if (existingPos.quantity === 0) {
-                session.portfolio.positions = session.portfolio.positions.filter(p => p.symbol !== symbol);
-            }
+            state.positions = [];
+            state.isRunning = false;
         }
 
-        // Update portfolio values
-        this.updatePortfolioValues(session);
+        return state || null;
+    }
 
-        const trade: ReplayTrade = {
-            id: `trade-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            sessionId,
-            symbol,
+    /**
+     * Open position in replay
+     */
+    openPosition(replayId: string, side: 'LONG' | 'SHORT', price: number, size: number): void {
+        const state = this.replays.get(replayId);
+        if (!state) return;
+
+        state.positions.push({
+            symbol: state.config.symbol,
             side,
-            quantity,
-            price,
-            date: session.currentDate.toISOString().split('T')[0],
-            reasoning,
-        };
+            entryPrice: price,
+            entryTime: state.currentTime,
+            size,
+            unrealizedPnl: 0
+        });
 
-        return { success: true, trade };
+        state.capital -= size * price; // Allocate capital
     }
 
     /**
-     * Get session summary
+     * Close position in replay
      */
-    getSessionSummary(sessionId: string): {
-        session: ReplaySession | null;
-        performance: {
-            totalReturn: number;
-            winRate: number;
-            maxDrawdown: number;
-            sharpeRatio: number;
-        } | null;
-    } {
-        const session = sessions.get(sessionId);
-        if (!session) return { session: null, performance: null };
+    closePosition(replayId: string, positionIndex: number, price: number): void {
+        const state = this.replays.get(replayId);
+        if (!state || !state.positions[positionIndex]) return;
 
-        const totalReturn = ((session.portfolio.totalValue - session.config.initialCapital) / session.config.initialCapital) * 100;
-        const winRate = session.stats.totalTrades > 0
-            ? (session.stats.winningTrades / session.stats.totalTrades) * 100
-            : 0;
+        const pos = state.positions[positionIndex];
+        const pnl = pos.side === 'LONG'
+            ? (price - pos.entryPrice) * pos.size
+            : (pos.entryPrice - price) * pos.size;
+
+        state.trades.push({
+            symbol: pos.symbol,
+            side: pos.side,
+            entryPrice: pos.entryPrice,
+            exitPrice: price,
+            entryTime: pos.entryTime,
+            exitTime: state.currentTime,
+            pnl,
+            size: pos.size
+        });
+
+        state.capital += pos.size * pos.entryPrice + pnl; // Return capital + P/L
+        state.positions.splice(positionIndex, 1);
+    }
+
+    /**
+     * Get replay state
+     */
+    getState(replayId: string): ReplayState | null {
+        return this.replays.get(replayId) || null;
+    }
+
+    /**
+     * Get replay statistics
+     */
+    getStatistics(replayId: string): any {
+        const state = this.replays.get(replayId);
+        if (!state) return null;
+
+        const trades = state.trades;
+        const wins = trades.filter(t => t.pnl > 0);
+        const losses = trades.filter(t => t.pnl < 0);
+        const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
 
         return {
-            session,
-            performance: {
-                totalReturn,
-                winRate,
-                maxDrawdown: session.stats.maxDrawdown,
-                sharpeRatio: 0, // Would need daily returns to calculate
-            },
+            totalTrades: trades.length,
+            winRate: trades.length > 0 ? (wins.length / trades.length) * 100 : 0,
+            totalPnl,
+            returnPercent: (totalPnl / state.config.initialCapital) * 100,
+            avgWin: wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0,
+            avgLoss: losses.length > 0 ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0,
+            finalCapital: state.capital,
+            maxDrawdown: 0 // TODO: Track peak and calculate
         };
     }
 
     /**
-     * Load historical data for symbols from AsterDex
+     * Fetch historical candles for replay
      */
-    async loadHistoricalData(
-        symbols: string[],
-        startDate: string,
-        endDate: string
-    ): Promise<void> {
-        console.log(`[Replay] Loading historical data for ${symbols.join(', ')} from ${startDate} to ${endDate}`);
-
-        for (const symbol of symbols) {
-            try {
-                // Calculate how many days of data we need
-                const start = new Date(startDate);
-                const end = new Date(endDate);
-                const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
-                // Fetch daily klines from AsterDex (limit 1500 per request)
-                const limit = Math.min(daysDiff + 50, 1500); // Extra buffer for indicators
-                const klines = await asterService.getKlines(symbol, '1d', limit);
-
-                console.log(`[Replay] Fetched ${klines.length} klines for ${symbol}`);
-
-                // Convert klines to ReplayMarketData format
-                const data: ReplayMarketData[] = klines
-                    .filter(k => {
-                        const klineDate = new Date(k.openTime);
-                        return klineDate >= start && klineDate <= end;
-                    })
-                    .map(k => ({
-                        symbol,
-                        date: new Date(k.openTime).toISOString().split('T')[0],
-                        open: k.open,
-                        high: k.high,
-                        low: k.low,
-                        close: k.close,
-                        volume: k.volume,
-                    }));
-
-                if (data.length > 0) {
-                    historicalData.set(symbol, data);
-                    console.log(`[Replay] Stored ${data.length} data points for ${symbol}`);
-                } else {
-                    // Fallback to mock data if no klines returned
-                    console.log(`[Replay] No klines for ${symbol}, using mock data`);
-                    const mockData = this.generateMockData(symbol, startDate, endDate);
-                    historicalData.set(symbol, mockData);
-                }
-            } catch (error: any) {
-                console.error(`[Replay] Error fetching klines for ${symbol}:`, error.message);
-                // Fallback to mock data on error
-                const mockData = this.generateMockData(symbol, startDate, endDate);
-                historicalData.set(symbol, mockData);
-            }
-        }
-    }
-
-    // ============================================
-    // Private Helper Methods
-    // ============================================
-
-    private calculateTradingDays(startDate: string, endDate: string): number {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        let days = 0;
-        const current = new Date(start);
-
-        while (current <= end) {
-            const dayOfWeek = current.getDay();
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip weekends
-                days++;
-            }
-            current.setDate(current.getDate() + 1);
-        }
-
-        return days;
-    }
-
-    private getNextTradingDay(date: Date): Date {
-        const next = new Date(date);
-        next.setDate(next.getDate() + 1);
-
-        // Skip weekends (for crypto, remove this)
-        while (next.getDay() === 0 || next.getDay() === 6) {
-            next.setDate(next.getDate() + 1);
-        }
-
-        return next;
-    }
-
-    private updatePortfolioValues(session: ReplaySession): void {
-        let positionsValue = 0;
-
-        for (const position of session.portfolio.positions) {
-            const marketData = this.getDataAtTime(session.id, position.symbol);
-            if (marketData) {
-                position.currentPrice = marketData.close;
-                position.unrealizedPnL = (position.currentPrice - position.entryPrice) * position.quantity;
-                positionsValue += position.currentPrice * position.quantity;
-            }
-        }
-
-        const previousValue = session.portfolio.totalValue;
-        session.portfolio.totalValue = session.portfolio.cash + positionsValue;
-        session.portfolio.dailyPnL = session.portfolio.totalValue - previousValue;
-        session.portfolio.totalPnL = session.portfolio.totalValue - session.config.initialCapital;
-
-        // Update high water mark and max drawdown
-        if (session.portfolio.totalValue > session.stats.highWaterMark) {
-            session.stats.highWaterMark = session.portfolio.totalValue;
-        }
-
-        const drawdown = ((session.stats.highWaterMark - session.portfolio.totalValue) / session.stats.highWaterMark) * 100;
-        if (drawdown > session.stats.maxDrawdown) {
-            session.stats.maxDrawdown = drawdown;
-        }
-    }
-
-    private calculateIndicators(data: ReplayMarketData[]): Partial<ReplayMarketData> {
-        if (data.length < 20) return {};
-
-        const closes = data.map(d => d.close);
-
-        // RSI (14-period)
-        const rsi = this.calculateRSI(closes, 14);
-
-        // EMA
-        const ema20 = this.calculateEMA(closes, 20);
-        const ema50 = data.length >= 50 ? this.calculateEMA(closes, 50) : undefined;
-
-        // ATR
-        const atr = this.calculateATR(data, 14);
-
-        return { rsi, ema20, ema50, atr };
-    }
-
-    private calculateRSI(prices: number[], period: number): number {
-        if (prices.length < period + 1) return 50;
-
-        let gains = 0;
-        let losses = 0;
-
-        for (let i = prices.length - period; i < prices.length; i++) {
-            const change = prices[i] - prices[i - 1];
-            if (change > 0) gains += change;
-            else losses += Math.abs(change);
-        }
-
-        const avgGain = gains / period;
-        const avgLoss = losses / period;
-
-        if (avgLoss === 0) return 100;
-        const rs = avgGain / avgLoss;
-        return 100 - (100 / (1 + rs));
-    }
-
-    private calculateEMA(prices: number[], period: number): number {
-        const k = 2 / (period + 1);
-        let ema = prices.slice(0, period).reduce((a, b) => a + b, 0) / period;
-
-        for (let i = period; i < prices.length; i++) {
-            ema = prices[i] * k + ema * (1 - k);
-        }
-
-        return ema;
-    }
-
-    private calculateATR(data: ReplayMarketData[], period: number): number {
-        if (data.length < period + 1) return 0;
-
-        const trueRanges: number[] = [];
-        for (let i = 1; i < data.length; i++) {
-            const high = data[i].high;
-            const low = data[i].low;
-            const prevClose = data[i - 1].close;
-
-            const tr = Math.max(
-                high - low,
-                Math.abs(high - prevClose),
-                Math.abs(low - prevClose)
-            );
-            trueRanges.push(tr);
-        }
-
-        return trueRanges.slice(-period).reduce((a, b) => a + b, 0) / period;
-    }
-
-    private generateMockData(symbol: string, startDate: string, endDate: string): ReplayMarketData[] {
-        const data: ReplayMarketData[] = [];
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-
-        // Base price based on symbol
-        let price = symbol.includes('BTC') ? 45000 : symbol.includes('ETH') ? 2500 : 100;
-
-        const current = new Date(start);
-        while (current <= end) {
-            // Skip weekends for stocks
-            if (current.getDay() !== 0 && current.getDay() !== 6) {
-                // Random price movement
-                const change = (Math.random() - 0.48) * price * 0.03; // Slight bullish bias
-                price = Math.max(price * 0.5, price + change);
-
-                const volatility = price * 0.02;
-
-                data.push({
-                    symbol,
-                    date: current.toISOString().split('T')[0],
-                    open: price - volatility / 2 + Math.random() * volatility,
-                    high: price + Math.random() * volatility,
-                    low: price - Math.random() * volatility,
-                    close: price,
-                    volume: 1000000 + Math.random() * 5000000,
-                });
-            }
-            current.setDate(current.getDate() + 1);
-        }
-
-        return data;
+    async fetchHistoricalData(symbol: string, startDate: Date, endDate: Date): Promise<CandleData[]> {
+        // In production, fetch from exchange API with historical data
+        // For now, return sample data structure
+        console.log(`[Replay] Would fetch ${symbol} data from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+        return [];
     }
 }
 

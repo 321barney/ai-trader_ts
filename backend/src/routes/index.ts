@@ -7,6 +7,10 @@ import { featureRouter } from './features.js';
 import { strategyRouter } from './strategy.js';
 import { backtestRouter } from './backtest.js';
 import modelsRouter from './models.js';
+import { positionsRouter } from './positions.js';
+import { notificationsRouter } from './notifications.js';
+import { portfolioRouter } from './portfolio.js';
+import { analyticsRouter } from './analytics.js';
 
 const router = Router();
 
@@ -20,5 +24,9 @@ router.use('/features', featureRouter);
 router.use('/strategies', strategyRouter);
 router.use('/backtest', backtestRouter);
 router.use('/models', modelsRouter);
+router.use('/positions', positionsRouter);
+router.use('/notifications', notificationsRouter);
+router.use('/portfolio', portfolioRouter);
+router.use('/analytics', analyticsRouter);
 
 export default router;
