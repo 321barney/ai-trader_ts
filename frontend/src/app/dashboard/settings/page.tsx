@@ -444,7 +444,20 @@ export default function SettingsPage() {
                                 >
                                     {editingKey === 'deepseek' ? 'Done' : 'Edit'}
                                 </button>
+                                <button
+                                    onClick={testDeepseekConnection}
+                                    disabled={deepseekTest.testing}
+                                    className="btn-secondary px-4"
+                                >
+                                    {deepseekTest.testing ? 'Testing...' : 'Test'}
+                                </button>
                             </div>
+                            {deepseekTest.result && (
+                                <div className={`text-sm mt-2 flex items-center gap-1 ${deepseekTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${deepseekTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                    {deepseekTest.result.connected ? deepseekTest.result.message : deepseekTest.result.error}
+                                </div>
+                            )}
                         </div>
 
                         {/* OpenAI */}
