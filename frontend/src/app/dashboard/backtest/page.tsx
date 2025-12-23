@@ -261,20 +261,21 @@ function BacktestContent() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm text-gray-400">Strategy</label>
+                        <label className="text-sm text-gray-400">Strategy (DRAFT only)</label>
                         <select
                             className="w-full bg-[#0a0a0f] border border-white/10 rounded px-3 py-2 text-white"
                             value={selectedStrategyId}
                             onChange={(e) => setSelectedStrategyId(e.target.value)}
                             disabled={isRunning}
                         >
-                            {strategies.length === 0 && <option value="">No strategies</option>}
-                            {strategies.map(s => (
+                            {strategies.filter(s => s.status === 'DRAFT').length === 0 && <option value="">No draft strategies</option>}
+                            {strategies.filter(s => s.status === 'DRAFT').map(s => (
                                 <option key={s.id} value={s.id}>
-                                    v{s.version} - {s.baseMethodology} ({s.status})
+                                    v{s.version} - {s.baseMethodology}
                                 </option>
                             ))}
                         </select>
+                        <p className="text-xs text-gray-500">Only draft strategies can be backtested</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -314,10 +315,13 @@ function BacktestContent() {
                     {!session || isCompleted ? (
                         <button
                             onClick={startBacktest}
-                            disabled={isStarting || !selectedStrategyId}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2 rounded-lg transition-colors"
+                            disabled={isStarting || !selectedStrategyId || isRunning}
+                            className={`w-full font-medium py-2 rounded-lg transition-colors ${isStarting || !selectedStrategyId || isRunning
+                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                }`}
                         >
-                            {isStarting ? 'Starting...' : 'Start Backtest'}
+                            {isStarting ? 'Starting...' : isRunning ? 'Backtest Running...' : 'Start Backtest'}
                         </button>
                     ) : (
                         <div className="flex gap-2">

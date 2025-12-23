@@ -151,7 +151,7 @@ router.post('/:id/activate', authMiddleware, async (req: Request, res: Response)
 
 /**
  * POST /api/models/:id/backtest
- * Run backtest on a model
+ * Run backtest on a model - triggers AI council deliberation
  */
 router.post('/:id/backtest', authMiddleware, async (req: Request, res: Response) => {
     try {
@@ -174,28 +174,23 @@ router.post('/:id/backtest', authMiddleware, async (req: Request, res: Response)
             data: { status: 'BACKTESTING' }
         });
 
-        // Create backtest session (would connect to existing backtest system)
-        // For now, simulate backtest results
-        const simulatedResults = {
-            sharpeRatio: 1.5 + Math.random(),
-            winRate: 55 + Math.random() * 15,
-            maxDrawdown: 5 + Math.random() * 10,
-            totalReturn: 20 + Math.random() * 30,
-            backtestData: {
-                symbol,
-                startDate,
-                endDate,
-                trades: 50,
-                profitFactor: 1.8
-            }
-        };
+        // Import and use the real backtest service
+        const { backtestService } = await import('../services/backtest.service.js');
 
-        const updated = await modelService.updateBacktestResults(
-            req.params.id,
-            simulatedResults
-        );
+        // Start backtest with AI council - this runs agents
+        const backtestSession = await backtestService.startBacktest(req.userId!, {
+            strategyVersionId: req.params.id,
+            symbol: symbol || 'BTCUSDT',
+            initDate: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            endDate: endDate || new Date().toISOString().split('T')[0],
+            initialCapital: 10000
+        });
 
-        return successResponse(res, updated, 'Backtest completed');
+        return successResponse(res, {
+            ...model,
+            status: 'BACKTESTING',
+            backtestSessionId: backtestSession.id
+        }, 'Backtest started with AI council');
     } catch (error: any) {
         return errorResponse(res, error.message, 500);
     }
