@@ -50,6 +50,8 @@ class ApiClient {
                 token = localStorage.getItem('token');
             }
 
+            console.log('[ApiClient] Token from storage:', token ? token.substring(0, 10) + '...' : 'null');
+
             // Validate fallback
             if (token && token !== 'undefined' && token !== 'null') {
                 // Determine if we should treat this as a migration or just a load
@@ -57,6 +59,7 @@ class ApiClient {
                 return token;
             }
         }
+        console.warn('[ApiClient] No valid access token found');
         return null;
     }
 
@@ -92,6 +95,11 @@ class ApiClient {
             ...(token && { Authorization: `Bearer ${token}` }),
             ...options.headers,
         };
+
+        console.log(`[ApiClient] Requesting ${endpoint}`, {
+            hasToken: !!token,
+            authHeader: (headers as any).Authorization
+        });
 
         const response = await fetch(`${API_BASE}${endpoint}`, {
             ...options,
