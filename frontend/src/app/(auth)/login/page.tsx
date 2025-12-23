@@ -28,8 +28,12 @@ export default function LoginPage() {
 
             // Tokens are already set by api.login()
 
-            // Redirect to dashboard (skip onboarding check as requested)
-            router.push("/dashboard");
+            // Redirect based on onboarding status
+            if (data.data?.user?.onboardingCompleted) {
+                router.push("/dashboard");
+            } else {
+                router.push("/onboarding");
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {

@@ -19,12 +19,12 @@ class ApiClient {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         if (typeof window !== 'undefined') {
-            if (accessToken) {
+            if (accessToken && accessToken !== 'undefined' && accessToken !== 'null') {
                 localStorage.setItem('accessToken', accessToken);
             } else {
                 localStorage.removeItem('accessToken');
             }
-            if (refreshToken) {
+            if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
                 localStorage.setItem('refreshToken', refreshToken);
             } else {
                 localStorage.removeItem('refreshToken');
@@ -35,8 +35,16 @@ class ApiClient {
     getAccessToken(): string | null {
         if (this.accessToken) return this.accessToken;
         if (typeof window !== 'undefined') {
-            const token = localStorage.getItem('accessToken') || localStorage.getItem('token'); // Fallback for migration
-            return token;
+            let token = localStorage.getItem('accessToken');
+            // Migration fallback
+            if (!token || token === 'undefined' || token === 'null') {
+                token = localStorage.getItem('token');
+            }
+
+            // Validate fallback
+            if (token && token !== 'undefined' && token !== 'null') {
+                return token;
+            }
         }
         return null;
     }
