@@ -285,11 +285,11 @@ class BacktestService {
                     agentType: 'ORCHESTRATOR',
                     reasoning: decision.blockReason || decision.agentDecisions?.strategy?.reasoning || 'Backtest analysis',
                     thoughtSteps: [
-                        { step: 1, thought: `Market Analysis: ${decision.marketAnalysis?.reasoning?.slice(0, 200)}...` },
-                        { step: 2, thought: `Strategy Proposal: ${decision.strategyDecision?.reasoning?.slice(0, 200)}...` },
-                        { step: 3, thought: `Risk Assessment: ${decision.riskAssessment?.reasoning?.slice(0, 200)}...` },
+                        { step: 1, thought: `Market Analysis: ${decision.marketAnalysis?.reasoning || 'N/A'}` },
+                        { step: 2, thought: `Strategy Proposal: ${decision.strategyDecision?.reasoning || 'N/A'}` },
+                        { step: 3, thought: `Risk Assessment: ${decision.riskAssessment?.reasoning || 'N/A'}` },
                         { step: 4, thought: `Counsel Consensus: ${decision.agentConsensus ? 'AGREEMENT' : 'DISAGREEMENT'}. Final Verdict: ${decision.finalDecision}` },
-                        ...(decision.counsel?.deliberation ? [{ step: 5, thought: `Deliberation: ${decision.counsel.deliberation.slice(0, 300)}...` }] : [])
+                        ...(decision.counsel?.deliberation ? [{ step: 5, thought: `Deliberation: ${decision.counsel.deliberation}` }] : [])
                     ],
                     decision: decision.finalDecision,
                     confidence: decision.confidence,
