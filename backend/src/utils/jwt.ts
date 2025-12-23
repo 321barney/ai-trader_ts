@@ -6,7 +6,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret-change-in-production';
-const ACCESS_TOKEN_EXPIRES_IN = '15m';
+const ACCESS_TOKEN_EXPIRES_IN = '1h';  // Increased from 15m for better UX during onboarding
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 
@@ -37,7 +37,8 @@ export function verifyToken(token: string): JwtPayload | null {
 export function verifyAccessToken(token: string): JwtPayload | null {
     try {
         return jwt.verify(token, JWT_SECRET) as unknown as JwtPayload;
-    } catch (error) {
+    } catch (error: any) {
+        console.error('[JWT] Access token verification failed:', error.message || 'Unknown error');
         return null;
     }
 }
@@ -45,7 +46,8 @@ export function verifyAccessToken(token: string): JwtPayload | null {
 export function verifyRefreshToken(token: string): JwtPayload | null {
     try {
         return jwt.verify(token, JWT_REFRESH_SECRET) as unknown as JwtPayload;
-    } catch (error) {
+    } catch (error: any) {
+        console.error('[JWT] Refresh token verification failed:', error.message || 'Unknown error');
         return null;
     }
 }

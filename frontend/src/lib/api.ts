@@ -108,9 +108,11 @@ class ApiClient {
 
         // Handle 401 (Unauthorized) - Try refresh
         if (response.status === 401 && retryCount < 1 && !endpoint.includes('/auth/login')) {
+            console.warn('[ApiClient] Got 401 on', endpoint, '- attempting token refresh');
             const refreshToken = this.getRefreshToken();
             if (refreshToken) {
                 try {
+                    console.log('[ApiClient] Refreshing tokens...');
                     const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -120,12 +122,17 @@ class ApiClient {
                     const refreshData = await refreshRes.json();
 
                     if (refreshData.success && refreshData.data?.accessToken) {
+                        console.log('[ApiClient] Token refresh successful, retrying request');
                         this.setTokens(refreshData.data.accessToken, refreshData.data.refreshToken);
                         return this.request<T>(endpoint, options, retryCount + 1);
+                    } else {
+                        console.error('[ApiClient] Token refresh failed:', refreshData.error || 'Unknown error');
                     }
-                } catch (e) {
-                    // Refresh failed
+                } catch (e: any) {
+                    console.error('[ApiClient] Token refresh exception:', e.message);
                 }
+            } else {
+                console.warn('[ApiClient] No refresh token available');
             }
             // If refresh failed or no token, logout
             this.setTokens(null, null);

@@ -26,14 +26,17 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
         // Get token from header
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            console.warn('[Auth Middleware] No token in header');
             return unauthorizedResponse(res, 'No token provided');
         }
 
         const token = authHeader.split(' ')[1];
+        console.log('[Auth Middleware] Verifying token:', token.substring(0, 20) + '...');
 
         // Verify token
         const payload = verifyToken(token);
         if (!payload) {
+            console.error('[Auth Middleware] Token verification failed for:', token.substring(0, 20) + '...');
             return unauthorizedResponse(res, 'Invalid or expired token');
         }
 
