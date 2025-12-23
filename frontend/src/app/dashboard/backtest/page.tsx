@@ -252,11 +252,29 @@ function BacktestContent() {
             {/* Strategy Models - NOW AT TOP */}
             {tradingModels.length > 0 && (
                 <div>
-                    <h2 className="text-xl font-bold text-white mb-4">📊 Your Strategies</h2>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-white">📊 Your Strategies</h2>
+                        {/* Summary Metrics */}
+                        <div className="flex gap-4 text-sm">
+                            <div className="px-3 py-1 bg-green-500/10 rounded-lg">
+                                <span className="text-gray-400">Active: </span>
+                                <span className="text-green-400 font-bold">{tradingModels.filter(m => m.isActive).length}</span>
+                            </div>
+                            <div className="px-3 py-1 bg-purple-500/10 rounded-lg">
+                                <span className="text-gray-400">Backtesting: </span>
+                                <span className="text-purple-400 font-bold">{tradingModels.filter(m => m.status === 'BACKTESTING').length}</span>
+                            </div>
+                            <div className="px-3 py-1 bg-yellow-500/10 rounded-lg">
+                                <span className="text-gray-400">Pending: </span>
+                                <span className="text-yellow-400 font-bold">{tradingModels.filter(m => m.status === 'PENDING_APPROVAL').length}</span>
+                            </div>
+                        </div>
+                    </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {tradingModels.map((model) => (
                             <div key={model.id} className={`bg-[#12121a] border rounded-xl p-5 ${model.isActive ? 'border-green-500/50' : 'border-white/10'
                                 }`}>
+                                {/* Header with version and status */}
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
                                         <div className="text-white font-bold text-lg">v{model.version}</div>
@@ -285,142 +303,145 @@ function BacktestContent() {
                                     )) || <span className="px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded text-xs font-medium">1H</span>}
                                 </div>
 
-                                {/* Metrics (only show if backtested) */}
-                                {model.winRate && (
-                                    <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                                        <div className="bg-white/5 rounded-lg p-2">
-                                            <div className="text-gray-500">Win Rate</div>
-                                            <div className="text-white font-bold">{model.winRate?.toFixed(1)}%</div>
+                                {/* Metrics (show if has backtest data) */}
+                                {(model.winRate || model.backtestData) && (
+                                    <div className="grid grid-cols-4 gap-2 mb-4 text-xs">
+                                        <div className="bg-white/5 rounded-lg p-2 text-center">
+                                            <div className="text-gray-500">Win</div>
+                                            <div className="text-white font-bold">{model.winRate?.toFixed(0) || '-'}%</div>
                                         </div>
-                                        <div className="bg-white/5 rounded-lg p-2">
+                                        <div className="bg-white/5 rounded-lg p-2 text-center">
                                             <div className="text-gray-500">Sharpe</div>
-                                            <div className="text-white font-bold">{model.sharpeRatio?.toFixed(2) || '-'}</div>
+                                            <div className="text-white font-bold">{model.sharpeRatio?.toFixed(1) || '-'}</div>
                                         </div>
-                                        <div className="bg-white/5 rounded-lg p-2">
+                                        <div className="bg-white/5 rounded-lg p-2 text-center">
                                             <div className="text-gray-500">Return</div>
                                             <div className={`font-bold ${(model.totalReturn || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {model.totalReturn?.toFixed(1)}%
+                                                {model.totalReturn?.toFixed(0) || '-'}%
                                             </div>
                                         </div>
-                                        <div className="bg-white/5 rounded-lg p-2">
-                                            <div className="text-gray-500">Drawdown</div>
-                                            <div className="text-red-400 font-bold">{model.maxDrawdown?.toFixed(1)}%</div>
+                                        <div className="bg-white/5 rounded-lg p-2 text-center">
+                                            <div className="text-gray-500">DD</div>
+                                            <div className="text-red-400 font-bold">{model.maxDrawdown?.toFixed(0) || '-'}%</div>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Actions based on status */}
-                                {model.status === 'DRAFT' && (
-                                    <div className="space-y-3">
-                                        {/* Config for this model */}
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="text-xs text-gray-500">Pair</label>
-                                                <select
-                                                    className="w-full bg-[#0a0a0f] border border-white/10 rounded px-2 py-1.5 text-sm text-white"
-                                                    defaultValue="BTCUSDT"
-                                                    id={`pair-${model.id}`}
+                                {/* Unified Config Section - ALL cards get this */}
+                                <div className="space-y-3 pt-3 border-t border-white/5">
+                                    {/* Status Message */}
+                                    {model.status === 'BACKTESTING' && (
+                                        <div className="text-center py-2 bg-purple-500/10 rounded-lg text-purple-400 text-sm flex items-center justify-center gap-2">
+                                            <span className="animate-spin">⚙️</span> Backtest running...
+                                        </div>
+                                    )}
+                                    {model.isActive && (
+                                        <div className="text-center py-2 bg-green-500/10 rounded-lg text-green-400 font-bold text-sm">
+                                            ✅ Currently Active
+                                        </div>
+                                    )}
+
+                                    {/* Config inputs - show for non-active, non-running models */}
+                                    {!model.isActive && model.status !== 'BACKTESTING' && (
+                                        <>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <label className="text-xs text-gray-500">Pair</label>
+                                                    <select
+                                                        className="w-full bg-[#0a0a0f] border border-white/10 rounded px-2 py-1.5 text-sm text-white"
+                                                        defaultValue={model.backtestData?.symbol || 'BTCUSDT'}
+                                                        id={`pair-${model.id}`}
+                                                    >
+                                                        {userPairs.map(p => <option key={p} value={p}>{p}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-gray-500">Capital</label>
+                                                    <input
+                                                        type="number"
+                                                        className="w-full bg-[#0a0a0f] border border-white/10 rounded px-2 py-1.5 text-sm text-white"
+                                                        defaultValue={10000}
+                                                        id={`capital-${model.id}`}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <label className="text-xs text-gray-500">Start</label>
+                                                    <input
+                                                        type="date"
+                                                        className="w-full bg-[#0a0a0f] border border-white/10 rounded px-2 py-1.5 text-sm text-white"
+                                                        defaultValue={new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                                                        id={`start-${model.id}`}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-gray-500">End</label>
+                                                    <input
+                                                        type="date"
+                                                        className="w-full bg-[#0a0a0f] border border-white/10 rounded px-2 py-1.5 text-sm text-white"
+                                                        defaultValue={new Date().toISOString().split('T')[0]}
+                                                        id={`end-${model.id}`}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Action Buttons */}
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={async () => {
+                                                        const pair = (document.getElementById(`pair-${model.id}`) as HTMLSelectElement)?.value || 'BTCUSDT';
+                                                        const startDate = (document.getElementById(`start-${model.id}`) as HTMLInputElement)?.value;
+                                                        const endDate = (document.getElementById(`end-${model.id}`) as HTMLInputElement)?.value;
+                                                        const capital = (document.getElementById(`capital-${model.id}`) as HTMLInputElement)?.value || '10000';
+
+                                                        const token = api.getAccessToken();
+                                                        const res = await fetch(`${API_BASE}/api/models/${model.id}/backtest`, {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json',
+                                                                'Authorization': `Bearer ${token}`
+                                                            },
+                                                            body: JSON.stringify({
+                                                                symbol: pair,
+                                                                startDate: startDate,
+                                                                endDate: endDate,
+                                                                initialCapital: Number(capital)
+                                                            })
+                                                        });
+                                                        if (res.ok) {
+                                                            alert('Backtest & AI Council started!');
+                                                            window.location.reload();
+                                                        } else {
+                                                            alert('Failed to start backtest');
+                                                        }
+                                                    }}
+                                                    className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-colors text-sm"
                                                 >
-                                                    {userPairs.map(p => <option key={p} value={p}>{p}</option>)}
-                                                </select>
+                                                    🚀 Start
+                                                </button>
+                                                {(model.status === 'APPROVED' || model.status === 'COMPLETED') && (
+                                                    <button
+                                                        onClick={async () => {
+                                                            const token = api.getAccessToken();
+                                                            const res = await fetch(`${API_BASE}/api/models/${model.id}/activate`, {
+                                                                method: 'POST',
+                                                                headers: { Authorization: `Bearer ${token}` }
+                                                            });
+                                                            if (res.ok) {
+                                                                alert('Model activated for live trading!');
+                                                                window.location.reload();
+                                                            }
+                                                        }}
+                                                        className="flex-1 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold transition-colors text-sm"
+                                                    >
+                                                        ⚡ Activate
+                                                    </button>
+                                                )}
                                             </div>
-                                            <div>
-                                                <label className="text-xs text-gray-500">Capital</label>
-                                                <input
-                                                    type="number"
-                                                    className="w-full bg-[#0a0a0f] border border-white/10 rounded px-2 py-1.5 text-sm text-white"
-                                                    defaultValue={10000}
-                                                    id={`capital-${model.id}`}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="text-xs text-gray-500">Start</label>
-                                                <input
-                                                    type="date"
-                                                    className="w-full bg-[#0a0a0f] border border-white/10 rounded px-2 py-1.5 text-sm text-white"
-                                                    defaultValue={new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                                                    id={`start-${model.id}`}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-gray-500">End</label>
-                                                <input
-                                                    type="date"
-                                                    className="w-full bg-[#0a0a0f] border border-white/10 rounded px-2 py-1.5 text-sm text-white"
-                                                    defaultValue={new Date().toISOString().split('T')[0]}
-                                                    id={`end-${model.id}`}
-                                                />
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={async () => {
-                                                const pair = (document.getElementById(`pair-${model.id}`) as HTMLSelectElement)?.value || 'BTCUSDT';
-                                                const startDate = (document.getElementById(`start-${model.id}`) as HTMLInputElement)?.value;
-                                                const endDate = (document.getElementById(`end-${model.id}`) as HTMLInputElement)?.value;
-                                                const capital = (document.getElementById(`capital-${model.id}`) as HTMLInputElement)?.value || '10000';
-
-                                                const token = api.getAccessToken();
-                                                const res = await fetch(`${API_BASE}/api/models/${model.id}/backtest`, {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                        'Authorization': `Bearer ${token}`
-                                                    },
-                                                    body: JSON.stringify({
-                                                        symbol: pair,
-                                                        startDate: startDate,
-                                                        endDate: endDate,
-                                                        initialCapital: Number(capital)
-                                                    })
-                                                });
-                                                if (res.ok) {
-                                                    alert('Backtest started with AI Council!');
-                                                    window.location.reload();
-                                                } else {
-                                                    alert('Failed to start backtest');
-                                                }
-                                            }}
-                                            className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-colors"
-                                        >
-                                            🧪 Start Backtest
-                                        </button>
-                                    </div>
-                                )}
-                                {model.status === 'BACKTESTING' && (
-                                    <div className="text-center py-3 bg-purple-500/10 rounded-lg text-purple-400 text-sm flex items-center justify-center gap-2">
-                                        <span className="animate-spin">⚙️</span> Backtest running...
-                                    </div>
-                                )}
-                                {model.status === 'PENDING_APPROVAL' && (
-                                    <div className="text-center py-3 bg-yellow-500/10 rounded-lg text-yellow-400 text-sm">
-                                        🗳️ Awaiting council approval...
-                                    </div>
-                                )}
-                                {(model.status === 'APPROVED' || model.status === 'COMPLETED') && !model.isActive && (
-                                    <button
-                                        onClick={async () => {
-                                            const token = api.getAccessToken();
-                                            const res = await fetch(`${API_BASE}/api/models/${model.id}/activate`, {
-                                                method: 'POST',
-                                                headers: { Authorization: `Bearer ${token}` }
-                                            });
-                                            if (res.ok) {
-                                                alert('Model activated for live trading!');
-                                                window.location.reload();
-                                            }
-                                        }}
-                                        className="w-full py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold transition-colors"
-                                    >
-                                        🚀 Activate for Live Trading
-                                    </button>
-                                )}
-                                {model.isActive && (
-                                    <div className="text-center py-3 bg-green-500/10 rounded-lg text-green-400 font-bold">
-                                        ✅ Currently Active
-                                    </div>
-                                )}
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>

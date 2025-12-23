@@ -155,7 +155,7 @@ router.post('/:id/activate', authMiddleware, async (req: Request, res: Response)
  */
 router.post('/:id/backtest', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const { symbol, startDate, endDate } = req.body;
+        const { symbol, startDate, endDate, initialCapital } = req.body;
 
         const model = await db.tradingModel.findFirst({
             where: {
@@ -177,14 +177,23 @@ router.post('/:id/backtest', authMiddleware, async (req: Request, res: Response)
         // Import and use the real backtest service
         const { backtestService } = await import('../services/backtest.service.js');
 
+        // Convert string dates to Date objects (required by BacktestConfig interface)
+        const initDateObj = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const endDateObj = endDate ? new Date(endDate) : new Date();
+
+        console.log(`[Models API] Starting backtest for model ${req.params.id}`);
+        console.log(`[Models API] Symbol: ${symbol || 'BTCUSDT'}, Dates: ${initDateObj.toISOString()} to ${endDateObj.toISOString()}`);
+
         // Start backtest with AI council - this runs agents
         const backtestSession = await backtestService.startBacktest(req.userId!, {
             strategyVersionId: req.params.id,
             symbol: symbol || 'BTCUSDT',
-            initDate: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            endDate: endDate || new Date().toISOString().split('T')[0],
-            initialCapital: 10000
+            initDate: initDateObj,
+            endDate: endDateObj,
+            initialCapital: initialCapital || 10000
         });
+
+        console.log(`[Models API] Backtest session created: ${backtestSession.id}`);
 
         return successResponse(res, {
             ...model,
@@ -192,6 +201,7 @@ router.post('/:id/backtest', authMiddleware, async (req: Request, res: Response)
             backtestSessionId: backtestSession.id
         }, 'Backtest started with AI council');
     } catch (error: any) {
+        console.error(`[Models API] Backtest error:`, error);
         return errorResponse(res, error.message, 500);
     }
 });
