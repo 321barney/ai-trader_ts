@@ -6,6 +6,7 @@ import { api, API_BASE } from '@/lib/api';
 
 interface BacktestSession {
     id: string;
+    strategyVersionId: string;
     status: 'PENDING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
     symbol: string;
     currentDate: string;
@@ -354,8 +355,25 @@ function BacktestContent() {
                                 <div className="space-y-3 pt-3 border-t border-white/5">
                                     {/* Status Message */}
                                     {model.status === 'BACKTESTING' && (
-                                        <div className="text-center py-2 bg-purple-500/10 rounded-lg text-purple-400 text-sm flex items-center justify-center gap-2">
-                                            <span className="animate-spin">⚙️</span> Backtest running...
+                                        <div className="bg-purple-500/10 rounded-lg p-3">
+                                            {session?.strategyVersionId === model.id ? (
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between text-xs text-purple-300">
+                                                        <span className="flex items-center gap-1"><span className="animate-spin">⚙️</span> Running...</span>
+                                                        <span>{session.currentStep} / {session.totalSteps} steps</span>
+                                                    </div>
+                                                    <div className="w-full bg-purple-900/40 rounded-full h-1.5">
+                                                        <div
+                                                            className="bg-purple-500 h-1.5 rounded-full transition-all duration-300"
+                                                            style={{ width: `${Math.min(100, Math.round((session.currentStep / session.totalSteps) * 100))}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center text-purple-400 text-sm flex items-center justify-center gap-2">
+                                                    <span className="animate-spin">⚙️</span> Backtest running...
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                     {model.isActive && (

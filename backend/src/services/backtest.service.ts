@@ -471,7 +471,19 @@ class BacktestService {
             data: { backtestCompleted: true }
         });
 
-        console.log(`[Backtest] Session ${sessionId} completed. Return: ${totalReturn.toFixed(2)}%`);
+        // Update TradingModel status to PENDING_APPROVAL for council deliberation
+        await prisma.tradingModel.update({
+            where: { id: session.strategyVersionId },
+            data: {
+                status: 'PENDING_APPROVAL',
+                winRate: winRate,
+                sharpeRatio: sharpeRatio,
+                totalReturn: totalReturn,
+                maxDrawdown: maxDrawdown
+            }
+        });
+
+        console.log(`[Backtest] Session ${sessionId} completed. Return: ${totalReturn.toFixed(2)}%. Model status -> PENDING_APPROVAL`);
     }
 
     /**
