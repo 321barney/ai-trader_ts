@@ -264,6 +264,11 @@ export class AgentOrchestrator {
             this.marketAgent.decide({ ...enhancedContext, aiService: marketService }),
         ]);
 
+        // console.log(`[Orchestrator] Raw Agent Outputs:
+        // Strategy: ${strategyDecision.decision} (${strategyDecision.confidence})
+        // Risk: ${riskAssessment.decision} (${(riskAssessment as RiskAssessment).riskLevel})
+        // Market: ${(marketAnalysis as MarketAnalysis).sentiment}`);
+
         // Get RL prediction if available and not in deepseek-only mode
         let rlPrediction: RLPrediction | undefined;
         let rlMetrics: RLMetrics | undefined;
@@ -333,12 +338,12 @@ export class AgentOrchestrator {
         const holdVotes = votes.filter(v => v === 'HOLD' || v === 'BLOCKED').length;
 
         // If unanimous, no deliberation needed
-        if (longVotes === 3 || shortVotes === 3 || holdVotes === 3) {
+        if (longVotes === 3 || shortVotes === 3) {
             return {
                 deliberation: 'Unanimous agreement - no deliberation needed.',
                 votes: initialVotes,
                 consensus: true,
-                finalVerdict: longVotes === 3 ? 'LONG' : shortVotes === 3 ? 'SHORT' : 'HOLD',
+                finalVerdict: longVotes === 3 ? 'LONG' : 'SHORT',
                 escalated: false
             };
         }
@@ -380,11 +385,13 @@ CONFIDENCE SCORES:
 - Market: ${marketAnalysis.confidence}
 
 Analyze the disagreement and provide:
-1. Who has the strongest argument?
-2. What concerns need to be addressed?
 3. FINAL COUNSEL VERDICT: [LONG|SHORT|HOLD]
 4. Should this be ESCALATED for human review? [YES|NO]
 5. Brief explanation of the final decision
+
+IMPORTANT: You are the HEAD TRADER. You have the authority to OVERRIDE the Risk Officer if the Strategy/Market arguments are compelling and the risk is managed (not EXTREME).
+If Risk Officer says "High Risk", you can still Approve if you simply reduce the position size (suggest that in reason).
+Do not just default to HOLD. If there is an edge, TAKE IT, but safe.
 
 Format your response:
 DELIBERATION: [Your analysis of the discussion]
@@ -406,7 +413,7 @@ REASON: [Why this decision was reached]`;
             const finalVerdict = verdictMatch ? verdictMatch[1].toUpperCase() :
                 (longVotes >= 2 ? 'LONG' : shortVotes >= 2 ? 'SHORT' : 'HOLD');
 
-            console.log(`[Counsel] Deliberation complete. Verdict: ${finalVerdict}`);
+            console.log(`[Counsel] Deliberation complete.Verdict: ${finalVerdict} `);
 
             return {
                 deliberation: deliberation,
@@ -481,8 +488,10 @@ REASON: [Why this decision was reached]`;
             market: { reasoning: market.reasoning },
         };
 
-        // Rule 1: Risk Officer has veto power (always respected)
-        if (!risk.approved) {
+        // Rule 1: Risk Officer VETO Override Logic
+        // OLD: Risk Veto always blocks.
+        // NEW: Only block on EXTREME risk. If HIGH/MEDIUM and not approved, let Counsel decide but reduce confidence.
+        if (risk.riskLevel === 'EXTREME') {
             return {
                 finalDecision: 'BLOCKED',
                 confidence: risk.confidence,
@@ -492,7 +501,7 @@ REASON: [Why this decision was reached]`;
                 marketAnalysis: market,
                 executionReady: false,
                 readyToExecute: false,
-                blockReason: `Risk Officer blocked: ${risk.warnings.join(', ') || 'Risk too high'}`,
+                blockReason: `Risk Officer blocked: EXTREME RISK DETECTED - ${risk.warnings.join(', ') || 'Safety protocols triggered'} `,
                 agentDecisions,
                 counsel,
                 rlPrediction,
@@ -503,7 +512,7 @@ REASON: [Why this decision was reached]`;
 
         // ============ USE COUNSEL VERDICT IF AVAILABLE ============
         if (counsel) {
-            console.log(`[Aggregator] Using counsel verdict: ${counsel.finalVerdict}`);
+            console.log(`[Aggregator] Using counsel verdict: ${counsel.finalVerdict} `);
 
             // If escalated, default to HOLD and flag for human review
             if (counsel.escalated) {
@@ -516,7 +525,7 @@ REASON: [Why this decision was reached]`;
                     marketAnalysis: market,
                     executionReady: false,
                     readyToExecute: false,
-                    blockReason: `Escalated for human review: ${counsel.escalationReason || 'Agents could not reach confident consensus'}`,
+                    blockReason: `Escalated for human review: ${counsel.escalationReason || 'Agents could not reach confident consensus'} `,
                     agentDecisions,
                     counsel,
                     rlPrediction,
@@ -774,7 +783,7 @@ REASON: [Why this decision was reached]`;
         const cachedAnalysis = await modelService.getCachedMarketAnalysis(context.userId);
 
         if (cachedAnalysis) {
-            console.log(`[Orchestrator] Using cached market analysis (< 4 hours old)`);
+            console.log(`[Orchestrator] Using cached market analysis(<4 hours old)`);
 
             // Run only Strategy and Risk agents
             const user = await prisma.user.findUnique({
@@ -901,12 +910,12 @@ REASON: [Why this decision was reached]`;
 
         const drawdown = ((peakPortfolioValue - currentPortfolioValue) / peakPortfolioValue) * 100;
 
-        console.log(`[Orchestrator] Current drawdown: ${drawdown.toFixed(2)}%`);
+        console.log(`[Orchestrator] Current drawdown: ${drawdown.toFixed(2)}% `);
 
         const retrainTriggered = await modelService.updateDrawdown(activeModel.id, drawdown);
 
         if (retrainTriggered) {
-            console.log(`[Orchestrator] 15% drawdown threshold hit. Model marked for retraining.`);
+            console.log(`[Orchestrator] 15 % drawdown threshold hit.Model marked for retraining.`);
             // Here you could trigger automatic model regeneration
         }
 
