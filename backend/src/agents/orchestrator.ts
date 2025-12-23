@@ -491,7 +491,8 @@ REASON: [Why this decision was reached]`;
         // Rule 1: Risk Officer VETO Override Logic
         // OLD: Risk Veto always blocks.
         // NEW: Only block on EXTREME risk. If HIGH/MEDIUM and not approved, let Counsel decide but reduce confidence.
-        if (risk.riskLevel === 'EXTREME') {
+        // NEW: Only block on EXTREME risk. If HIGH/MEDIUM and not approved, let Counsel decide but reduce confidence.
+        if ((risk.riskLevel as string) === 'EXTREME') {
             return {
                 finalDecision: 'BLOCKED',
                 confidence: risk.confidence,
@@ -542,7 +543,7 @@ REASON: [Why this decision was reached]`;
             const executionReady =
                 counselDecision !== 'HOLD' &&
                 counselConfidence > 0.6 &&
-                risk.riskLevel !== 'EXTREME';
+                (risk.riskLevel as string) !== 'EXTREME';
 
             return {
                 finalDecision: counselDecision,
@@ -630,7 +631,7 @@ REASON: [Why this decision was reached]`;
         const executionReady =
             finalDecision !== 'HOLD' &&
             combinedConfidence > 0.6 &&
-            risk.riskLevel !== 'EXTREME';
+            (risk.riskLevel as string) !== 'EXTREME';
 
         return {
             finalDecision,
