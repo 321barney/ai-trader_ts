@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API_BASE } from "@/lib/api";
+import { api, API_BASE } from "@/lib/api";
 import Link from "next/link";
 
 interface Balance {
@@ -41,7 +41,8 @@ export default function DashboardPage() {
     }, []);
 
     const fetchDashboardData = async () => {
-        const token = localStorage.getItem("token");
+        // Use the api client's token getter for consistency
+        const token = api.getAccessToken();
         if (!token) {
             setError("Not authenticated");
             setLoading(false);
