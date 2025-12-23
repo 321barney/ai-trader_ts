@@ -62,6 +62,7 @@ router.get('/status/:sessionId', asyncHandler(async (req: Request, res: Response
         success: true,
         data: {
             id: session.id,
+            strategyVersionId: session.strategyVersionId,
             status: session.status,
             symbol: session.symbol,
             currentDate: session.currentDate,
