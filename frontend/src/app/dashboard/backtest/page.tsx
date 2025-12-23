@@ -221,7 +221,7 @@ function BacktestContent() {
             const data = await res.json();
             if (data.success) {
                 alert('✅ Strategy approved! Go to Strategy Lab to promote it.');
-                router.push('/dashboard/strategy');
+                router.push('/dashboard/strategy-lab');
             } else {
                 alert(`❌ ${data.error}`);
             }
@@ -460,10 +460,10 @@ function BacktestContent() {
                                         <div className="text-sm text-gray-400">{model.methodology}</div>
                                     </div>
                                     <div className={`px-3 py-1 rounded-full text-xs font-bold ${model.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
-                                            model.status === 'APPROVED' ? 'bg-blue-500/20 text-blue-400' :
-                                                model.status === 'PENDING_APPROVAL' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                    model.status === 'BACKTESTING' ? 'bg-purple-500/20 text-purple-400' :
-                                                        'bg-gray-500/20 text-gray-400'
+                                        model.status === 'APPROVED' ? 'bg-blue-500/20 text-blue-400' :
+                                            model.status === 'PENDING_APPROVAL' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                model.status === 'BACKTESTING' ? 'bg-purple-500/20 text-purple-400' :
+                                                    'bg-gray-500/20 text-gray-400'
                                         }`}>
                                         {model.status}
                                     </div>
@@ -492,7 +492,7 @@ function BacktestContent() {
                                 </div>
 
                                 {/* Actions */}
-                                {model.status === 'APPROVED' && !model.isActive && (
+                                {(model.status === 'APPROVED' || model.status === 'COMPLETED') && !model.isActive && (
                                     <button
                                         onClick={async () => {
                                             const token = api.getAccessToken();
@@ -501,13 +501,15 @@ function BacktestContent() {
                                                 headers: { Authorization: `Bearer ${token}` }
                                             });
                                             if (res.ok) {
-                                                alert('Model activated!');
+                                                alert('Model activated! Execution will start.');
                                                 window.location.reload();
+                                            } else {
+                                                alert('Failed to activate model');
                                             }
                                         }}
-                                        className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 font-bold"
+                                        className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 font-bold transition-colors"
                                     >
-                                        🚀 Activate for Trading
+                                        🚀 Activate for Live Trading
                                     </button>
                                 )}
                                 {model.isActive && (
@@ -519,6 +521,37 @@ function BacktestContent() {
                                     <div className="text-center py-2 text-yellow-400 text-sm">
                                         Awaiting council approval...
                                     </div>
+                                )}
+                                {model.status === 'BACKTESTING' && (
+                                    <div className="text-center py-2 text-purple-400 text-sm flex items-center justify-center gap-2">
+                                        <span className="animate-spin">⚙️</span> Backtest running...
+                                    </div>
+                                )}
+                                {model.status === 'DRAFT' && (
+                                    <button
+                                        onClick={async () => {
+                                            const token = api.getAccessToken();
+                                            const res = await fetch(`${API_BASE}/api/models/${model.id}/backtest`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Authorization': `Bearer ${token}`
+                                                },
+                                                body: JSON.stringify({
+                                                    symbol: 'BTCUSDT',
+                                                    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+                                                    endDate: new Date().toISOString()
+                                                })
+                                            });
+                                            if (res.ok) {
+                                                alert('Backtest started!');
+                                                window.location.reload();
+                                            }
+                                        }}
+                                        className="w-full py-2 rounded-lg bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 font-bold transition-colors"
+                                    >
+                                        🧪 Run Backtest
+                                    </button>
                                 )}
                             </div>
                         ))}
