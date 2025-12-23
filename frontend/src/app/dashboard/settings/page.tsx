@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { API_BASE } from "@/lib/api";
+import { api } from "@/lib/api";
 
 interface ConnectionTest {
     testing: boolean;
@@ -59,13 +59,7 @@ export default function SettingsPage() {
         }
         stateSetter({ testing: true, result: null });
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE}${url}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ apiKey: key.includes("••••") ? undefined : key })
-            });
-            const data = await res.json();
+            const data: any = await api.post(url, { apiKey: key.includes("••••") ? undefined : key });
             stateSetter({ testing: false, result: data.data || data });
         } catch (err: any) {
             stateSetter({ testing: false, result: { connected: false, error: err.message } });
@@ -80,18 +74,12 @@ export default function SettingsPage() {
         }
         setAsterTest({ testing: true, result: null });
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE}/api/trading/test-aster`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    // If masked, don't send keys so backend uses stored ones
-                    apiKey: settings.asterApiKey.includes("••••") ? undefined : settings.asterApiKey,
-                    apiSecret: settings.asterApiSecret?.includes("••••") ? undefined : settings.asterApiSecret,
-                    testnet: true
-                })
+            const data: any = await api.post('/api/trading/test-aster', {
+                // If masked, don't send keys so backend uses stored ones
+                apiKey: settings.asterApiKey.includes("••••") ? undefined : settings.asterApiKey,
+                apiSecret: settings.asterApiSecret?.includes("••••") ? undefined : settings.asterApiSecret,
+                testnet: true
             });
-            const data = await res.json();
             setAsterTest({ testing: false, result: data.data || data });
         } catch (err: any) {
             setAsterTest({ testing: false, result: { connected: false, error: err.message } });
@@ -107,11 +95,7 @@ export default function SettingsPage() {
     useEffect(() => {
         const loadSettings = async () => {
             try {
-                const token = localStorage.getItem("token");
-                const res = await fetch(`${API_BASE}/api/auth/me`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const data = await res.json();
+                const data: any = await api.get('/api/auth/me');
                 if (data.success && data.data) {
                     const user = data.data;
                     setSettings(prev => ({
@@ -137,10 +121,7 @@ export default function SettingsPage() {
                 }
 
                 // Fetch available pairs
-                const pairsRes = await fetch(`${API_BASE}/api/trading/symbols`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const pairsData = await pairsRes.json();
+                const pairsData: any = await api.get('/api/trading/symbols');
                 if (pairsData.success && Array.isArray(pairsData.data)) {
                     setAvailablePairs(pairsData.data.map((p: any) => ({
                         symbol: p.symbol,
@@ -169,45 +150,36 @@ export default function SettingsPage() {
         setSaving(true);
         setError("");
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE}/api/trading/settings`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    tradingEnabled: settings.tradingEnabled,
-                    tradingMode: settings.tradingMode,
-                    strategyMode: settings.strategyMode,
-                    methodology: settings.methodology,
-                    leverage: settings.leverage,
+            const data: any = await api.put('/api/trading/settings', {
+                tradingEnabled: settings.tradingEnabled,
+                tradingMode: settings.tradingMode,
+                strategyMode: settings.strategyMode,
+                methodology: settings.methodology,
+                leverage: settings.leverage,
 
-                    selectedPairs: settings.selectedPairs,
-                    marketType: settings.marketType,
-                    // Only send API keys if they were edited (not masked)
-                    ...(settings.deepseekApiKey && !settings.deepseekApiKey.includes("••••")
-                        ? { deepseekApiKey: settings.deepseekApiKey } : {}),
-                    ...(settings.openaiApiKey && !settings.openaiApiKey.includes("••••")
-                        ? { openaiApiKey: settings.openaiApiKey } : {}),
-                    ...(settings.anthropicApiKey && !settings.anthropicApiKey.includes("••••")
-                        ? { anthropicApiKey: settings.anthropicApiKey } : {}),
-                    ...(settings.geminiApiKey && !settings.geminiApiKey.includes("••••")
-                        ? { geminiApiKey: settings.geminiApiKey } : {}),
-                    ...(settings.asterApiKey && !settings.asterApiKey.includes("••••")
-                        ? { asterApiKey: settings.asterApiKey } : {}),
-                    ...(settings.asterApiSecret && !settings.asterApiSecret.includes("••••")
-                        ? { asterApiSecret: settings.asterApiSecret } : {}),
+                selectedPairs: settings.selectedPairs,
+                marketType: settings.marketType,
+                // Only send API keys if they were edited (not masked)
+                ...(settings.deepseekApiKey && !settings.deepseekApiKey.includes("••••")
+                    ? { deepseekApiKey: settings.deepseekApiKey } : {}),
+                ...(settings.openaiApiKey && !settings.openaiApiKey.includes("••••")
+                    ? { openaiApiKey: settings.openaiApiKey } : {}),
+                ...(settings.anthropicApiKey && !settings.anthropicApiKey.includes("••••")
+                    ? { anthropicApiKey: settings.anthropicApiKey } : {}),
+                ...(settings.geminiApiKey && !settings.geminiApiKey.includes("••••")
+                    ? { geminiApiKey: settings.geminiApiKey } : {}),
+                ...(settings.asterApiKey && !settings.asterApiKey.includes("••••")
+                    ? { asterApiKey: settings.asterApiKey } : {}),
+                ...(settings.asterApiSecret && !settings.asterApiSecret.includes("••••")
+                    ? { asterApiSecret: settings.asterApiSecret } : {}),
 
-                    marketAnalystModel: settings.marketAnalystModel,
-                    riskOfficerModel: settings.riskOfficerModel,
-                    strategyConsultantModel: settings.strategyConsultantModel,
+                marketAnalystModel: settings.marketAnalystModel,
+                riskOfficerModel: settings.riskOfficerModel,
+                strategyConsultantModel: settings.strategyConsultantModel,
 
-                    asterTestnet: settings.asterTestnet,
-                })
+                asterTestnet: settings.asterTestnet,
             });
 
-            const data = await res.json();
             if (data.success) {
                 setSaved(true);
                 setTimeout(() => setSaved(false), 2000);
@@ -678,4 +650,3 @@ export default function SettingsPage() {
         </div >
     );
 }
-
