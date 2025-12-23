@@ -79,7 +79,7 @@ export class TechnicalAnalysisService {
         const orderBlocks: OrderBlock[] = [];
         const threshold = 0.005; // 0.5% move threshold
 
-        for (let i = 2; i < closes.length - 1; i++) {
+        for (let i = 2; i < closes.length; i++) {
             const prevCandleBullish = closes[i - 1] > opens[i - 1];
             const prevCandleBearish = closes[i - 1] < opens[i - 1];
             const currentMove = (closes[i] - closes[i - 1]) / closes[i - 1];
@@ -170,8 +170,9 @@ export class TechnicalAnalysisService {
      * ICT Optimal Trade Entry (OTE) - 61.8% - 79% Fib retracement
      */
     static calculateOTE(highs: number[], lows: number[]): { oteZoneHigh: number; oteZoneLow: number; direction: string } {
-        const swingHigh = Math.max(...highs.slice(-20));
-        const swingLow = Math.min(...lows.slice(-20));
+        const lookback = 50; // Increased from 20 to capture significant swings
+        const swingHigh = Math.max(...highs.slice(-lookback));
+        const swingLow = Math.min(...lows.slice(-lookback));
         const range = swingHigh - swingLow;
 
         // OTE zone is 61.8% to 79% retracement
@@ -211,14 +212,17 @@ export class TechnicalAnalysisService {
 
     /**
      * Gann Angles (1x1, 2x1, 1x2)
+     * Uses Volatility (ATR) as the "Price Unit" per "Time Unit" (Slope)
      */
-    static calculateGannLevels(currentPrice: number, pivotPrice: number, periods: number): { angle1x1: number; angle2x1: number; angle1x2: number } {
-        const pricePerPeriod = (currentPrice - pivotPrice) / periods;
+    static calculateGannLevels(pivotPrice: number, barsSincePivot: number, volatility: number): { angle1x1: number; angle2x1: number; angle1x2: number } {
+        // Standard Gann: 1x1 = 1 Price Unit per 1 Time Unit
+        // We use ATR as the Price Unit to adapt to volatility
+        const slope = volatility;
 
         return {
-            angle1x1: pivotPrice + (periods * pricePerPeriod),        // 45 degree
-            angle2x1: pivotPrice + (periods * pricePerPeriod * 2),    // Steeper
-            angle1x2: pivotPrice + (periods * pricePerPeriod * 0.5),  // Flatter
+            angle1x1: pivotPrice + (barsSincePivot * slope),       // 45 degree (1x1)
+            angle2x1: pivotPrice + (barsSincePivot * slope * 2),   // Steeper (2x1)
+            angle1x2: pivotPrice + (barsSincePivot * slope * 0.5), // Flatter (1x2)
         };
     }
 
@@ -282,9 +286,23 @@ export class TechnicalAnalysisService {
                 break;
 
             case 'GANN':
-                const pivotPrice = Math.min(...lows.slice(-50));
-                result.gannLevels = this.calculateGannLevels(currentPrice, pivotPrice, 50);
+                // Find pivot low in recent history
+                const lookback = 50;
+                const recentLows = lows.slice(-lookback);
+                const pivotPrice = Math.min(...recentLows);
+
+                // Calculate time delta (bars since pivot)
+                // lastIndexOf finds the most recent occurrence if multiple exist
+                const pivotIndexInSlice = recentLows.lastIndexOf(pivotPrice);
+                const barsSincePivot = lookback - 1 - pivotIndexInSlice;
+
+                // Use ATR for dynamic slope, or fallback to 1% of price if ATR not ready
+                const slope = currentATR || (currentPrice * 0.01);
+
+                result.gannLevels = this.calculateGannLevels(pivotPrice, barsSincePivot, slope);
                 result.gannSquare9 = this.calculateGannSquare9(currentPrice);
+
+                // Bias: Price above 1x1 is Bullish, below is Bearish
                 result.gannBias = currentPrice > result.gannLevels.angle1x1 ? 'BULLISH' : 'BEARISH';
                 break;
 
