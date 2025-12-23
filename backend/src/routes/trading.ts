@@ -285,6 +285,120 @@ router.post('/test-deepseek', authMiddleware, asyncHandler(async (req: Request, 
 }));
 
 /**
+ * POST /api/trading/test-openai
+ * Test OpenAI API connection
+ */
+router.post('/test-openai', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    let { apiKey } = req.body;
+
+    if (!apiKey) {
+        const { prisma } = await import('../utils/prisma.js');
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (user?.openaiApiKey) apiKey = user.openaiApiKey;
+        else return successResponse(res, { connected: false, error: 'Please provide API key or save it in settings first' });
+    }
+
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: 'Ping' }],
+                max_tokens: 1
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json() as any;
+            throw new Error(error.error?.message || 'OpenAI API connection failed');
+        }
+
+        return successResponse(res, { connected: true, message: 'Successfully connected to OpenAI' });
+    } catch (error: any) {
+        return successResponse(res, { connected: false, error: error.message || 'Failed to connect to OpenAI API' });
+    }
+}));
+
+/**
+ * POST /api/trading/test-anthropic
+ * Test Anthropic API connection
+ */
+router.post('/test-anthropic', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    let { apiKey } = req.body;
+
+    if (!apiKey) {
+        const { prisma } = await import('../utils/prisma.js');
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (user?.anthropicApiKey) apiKey = user.anthropicApiKey;
+        else return successResponse(res, { connected: false, error: 'Please provide API key or save it in settings first' });
+    }
+
+    try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+                model: 'claude-3-haiku-20240307',
+                max_tokens: 1,
+                messages: [{ role: 'user', content: 'Ping' }]
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json() as any;
+            throw new Error(error.error?.message || 'Anthropic API connection failed');
+        }
+
+        return successResponse(res, { connected: true, message: 'Successfully connected to Anthropic' });
+    } catch (error: any) {
+        return successResponse(res, { connected: false, error: error.message || 'Failed to connect to Anthropic API' });
+    }
+}));
+
+/**
+ * POST /api/trading/test-gemini
+ * Test Google Gemini API connection
+ */
+router.post('/test-gemini', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    let { apiKey } = req.body;
+
+    if (!apiKey) {
+        const { prisma } = await import('../utils/prisma.js');
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (user?.geminiApiKey) apiKey = user.geminiApiKey;
+        else return successResponse(res, { connected: false, error: 'Please provide API key or save it in settings first' });
+    }
+
+    try {
+        // Models: gemini-1.5-flash
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: 'Ping' }] }]
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json() as any;
+            throw new Error(error.error?.message || 'Gemini API connection failed');
+        }
+
+        return successResponse(res, { connected: true, message: 'Successfully connected to Google Gemini' });
+    } catch (error: any) {
+        return successResponse(res, { connected: false, error: error.message || 'Failed to connect to Gemini API' });
+    }
+}));
+
+/**
  * GET /api/trading/portfolio
  * Get real portfolio data from AsterDex
  */

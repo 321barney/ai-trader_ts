@@ -40,8 +40,37 @@ export default function SettingsPage() {
     // Connection test states
     const [asterTest, setAsterTest] = useState<ConnectionTest>({ testing: false, result: null });
     const [deepseekTest, setDeepseekTest] = useState<ConnectionTest>({ testing: false, result: null });
+    const [openaiTest, setOpenaiTest] = useState<ConnectionTest>({ testing: false, result: null });
+    const [anthropicTest, setAnthropicTest] = useState<ConnectionTest>({ testing: false, result: null });
+    const [geminiTest, setGeminiTest] = useState<ConnectionTest>({ testing: false, result: null });
 
     const [availablePairs, setAvailablePairs] = useState<{ symbol: string, maxLeverage?: number }[]>([]);
+
+    // Helper for testing connections
+    const testConnection = async (
+        url: string,
+        key: string,
+        stateSetter: (val: ConnectionTest) => void,
+        keyName: string
+    ) => {
+        if (!key) {
+            stateSetter({ testing: false, result: { connected: false, error: "Please enter your API key first" } });
+            return;
+        }
+        stateSetter({ testing: true, result: null });
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE}${url}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ apiKey: key.includes("••••") ? undefined : key })
+            });
+            const data = await res.json();
+            stateSetter({ testing: false, result: data.data || data });
+        } catch (err: any) {
+            stateSetter({ testing: false, result: { connected: false, error: err.message } });
+        }
+    };
 
     // Test Aster connection
     const testAsterConnection = async () => {
@@ -69,28 +98,10 @@ export default function SettingsPage() {
         }
     };
 
-    // Test DeepSeek connection
-    const testDeepseekConnection = async () => {
-        if (!settings.deepseekApiKey) {
-            setDeepseekTest({ testing: false, result: { connected: false, error: "Please enter your API key first" } });
-            return;
-        }
-        setDeepseekTest({ testing: true, result: null });
-        try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE}/api/trading/test-deepseek`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    apiKey: settings.deepseekApiKey.includes("••••") ? undefined : settings.deepseekApiKey
-                })
-            });
-            const data = await res.json();
-            setDeepseekTest({ testing: false, result: data.data || data });
-        } catch (err: any) {
-            setDeepseekTest({ testing: false, result: { connected: false, error: err.message } });
-        }
-    };
+    const testDeepseekConnection = () => testConnection('/api/trading/test-deepseek', settings.deepseekApiKey, setDeepseekTest, 'deepseek');
+    const testOpenaiConnection = () => testConnection('/api/trading/test-openai', settings.openaiApiKey, setOpenaiTest, 'openai');
+    const testAnthropicConnection = () => testConnection('/api/trading/test-anthropic', settings.anthropicApiKey, setAnthropicTest, 'anthropic');
+    const testGeminiConnection = () => testConnection('/api/trading/test-gemini', settings.geminiApiKey, setGeminiTest, 'gemini');
 
     // Load settings on mount
     useEffect(() => {
@@ -478,7 +489,20 @@ export default function SettingsPage() {
                                 >
                                     {editingKey === 'openai' ? 'Done' : 'Edit'}
                                 </button>
+                                <button
+                                    onClick={testOpenaiConnection}
+                                    disabled={openaiTest.testing}
+                                    className="btn-secondary px-4"
+                                >
+                                    {openaiTest.testing ? 'Testing...' : 'Test'}
+                                </button>
                             </div>
+                            {openaiTest.result && (
+                                <div className={`text-sm mt-2 flex items-center gap-1 ${openaiTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${openaiTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                    {openaiTest.result.connected ? openaiTest.result.message : openaiTest.result.error}
+                                </div>
+                            )}
                         </div>
 
                         {/* Anthropic */}
@@ -499,7 +523,20 @@ export default function SettingsPage() {
                                 >
                                     {editingKey === 'anthropic' ? 'Done' : 'Edit'}
                                 </button>
+                                <button
+                                    onClick={testAnthropicConnection}
+                                    disabled={anthropicTest.testing}
+                                    className="btn-secondary px-4"
+                                >
+                                    {anthropicTest.testing ? 'Testing...' : 'Test'}
+                                </button>
                             </div>
+                            {anthropicTest.result && (
+                                <div className={`text-sm mt-2 flex items-center gap-1 ${anthropicTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${anthropicTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                    {anthropicTest.result.connected ? anthropicTest.result.message : anthropicTest.result.error}
+                                </div>
+                            )}
                         </div>
 
                         {/* Gemini */}
@@ -520,7 +557,20 @@ export default function SettingsPage() {
                                 >
                                     {editingKey === 'gemini' ? 'Done' : 'Edit'}
                                 </button>
+                                <button
+                                    onClick={testGeminiConnection}
+                                    disabled={geminiTest.testing}
+                                    className="btn-secondary px-4"
+                                >
+                                    {geminiTest.testing ? 'Testing...' : 'Test'}
+                                </button>
                             </div>
+                            {geminiTest.result && (
+                                <div className={`text-sm mt-2 flex items-center gap-1 ${geminiTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${geminiTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                    {geminiTest.result.connected ? geminiTest.result.message : geminiTest.result.error}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
