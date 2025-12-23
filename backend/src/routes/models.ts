@@ -175,8 +175,8 @@ router.post('/:id/activate', authMiddleware, async (req: Request, res: Response)
             return errorResponse(res, 'Model not found', 404);
         }
 
-        if (model.status !== 'APPROVED') {
-            return errorResponse(res, 'Model must be approved before activation');
+        if (model.status !== 'APPROVED' && model.status !== 'PENDING_APPROVAL') {
+            return errorResponse(res, 'Model must be approved or pending approval before activation');
         }
 
         const activated = await modelService.activateModel(req.userId!, req.params.id);

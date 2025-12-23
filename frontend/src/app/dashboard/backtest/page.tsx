@@ -451,7 +451,7 @@ function BacktestContent() {
                                                             })
                                                         });
                                                         if (res.ok) {
-                                                            alert('Backtest & AI Council started!');
+                                                            alert('Backtest started!');
                                                             window.location.reload();
                                                         } else {
                                                             alert('Failed to start backtest');
@@ -461,17 +461,21 @@ function BacktestContent() {
                                                 >
                                                     🚀 Start
                                                 </button>
-                                                {(model.status === 'APPROVED' || model.status === 'COMPLETED') && (
+                                                {(model.status === 'APPROVED' || model.status === 'COMPLETED' || model.status === 'PENDING_APPROVAL') && (
                                                     <button
                                                         onClick={async () => {
+                                                            if (!confirm(`Activate strategy v${model.version} for live trading? This will approve and deploy the strategy.`)) return;
                                                             const token = api.getAccessToken();
                                                             const res = await fetch(`${API_BASE}/api/models/${model.id}/activate`, {
                                                                 method: 'POST',
                                                                 headers: { Authorization: `Bearer ${token}` }
                                                             });
                                                             if (res.ok) {
-                                                                alert('Model activated for live trading!');
+                                                                alert('Strategy activated successfully! 🚀');
                                                                 window.location.reload();
+                                                            } else {
+                                                                const data = await res.json();
+                                                                alert(`Activation failed: ${data.message}`);
                                                             }
                                                         }}
                                                         className="flex-1 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold transition-colors text-sm"
