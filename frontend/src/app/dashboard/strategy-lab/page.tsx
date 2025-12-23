@@ -109,8 +109,8 @@ export default function StrategyLabPage() {
                                     key={m.id}
                                     onClick={() => setMethodology(m.id)}
                                     className={`p-4 rounded-xl border text-left transition-all ${methodology === m.id
-                                            ? 'border-indigo-500 bg-indigo-500/20'
-                                            : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                        ? 'border-indigo-500 bg-indigo-500/20'
+                                        : 'border-white/10 bg-white/5 hover:bg-white/10'
                                         }`}
                                 >
                                     <div className="font-bold text-white">{m.name}</div>
@@ -131,8 +131,8 @@ export default function StrategyLabPage() {
                                     key={tf}
                                     onClick={() => toggleTimeframe(tf)}
                                     className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${selectedTimeframes.includes(tf)
-                                            ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
-                                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                        ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
+                                        : 'bg-white/5 text-gray-400 hover:bg-white/10'
                                         }`}
                                 >
                                     {tf}

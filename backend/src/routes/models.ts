@@ -183,7 +183,8 @@ router.post('/:id/backtest', authMiddleware, async (req: Request, res: Response)
             symbol: symbol || 'BTCUSDT',
             initDate: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             endDate: endDate || new Date().toISOString().split('T')[0],
-            initialCapital: 10000
+            initialCapital: 10000,
+            modelId: req.params.id
         });
 
         return successResponse(res, {
