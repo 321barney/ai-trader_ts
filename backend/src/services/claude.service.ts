@@ -12,8 +12,8 @@ export class ClaudeService implements IAiService {
     constructor(apiKey?: string) {
         this.apiKey = apiKey || process.env.ANTHROPIC_API_KEY || '';
         this.baseUrl = 'https://api.anthropic.com/v1';
-        // Updated to Claude 3.5 Sonnet (Latest)
-        this.model = 'claude-3-5-sonnet-20240620';
+        // Updated to Claude 3.5 Sonnet (October 2024 release)
+        this.model = 'claude-3-5-sonnet-20241022';
     }
 
     /**
