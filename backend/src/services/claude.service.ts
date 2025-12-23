@@ -53,7 +53,9 @@ export class ClaudeService implements IAiService {
 
             if (!response.ok) {
                 const error = await response.json() as any;
-                throw new Error(error.error?.message || 'Anthropic API request failed');
+                // Include full error details for debugging
+                const errorMessage = error.error?.message || JSON.stringify(error);
+                throw new Error(`Anthropic API Error (${response.status}): ${errorMessage}`);
             }
 
             const data = await response.json() as any;
