@@ -16,16 +16,21 @@ class ApiClient {
     private refreshToken: string | null = null;
 
     setTokens(accessToken: string | null, refreshToken: string | null) {
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
+        // Validate and sanitize before assignment
+        const validAccess = (accessToken && accessToken !== 'undefined' && accessToken !== 'null') ? accessToken : null;
+        const validRefresh = (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') ? refreshToken : null;
+
+        this.accessToken = validAccess;
+        this.refreshToken = validRefresh;
+
         if (typeof window !== 'undefined') {
-            if (accessToken && accessToken !== 'undefined' && accessToken !== 'null') {
-                localStorage.setItem('accessToken', accessToken);
+            if (validAccess) {
+                localStorage.setItem('accessToken', validAccess);
             } else {
                 localStorage.removeItem('accessToken');
             }
-            if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
-                localStorage.setItem('refreshToken', refreshToken);
+            if (validRefresh) {
+                localStorage.setItem('refreshToken', validRefresh);
             } else {
                 localStorage.removeItem('refreshToken');
             }
@@ -33,7 +38,11 @@ class ApiClient {
     }
 
     getAccessToken(): string | null {
-        if (this.accessToken) return this.accessToken;
+        // Double check memory state
+        if (this.accessToken && this.accessToken !== 'undefined' && this.accessToken !== 'null') {
+            return this.accessToken;
+        }
+
         if (typeof window !== 'undefined') {
             let token = localStorage.getItem('accessToken');
             // Migration fallback
@@ -43,6 +52,8 @@ class ApiClient {
 
             // Validate fallback
             if (token && token !== 'undefined' && token !== 'null') {
+                // Determine if we should treat this as a migration or just a load
+                this.accessToken = token; // Sync memory
                 return token;
             }
         }
@@ -50,11 +61,23 @@ class ApiClient {
     }
 
     getRefreshToken(): string | null {
-        if (this.refreshToken) return this.refreshToken;
+        // Double check memory state
+        if (this.refreshToken && this.refreshToken !== 'undefined' && this.refreshToken !== 'null') {
+            return this.refreshToken;
+        }
+
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('refreshToken');
+            const token = localStorage.getItem('refreshToken');
+            if (token && token !== 'undefined' && token !== 'null') {
+                this.refreshToken = token; // Sync memory
+                return token;
+            }
         }
         return null;
+    }
+
+    clearTokens() {
+        this.setTokens(null, null);
     }
 
     private async request<T>(
