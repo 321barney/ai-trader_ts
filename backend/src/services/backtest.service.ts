@@ -101,8 +101,9 @@ class BacktestService {
                 // Advance one step
                 await this.advanceStep(sessionId);
 
-                // Small delay - 1 step per second for realistic simulation
-                await this.sleep(1000);
+                // Small delay - prevent rate limiting (AI agents need time)
+                // 5 seconds delay to stay within safe limits for most APIs
+                await this.sleep(5000);
             }
         } catch (error) {
             console.error(`[Backtest] Error in session ${sessionId}:`, error);
@@ -205,6 +206,7 @@ class BacktestService {
             console.log(`[Backtest] Step ${nextStep}: Calling AI agents with ${methodology} methodology...`);
 
             // Run AI Agent analysis (in backtest mode)
+            // Use 'deepseek' mode (generic AI) rather than 'hybrid' to avoid RL checks unless needed
             const decision = await orchestratorInstance.analyzeAndDecide({
                 symbol: session.symbol,
                 marketData: marketData,
@@ -215,7 +217,7 @@ class BacktestService {
                     currentExposure: 0,
                     openPositions: 0
                 }
-            });
+            }, session.user.strategyMode as any || 'deepseek');
 
             console.log(`[Backtest] Step ${nextStep}: Agent decision = ${decision.finalDecision} (confidence: ${decision.confidence?.toFixed(2)})`);
 
@@ -350,15 +352,26 @@ class BacktestService {
         } catch (error: any) {
             console.error(`[Backtest] ⚠️ Agent analysis failed at step ${nextStep}:`, error.message || error);
 
-            // Check common issues
-            if (error.message?.includes('AI Service not configured')) {
-                console.error(`[Backtest] ❌ User ${session.userId} does not have an AI API key configured.`);
-                console.error(`[Backtest] Please configure an API key in Settings (DeepSeek, OpenAI, etc.)`);
-            } else if (error.message?.includes('API key')) {
-                console.error(`[Backtest] ❌ Invalid API key for AI service`);
-            }
-
-            console.warn(`[Backtest] Falling back to random simulation for this step.`);
+            // Log error visibly as an Orchestrator "decision" so it appears in UI
+            await prisma.agentDecision.create({
+                data: {
+                    userId: session.userId,
+                    agentType: 'ORCHESTRATOR',
+                    reasoning: `Analysis Failed: ${error.message || 'Unknown error'}`,
+                    thoughtSteps: [
+                        { step: 1, thought: `Attempted to analyze step ${nextStep}` },
+                        { step: 2, thought: `Error encountered: ${error.message}` },
+                        { step: 3, thought: 'Check API keys and quota in Settings.' }
+                    ],
+                    decision: 'BLOCKED',
+                    confidence: 0,
+                    symbol: session.symbol,
+                    marketData: {},
+                    isBacktest: true,
+                    backtestSessionId: sessionId,
+                    sourceMode: 'BACKTEST'
+                }
+            });
 
             // Fallback: random simulation if agents fail
             const randomChange = (Math.random() - 0.48) * 0.03;
