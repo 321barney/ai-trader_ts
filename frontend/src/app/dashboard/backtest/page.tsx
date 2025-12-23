@@ -39,6 +39,14 @@ interface TradingModel {
     currentDrawdown?: number;
     approvedBy?: string[];
     createdAt: string;
+    // Backtest config
+    symbol?: string;
+    timeframes?: string[];
+    backtestData?: {
+        symbol?: string;
+        startDate?: string;
+        endDate?: string;
+    };
 }
 
 function BacktestContent() {
@@ -249,7 +257,7 @@ function BacktestContent() {
                         {tradingModels.map((model) => (
                             <div key={model.id} className={`bg-[#12121a] border rounded-xl p-5 ${model.isActive ? 'border-green-500/50' : 'border-white/10'
                                 }`}>
-                                <div className="flex justify-between items-start mb-4">
+                                <div className="flex justify-between items-start mb-3">
                                     <div>
                                         <div className="text-white font-bold text-lg">v{model.version}</div>
                                         <div className="text-sm text-gray-400">{model.methodology}</div>
@@ -263,6 +271,18 @@ function BacktestContent() {
                                         }`}>
                                         {model.status}
                                     </div>
+                                </div>
+
+                                {/* Pair and Timeframe info */}
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    <span className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded text-xs font-medium">
+                                        {model.backtestData?.symbol || model.symbol || 'BTCUSDT'}
+                                    </span>
+                                    {model.timeframes?.map(tf => (
+                                        <span key={tf} className="px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded text-xs font-medium">
+                                            {tf}
+                                        </span>
+                                    )) || <span className="px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded text-xs font-medium">1H</span>}
                                 </div>
 
                                 {/* Metrics (only show if backtested) */}
