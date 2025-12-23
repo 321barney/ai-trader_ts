@@ -70,6 +70,11 @@ model User {
   trackedSignals   TrackedSignal[]
   testSessions     TestSession[]
   backtestSessions BacktestSession[]
+  tradingModels    TradingModel[]
+  
+  // Analysis Caching
+  lastMarketAnalysisAt DateTime?
+  lastMarketAnalysis   Json?     // Cached market analysis result
   
   // Timestamps
   createdAt DateTime @default(now())
@@ -422,3 +427,61 @@ enum BacktestStatus {
   FAILED
 }
 
+// ============================================
+// TRADING MODELS (Cost-Efficient Agent Architecture)
+// ============================================
+
+model TradingModel {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  // Version & Identity
+  version         Int
+  name            String?
+  methodology     String   // SMC | ICT | Gann | Custom
+  
+  // Multi-Timeframe Configuration
+  timeframes      String[] // ["5m", "15m", "1h", "4h"]
+  
+  // Model Parameters (entry/exit rules, indicators)
+  parameters      Json     // Strategy rules, thresholds, etc.
+  
+  // Backtest Results
+  backtestResults Json?
+  sharpeRatio     Float?
+  winRate         Float?
+  maxDrawdown     Float?
+  totalReturn     Float?
+  
+  // Lifecycle Status
+  status          TradingModelStatus @default(DRAFT)
+  approvedBy      String[] // ["STRATEGY_CONSULTANT", "RISK_OFFICER", "MARKET_ANALYST"]
+  
+  // Active Model Tracking
+  isActive        Boolean  @default(false)
+  currentDrawdown Float    @default(0)
+  
+  // Linked Strategy Version (if derived from one)
+  strategyVersionId String?
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  activatedAt     DateTime?
+  expiresAt       DateTime?  // + 1 month by default
+  retiredAt       DateTime?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([isActive])
+}
+
+enum TradingModelStatus {
+  DRAFT           // Initial creation
+  BACKTESTING     // Running backtest
+  PENDING_APPROVAL // Awaiting counsel approval
+  APPROVED        // Approved but not yet active
+  ACTIVE          // Currently in use
+  RETRAINING      // 15% drawdown triggered retrain
+  RETIRED         // Replaced by newer model
+}

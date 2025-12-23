@@ -18,6 +18,7 @@ import { ClaudeService } from '../services/claude.service.js';
 import { GeminiService } from '../services/gemini.service.js';
 import { DeepSeekService } from '../services/deepseek.service.js';
 import { IAiService } from '../services/ai-service.interface.js';
+import { modelService } from '../services/model.service.js';
 
 // Counsel deliberation result
 export interface CounselResult {
@@ -754,7 +755,163 @@ REASON: [Why this decision was reached]`;
         await Promise.all(promises);
         return results;
     }
+
+    // ============================================
+    // COST-EFFICIENT MODEL-BASED EXECUTION
+    // ============================================
+
+    /**
+     * Run analysis with 4-hour market analysis caching
+     * Market Analyst is only called if cache is expired (>4h)
+     */
+    public async analyzeWithCaching(
+        context: AgentContext,
+        mode: 'deepseek' | 'rl' | 'hybrid' = 'hybrid'
+    ): Promise<OrchestratorDecision> {
+        console.log(`[Orchestrator] Checking market analysis cache...`);
+
+        // Check for cached market analysis
+        const cachedAnalysis = await modelService.getCachedMarketAnalysis(context.userId);
+
+        if (cachedAnalysis) {
+            console.log(`[Orchestrator] Using cached market analysis (< 4 hours old)`);
+
+            // Run only Strategy and Risk agents
+            const user = await prisma.user.findUnique({
+                where: { id: context.userId },
+                select: {
+                    deepseekApiKey: true,
+                    openaiApiKey: true,
+                    anthropicApiKey: true,
+                    geminiApiKey: true,
+                    riskOfficerModel: true,
+                    strategyConsultantModel: true
+                }
+            });
+
+            const riskService = this.getAiService(user?.riskOfficerModel || 'deepseek', user);
+            const strategyService = this.getAiService(user?.strategyConsultantModel || 'deepseek', user);
+            const performanceHints = await this.generatePerformanceHints(context.userId, context.methodology);
+
+            const enhancedContext = { ...context, performanceHints };
+
+            const [strategyDecision, riskAssessment] = await Promise.all([
+                this.strategyAgent.decide({ ...enhancedContext, aiService: strategyService }),
+                this.riskAgent.decide({ ...enhancedContext, aiService: riskService })
+            ]);
+
+            // Use cached market analysis
+            const marketAnalysis = cachedAnalysis as MarketAnalysis;
+
+            // Conduct counsel with cached data
+            const counselResult = await this.conductCounsel(
+                strategyDecision,
+                riskAssessment,
+                marketAnalysis,
+                enhancedContext,
+                strategyService
+            );
+
+            return this.aggregateDecisions(
+                strategyDecision,
+                riskAssessment,
+                marketAnalysis,
+                undefined,
+                undefined,
+                mode,
+                counselResult
+            );
+        }
+
+        // Cache expired or not available - run full analysis
+        console.log(`[Orchestrator] Cache expired, running full analysis`);
+        const result = await this.analyzeAndDecide(context, mode);
+
+        // Cache the market analysis for next 4 hours
+        if (result.marketAnalysis) {
+            await modelService.cacheMarketAnalysis(context.userId, result.marketAnalysis);
+        }
+
+        return result;
+    }
+
+    /**
+     * Execute trading decision using active TradingModel
+     * Fast execution without AI calls when model is available
+     */
+    public async executeWithActiveModel(
+        userId: string,
+        symbol: string,
+        marketData: any
+    ): Promise<{ decision: 'LONG' | 'SHORT' | 'HOLD'; confidence: number; reason: string } | null> {
+        const activeModel = await modelService.getActiveModel(userId);
+
+        if (!activeModel) {
+            console.log(`[Orchestrator] No active model for user ${userId}`);
+            return null;
+        }
+
+        // Check if model is expired
+        if (activeModel.expiresAt && new Date() > activeModel.expiresAt) {
+            console.log(`[Orchestrator] Active model expired, needs refresh`);
+            return null;
+        }
+
+        // Apply model rules to current market data
+        const params = activeModel.parameters as any;
+        console.log(`[Orchestrator] Using model v${activeModel.version} (${activeModel.methodology})`);
+
+        // Simple rule-based decision from model parameters
+        // This is a placeholder - actual implementation would apply the learned rules
+        const decision = this.applyModelRules(params, marketData);
+
+        return decision;
+    }
+
+    /**
+     * Apply model rules to market data for quick decision
+     */
+    private applyModelRules(
+        params: any,
+        marketData: any
+    ): { decision: 'LONG' | 'SHORT' | 'HOLD'; confidence: number; reason: string } {
+        // Basic implementation - would be enhanced with actual model logic
+        const rsi = marketData?.rsi || 50;
+        const trend = marketData?.change24h || 0;
+
+        if (rsi < 30 && trend > 0) {
+            return { decision: 'LONG', confidence: 0.7, reason: 'RSI oversold with positive trend' };
+        } else if (rsi > 70 && trend < 0) {
+            return { decision: 'SHORT', confidence: 0.7, reason: 'RSI overbought with negative trend' };
+        }
+
+        return { decision: 'HOLD', confidence: 0.5, reason: 'No clear signal from model' };
+    }
+
+    /**
+     * Check drawdown and trigger model retrain if > 15%
+     */
+    public async checkAndUpdateDrawdown(
+        userId: string,
+        currentPortfolioValue: number,
+        peakPortfolioValue: number
+    ): Promise<boolean> {
+        const activeModel = await modelService.getActiveModel(userId);
+        if (!activeModel) return false;
+
+        const drawdown = ((peakPortfolioValue - currentPortfolioValue) / peakPortfolioValue) * 100;
+
+        console.log(`[Orchestrator] Current drawdown: ${drawdown.toFixed(2)}%`);
+
+        const retrainTriggered = await modelService.updateDrawdown(activeModel.id, drawdown);
+
+        if (retrainTriggered) {
+            console.log(`[Orchestrator] 15% drawdown threshold hit. Model marked for retraining.`);
+            // Here you could trigger automatic model regeneration
+        }
+
+        return retrainTriggered;
+    }
 }
 
 export default AgentOrchestrator;
-

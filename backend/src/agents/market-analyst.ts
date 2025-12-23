@@ -39,87 +39,38 @@ export class MarketAnalystAgent extends BaseAgent {
     }
 
     protected getSystemPrompt(): string {
-        return `You are a Market Analyst AI Agent for a cryptocurrency trading platform.
+        // Condensed prompt with personality
+        return `You are the MARKET ANALYST - a data-driven, neutral mediator.
 
-Your responsibilities:
-1. Analyze market sentiment from multiple data sources
-2. Track on-chain metrics (whale movements, exchange flows)
-3. Monitor news and social media sentiment
-4. Provide actionable market intelligence
+PERSONALITY: You are balanced and objective. You synthesize conflicting data.
+When Strategy and Risk disagree, you seek the truth in the middle.
+Speak with data: "The on-chain data supports both views. Whales are accumulating, but social sentiment is cooling."
 
-You have SEARCH CAPABILITY - you can access:
-- On-chain data (whale alerts, exchange inflows/outflows)
-- News aggregators
-- Social sentiment metrics
+ROLE: Analyze sentiment via on-chain data, news, social signals.
 
-You MUST use Chain-of-Thought reasoning. Structure your response as:
+Use 3-step COT:
+Step 1: [Data] On-chain + news analysis
+Step 2: [Sentiment] Social + technical context  
+Step 3: [Synthesis] Balanced assessment
 
-Step 1: [On-Chain Analysis]
-Analyze whale movements, exchange flows, and holder behavior.
-Look for: Large transfers, exchange deposits/withdrawals, accumulation patterns.
-
-Step 2: [News Analysis]
-Review recent news events affecting the market.
-Consider: Regulatory news, adoption events, technical developments.
-
-Step 3: [Social Sentiment]
-Analyze social media sentiment and community mood.
-Platforms: Twitter/X, Reddit, Discord, Telegram.
-
-Step 4: [Technical Context]
-Brief overview of technical indicators supporting sentiment.
-
-Step 5: [Synthesis]
-Combine all signals into overall market sentiment assessment.
-
-Format your final analysis as:
-SENTIMENT: [BULLISH|BEARISH|NEUTRAL]
-SENTIMENT_SCORE: [-1.0 to 1.0]
-SOCIAL_SENTIMENT: [-1.0 to 1.0]
-ON_CHAIN_SIGNALS: [JSON array of signals]
-KEY_INSIGHTS: [bullet points]`;
+Output:
+SENTIMENT: BULLISH|BEARISH|NEUTRAL
+SENTIMENT_SCORE: -1.0 to 1.0
+KEY_INSIGHTS: bullet points`;
     }
 
     protected buildCOTPrompt(context: AgentContext): string {
         const md = context.marketData || {};
-        const methodology = context.methodology || 'Technical Analysis';
+        // Condensed prompt (~50% less tokens)
+        const bias = [md.smcBias, md.ictBias, md.gannBias].filter(Boolean).join(', ') || 'None';
 
-        return `Analyze the market for the following symbol:
+        return `${context.symbol || 'BTCUSDT'} | ${context.methodology || 'TA'}
+Price: $${md.currentPrice || 'N/A'} | 24h: ${md.change24h?.toFixed(1) || 0}%
+RSI: ${md.rsi?.toFixed(0) || 'N/A'} | MACD: ${md.macd?.toFixed(2) || 'N/A'}
+OnChain: Netflow=${md.exchangeNetflow || 'N/A'}, Whales=${md.whaleTransactions || 'N/A'}
+Bias: ${bias}
 
-=== MARKET OVERVIEW ===
-Symbol: ${context.symbol || 'BTC-USD'}
-Methodology in Use: ${methodology}
-Current Price: $${md.currentPrice?.toLocaleString() || 'N/A'}
-24h Change: ${md.change24h?.toFixed(2) || 'N/A'}%
-24h High: $${md.high24h?.toLocaleString() || 'N/A'}
-24h Low: $${md.low24h?.toLocaleString() || 'N/A'}
-Volume: ${md.volume?.toLocaleString() || 'N/A'}
-
-=== TECHNICAL INDICATORS ===
-RSI (14): ${md.rsi?.toFixed(1) || 'N/A'} ${md.rsi > 70 ? '(OVERBOUGHT)' : md.rsi < 30 ? '(OVERSOLD)' : '(NEUTRAL)'}
-MACD: ${md.macd?.toFixed(2) || 'N/A'}
-ATR (Volatility): $${md.atr?.toFixed(2) || 'N/A'}
-Bollinger Bands: $${md.bollinger?.lower?.toFixed(2) || 'N/A'} - $${md.bollinger?.upper?.toFixed(2) || 'N/A'}
-
-=== STRATEGY-SPECIFIC BIAS ===
-${md.smcBias ? `SMC Bias: ${md.smcBias}` : ''}
-${md.ictBias ? `ICT Bias: ${md.ictBias}` : ''}
-${md.gannBias ? `Gann Bias: ${md.gannBias}` : ''}
-${md.breakOfStructure?.direction ? `Structure: ${md.breakOfStructure.direction}` : ''}
-${md.killZone?.active ? `Kill Zone: ${md.killZone.zone} (ACTIVE)` : ''}
-
-=== ON-CHAIN DATA ===
-Exchange Netflow: ${md.exchangeNetflow || 'N/A'}
-Whale Transactions (24h): ${md.whaleTransactions || 'N/A'}
-Active Addresses: ${md.activeAddresses || 'N/A'}
-
-=== SENTIMENT ===
-News Sentiment: ${md.newsSentiment || 'N/A'}
-Social Volume: ${md.socialVolume || 'N/A'}
-
-Use your search capabilities to gather additional data.
-Provide analysis aligned with the ${methodology} methodology.
-Use Chain-of-Thought reasoning throughout.`;
+Analyze and provide: SENTIMENT, SENTIMENT_SCORE, KEY_INSIGHTS`;
     }
 
     protected getMockResponse(): string {

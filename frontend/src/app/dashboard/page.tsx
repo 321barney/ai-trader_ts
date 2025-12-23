@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, API_BASE } from "@/lib/api";
 import Link from "next/link";
+import ModelStatusWidget from "@/components/ModelStatusWidget";
 
 interface Balance {
     asset: string;
@@ -194,6 +195,11 @@ export default function DashboardPage() {
                         AI generated
                     </div>
                 </div>
+            </div>
+
+            {/* Model Status Widget */}
+            <div className="mb-6">
+                <ModelStatusWidget />
             </div>
 
             {/* Two Column Layout */}

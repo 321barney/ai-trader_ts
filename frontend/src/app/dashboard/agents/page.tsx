@@ -306,8 +306,45 @@ export default function AgentDashboardPage() {
                             {/* Summary */}
                             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
                                 <div className="text-indigo-400 font-medium mb-1">Summary</div>
-                                <p className="text-gray-300">{agent.reasoning}</p>
+                                <p className="text-gray-300">{agent.reasoning?.substring(0, 500)}</p>
                             </div>
+
+                            {/* Counsel Debate (for Orchestrator with debate content) */}
+                            {agent.agentType === 'Orchestrator' && agent.reasoning?.includes('🎯') && (
+                                <div className="mt-6 bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border border-indigo-500/30 rounded-lg p-5">
+                                    <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                        <span>🏛️</span> Agent Counsel Debate
+                                    </h4>
+                                    <div className="space-y-4 text-sm">
+                                        {agent.reasoning.split('\n').map((line: string, i: number) => {
+                                            if (line.includes('🎯 STRATEGY') || line.includes('STRATEGY (bold)')) {
+                                                return <div key={i} className="p-3 bg-green-500/10 border-l-4 border-green-500 rounded">
+                                                    <div className="text-green-400 font-bold mb-1">🎯 Strategy Consultant</div>
+                                                    <p className="text-gray-300">{line.replace(/🎯.*?:/, '').trim()}</p>
+                                                </div>;
+                                            }
+                                            if (line.includes('🛡️ RISK') || line.includes('RISK (cautious)')) {
+                                                return <div key={i} className="p-3 bg-orange-500/10 border-l-4 border-orange-500 rounded">
+                                                    <div className="text-orange-400 font-bold mb-1">🛡️ Risk Officer</div>
+                                                    <p className="text-gray-300">{line.replace(/🛡️.*?:/, '').trim()}</p>
+                                                </div>;
+                                            }
+                                            if (line.includes('📊 MARKET') || line.includes('MARKET (mediator)')) {
+                                                return <div key={i} className="p-3 bg-blue-500/10 border-l-4 border-blue-500 rounded">
+                                                    <div className="text-blue-400 font-bold mb-1">📊 Market Analyst</div>
+                                                    <p className="text-gray-300">{line.replace(/📊.*?:/, '').trim()}</p>
+                                                </div>;
+                                            }
+                                            if (line.includes('VERDICT:') || line.includes('FINAL')) {
+                                                return <div key={i} className="p-3 bg-purple-500/20 border border-purple-500/40 rounded text-center">
+                                                    <p className="text-purple-300 font-bold">{line}</p>
+                                                </div>;
+                                            }
+                                            return null;
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

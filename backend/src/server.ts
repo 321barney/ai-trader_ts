@@ -71,6 +71,12 @@ app.listen(PORT, () => {
     import('./services/backtest.service.js').then(({ backtestService }) => {
         backtestService.resumeInterruptedBacktests();
     });
+
+    // Start Cost-Efficient Scheduler (4h market analysis, monthly model refresh)
+    import('./services/scheduler.service.js').then(({ schedulerService }) => {
+        schedulerService.start();
+        console.log('📅 Cost-efficient scheduler started');
+    });
 });
 
 export default app;

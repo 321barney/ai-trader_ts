@@ -405,6 +405,7 @@ class BacktestService {
         if (!session) return;
 
         const history = (session.portfolioHistory as any[]) || [];
+        const trades = (session.trades as any[]) || [];
         const initialValue = session.initialCapital;
         const finalValue = session.portfolioValue || initialValue;
 
@@ -420,6 +421,21 @@ class BacktestService {
             if (drawdown > maxDrawdown) maxDrawdown = drawdown;
         }
 
+        const winRate = trades.length > 0
+            ? (trades.filter((t: any) => t.return > 0).length / trades.length) * 100
+            : 50;
+        const sharpeRatio = totalReturn / Math.max(maxDrawdown, 1);
+
+        // Generate consolidated counsel debate (1 AI call)
+        const counselDebate = await this.generateConsolidatedCounsel({
+            totalReturn,
+            maxDrawdown,
+            winRate,
+            sharpeRatio,
+            tradeCount: trades.length,
+            symbol: session.symbol
+        });
+
         await prisma.backtestSession.update({
             where: { id: sessionId },
             data: {
@@ -427,8 +443,25 @@ class BacktestService {
                 completedAt: new Date(),
                 totalReturn,
                 maxDrawdown,
-                winRate: totalReturn > 0 ? 60 + Math.random() * 20 : 30 + Math.random() * 20,
-                sharpeRatio: totalReturn / 10 + Math.random()
+                winRate,
+                sharpeRatio
+            }
+        });
+
+        // Store counsel debate as a special agent decision
+        await prisma.agentDecision.create({
+            data: {
+                userId: session.userId,
+                agentType: 'ORCHESTRATOR',
+                reasoning: counselDebate,
+                thoughtSteps: [{ step: 1, thought: 'Consolidated Counsel Debate' }],
+                decision: totalReturn > 0 ? 'APPROVED' : 'REJECTED',
+                confidence: winRate / 100,
+                symbol: session.symbol,
+                marketData: { totalReturn, maxDrawdown, winRate, sharpeRatio },
+                isBacktest: true,
+                backtestSessionId: sessionId,
+                sourceMode: 'BACKTEST'
             }
         });
 
@@ -439,6 +472,42 @@ class BacktestService {
         });
 
         console.log(`[Backtest] Session ${sessionId} completed. Return: ${totalReturn.toFixed(2)}%`);
+    }
+
+    /**
+     * Generate consolidated counsel debate (1 AI call for cost efficiency)
+     */
+    private async generateConsolidatedCounsel(results: {
+        totalReturn: number;
+        maxDrawdown: number;
+        winRate: number;
+        sharpeRatio: number;
+        tradeCount: number;
+        symbol: string;
+    }): Promise<string> {
+        try {
+            const { DeepSeekService } = await import('./deepseek.service.js');
+            const aiService = new DeepSeekService();
+
+            const prompt = `Backtest Results for ${results.symbol}:
+Return: ${results.totalReturn.toFixed(2)}% | Drawdown: ${results.maxDrawdown.toFixed(2)}% | Win Rate: ${results.winRate.toFixed(1)}% | Trades: ${results.tradeCount}
+
+Generate a 3-agent counsel debate:
+
+🎯 STRATEGY (bold): [Defend the strategy's potential]
+🛡️ RISK (cautious): [Challenge with drawdown concerns]  
+📊 MARKET (mediator): [Balanced synthesis]
+
+VERDICT: APPROVE|REJECT|MODIFY`;
+
+            return await aiService.chat([
+                { role: 'system', content: 'Generate a brief 3-agent trading debate.' },
+                { role: 'user', content: prompt }
+            ]);
+        } catch (error) {
+            console.error('[Backtest] Counsel generation failed:', error);
+            return 'Counsel unavailable - agents could not convene.';
+        }
     }
 
     /**
