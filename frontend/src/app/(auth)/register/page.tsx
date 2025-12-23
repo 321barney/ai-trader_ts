@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API_BASE } from "@/lib/api";
+import { api } from "@/lib/api";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -34,24 +34,16 @@ export default function RegisterPage() {
         }
 
         try {
-            const res = await fetch(`${API_BASE}/api/auth/register`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    username: formData.username,
-                    email: formData.email,
-                    password: formData.password,
-                }),
-            });
+            const data = await api.register(formData.username, formData.email, formData.password);
 
-            const data = await res.json();
-
-            if (!res.ok || !data.success) {
+            if (!data.success) {
                 throw new Error(data.error || data.message || "Registration failed");
             }
 
-            // Store token (backend returns { success, data: { user, token } })
-            localStorage.setItem("token", data.data.token);
+            // Store tokens
+            if (data.data?.accessToken) {
+                api.setTokens(data.data.accessToken, data.data.refreshToken);
+            }
 
             // Redirect to onboarding
             router.push("/onboarding");

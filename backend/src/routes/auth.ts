@@ -59,10 +59,15 @@ router.post('/logout', authMiddleware, asyncHandler(async (req: Request, res: Re
 /**
  * POST /api/auth/refresh
  */
-router.post('/refresh', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
     try {
-        const token = await authService.refreshToken(req.userId!);
-        return successResponse(res, { token }, 'Token refreshed');
+        const { refreshToken } = req.body;
+        if (!refreshToken) {
+            return errorResponse(res, 'Refresh token required', 400);
+        }
+
+        const result = await authService.refreshToken(refreshToken);
+        return successResponse(res, result, 'Token refreshed');
     } catch (error: any) {
         return errorResponse(res, error.message, 401);
     }

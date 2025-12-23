@@ -12,32 +12,49 @@ interface ApiResponse<T> {
 }
 
 class ApiClient {
-    private token: string | null = null;
+    private accessToken: string | null = null;
+    private refreshToken: string | null = null;
 
-    setToken(token: string | null) {
-        this.token = token;
+    setTokens(accessToken: string | null, refreshToken: string | null) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
         if (typeof window !== 'undefined') {
-            if (token) {
-                localStorage.setItem('token', token);
+            if (accessToken) {
+                localStorage.setItem('accessToken', accessToken);
             } else {
-                localStorage.removeItem('token');
+                localStorage.removeItem('accessToken');
+            }
+            if (refreshToken) {
+                localStorage.setItem('refreshToken', refreshToken);
+            } else {
+                localStorage.removeItem('refreshToken');
             }
         }
     }
 
-    getToken(): string | null {
-        if (this.token) return this.token;
+    getAccessToken(): string | null {
+        if (this.accessToken) return this.accessToken;
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('token');
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('token'); // Fallback for migration
+            return token;
+        }
+        return null;
+    }
+
+    getRefreshToken(): string | null {
+        if (this.refreshToken) return this.refreshToken;
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('refreshToken');
         }
         return null;
     }
 
     private async request<T>(
         endpoint: string,
-        options: RequestInit = {}
+        options: RequestInit = {},
+        retryCount = 0
     ): Promise<ApiResponse<T>> {
-        const token = this.getToken();
+        const token = this.getAccessToken();
 
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
@@ -49,6 +66,35 @@ class ApiClient {
             ...options,
             headers,
         });
+
+        // Handle 401 (Unauthorized) - Try refresh
+        if (response.status === 401 && retryCount < 1 && !endpoint.includes('/auth/login')) {
+            const refreshToken = this.getRefreshToken();
+            if (refreshToken) {
+                try {
+                    const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refreshToken }),
+                    });
+
+                    const refreshData = await refreshRes.json();
+
+                    if (refreshData.success && refreshData.data?.accessToken) {
+                        this.setTokens(refreshData.data.accessToken, refreshData.data.refreshToken);
+                        return this.request<T>(endpoint, options, retryCount + 1);
+                    }
+                } catch (e) {
+                    // Refresh failed
+                }
+            }
+            // If refresh failed or no token, logout
+            this.setTokens(null, null);
+            if (typeof window !== 'undefined') {
+                // Optional: Redirect to login if needed, or let the app handle the error
+                // window.location.href = '/login';
+            }
+        }
 
         const data = await response.json();
         return data;
@@ -79,26 +125,26 @@ class ApiClient {
 
     // Auth
     async register(username: string, email: string, password: string) {
-        return this.request<{ user: any; token: string }>('/api/auth/register', {
+        return this.request<{ user: any; accessToken: string; refreshToken: string }>('/api/auth/register', {
             method: 'POST',
             body: JSON.stringify({ username, email, password }),
         });
     }
 
     async login(email: string, password: string) {
-        const result = await this.request<{ user: any; token: string }>('/api/auth/login', {
+        const result = await this.request<{ user: any; accessToken: string; refreshToken: string }>('/api/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
         });
-        if (result.success && result.data?.token) {
-            this.setToken(result.data.token);
+        if (result.success && result.data?.accessToken) {
+            this.setTokens(result.data.accessToken, result.data.refreshToken);
         }
         return result;
     }
 
     async logout() {
         const result = await this.request('/api/auth/logout', { method: 'POST' });
-        this.setToken(null);
+        this.setTokens(null, null);
         return result;
     }
 

@@ -4,7 +4,7 @@
 
 import { prisma } from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
-import { generateToken } from '../utils/jwt.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 
 
 export interface RegisterInput {
@@ -26,7 +26,8 @@ export interface AuthResult {
         role: string;
         onboardingCompleted: boolean;
     };
-    token: string;
+    accessToken: string;
+    refreshToken: string;
 }
 
 export class AuthService {
@@ -71,14 +72,16 @@ export class AuthService {
             },
         });
 
-        // Generate token
-        const token = generateToken({
+        // Generate tokens
+        const payload = {
             userId: user.id,
             email: user.email,
             role: user.role,
-        });
+        };
+        const accessToken = generateAccessToken(payload);
+        const refreshToken = generateRefreshToken(payload);
 
-        return { user, token };
+        return { user, accessToken, refreshToken };
     }
 
     /**
@@ -111,12 +114,15 @@ export class AuthService {
             data: { lastLogin: new Date() },
         });
 
-        // Generate token
-        const token = generateToken({
+        // Generate tokens
+        const payload = {
             userId: user.id,
             email: user.email,
             role: user.role,
-        });
+        };
+
+        const accessToken = generateAccessToken(payload);
+        const refreshToken = generateRefreshToken(payload);
 
         return {
             user: {
@@ -126,7 +132,8 @@ export class AuthService {
                 role: user.role,
                 onboardingCompleted: user.onboardingCompleted,
             },
-            token,
+            accessToken,
+            refreshToken,
         };
     }
 
@@ -184,9 +191,15 @@ export class AuthService {
     /**
      * Refresh token
      */
-    async refreshToken(userId: string): Promise<string> {
+    async refreshToken(token: string): Promise<{ accessToken: string, refreshToken: string }> {
+        // Verify refresh token
+        const payload = verifyRefreshToken(token);
+        if (!payload) {
+            throw new Error('Invalid refresh token');
+        }
+
         const user = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { id: payload.userId },
             select: { id: true, email: true, role: true },
         });
 
@@ -194,11 +207,16 @@ export class AuthService {
             throw new Error('User not found');
         }
 
-        return generateToken({
+        const newPayload = {
             userId: user.id,
             email: user.email,
             role: user.role,
-        });
+        };
+
+        return {
+            accessToken: generateAccessToken(newPayload),
+            refreshToken: generateRefreshToken(newPayload) // Rotate refresh token
+        };
     }
 }
 

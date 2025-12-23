@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API_BASE } from "@/lib/api";
+import { api } from "@/lib/api";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -20,27 +20,16 @@ export default function LoginPage() {
         setError("");
 
         try {
-            const res = await fetch(`${API_BASE}/api/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
-            });
+            const data = await api.login(formData.email, formData.password);
 
-            const data = await res.json();
-
-            if (!res.ok || !data.success) {
+            if (!data.success) {
                 throw new Error(data.error || data.message || "Login failed");
             }
 
-            // Store token (backend returns { success, data: { user, token } })
-            localStorage.setItem("token", data.data.token);
+            // Tokens are already set by api.login()
 
-            // Redirect based on onboarding status
-            if (data.data.user.onboardingCompleted) {
-                router.push("/dashboard");
-            } else {
-                router.push("/onboarding");
-            }
+            // Redirect to dashboard (skip onboarding check as requested)
+            router.push("/dashboard");
         } catch (err: any) {
             setError(err.message);
         } finally {
