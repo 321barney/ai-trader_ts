@@ -801,7 +801,7 @@ REASON: [Why this decision was reached]`;
             ]);
 
             // Use cached market analysis
-            const marketAnalysis = cachedAnalysis as MarketAnalysis;
+            const marketAnalysis = cachedAnalysis as any;
 
             // Conduct counsel with cached data
             const counselResult = await this.conductCounsel(

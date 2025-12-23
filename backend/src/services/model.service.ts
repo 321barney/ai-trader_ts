@@ -11,6 +11,8 @@
 
 import { prisma } from '../utils/prisma.js';
 // Note: TradingModelStatus will be available after running `prisma migrate deploy`
+// Cast prisma to any to allow pre-migration compilation
+const db = prisma as any;
 
 export interface ModelParameters {
     entryRules: {
@@ -53,19 +55,19 @@ export class ModelService {
         timeframes: string[] = ['5m', '15m', '1h', '4h']
     ) {
         // Get next version number
-        const lastModel = await prisma.tradingModel.findFirst({
+        const lastModel = await db.tradingModel.findFirst({
             where: { userId },
             orderBy: { version: 'desc' }
         });
         const version = (lastModel?.version || 0) + 1;
 
-        return await prisma.tradingModel.create({
+        return await db.tradingModel.create({
             data: {
                 userId,
                 version,
                 methodology,
                 timeframes,
-                parameters,
+                parameters: parameters as any, // Cast for Prisma JSON compatibility
                 status: 'DRAFT',
                 expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // + 1 month
             }
@@ -76,7 +78,7 @@ export class ModelService {
      * Get active model for user
      */
     async getActiveModel(userId: string) {
-        return await prisma.tradingModel.findFirst({
+        return await db.tradingModel.findFirst({
             where: {
                 userId,
                 isActive: true,
@@ -98,7 +100,7 @@ export class ModelService {
             backtestData: any;
         }
     ) {
-        return await prisma.tradingModel.update({
+        return await db.tradingModel.update({
             where: { id: modelId },
             data: {
                 backtestResults: results.backtestData,
@@ -115,7 +117,7 @@ export class ModelService {
      * Add counsel approval to model
      */
     async addApproval(modelId: string, agentType: string) {
-        const model = await prisma.tradingModel.findUnique({
+        const model = await db.tradingModel.findUnique({
             where: { id: modelId }
         });
 
@@ -130,7 +132,7 @@ export class ModelService {
         const allApproved = ['STRATEGY_CONSULTANT', 'RISK_OFFICER', 'MARKET_ANALYST']
             .every(agent => approvedBy.includes(agent));
 
-        return await prisma.tradingModel.update({
+        return await db.tradingModel.update({
             where: { id: modelId },
             data: {
                 approvedBy,
@@ -144,13 +146,13 @@ export class ModelService {
      */
     async activateModel(userId: string, modelId: string) {
         // Deactivate current active model
-        await prisma.tradingModel.updateMany({
+        await db.tradingModel.updateMany({
             where: { userId, isActive: true },
             data: { isActive: false, status: 'RETIRED', retiredAt: new Date() }
         });
 
         // Activate new model
-        return await prisma.tradingModel.update({
+        return await db.tradingModel.update({
             where: { id: modelId },
             data: {
                 isActive: true,
@@ -166,7 +168,7 @@ export class ModelService {
     async updateDrawdown(modelId: string, currentDrawdown: number): Promise<boolean> {
         const DRAWDOWN_THRESHOLD = 15; // 15%
 
-        const model = await prisma.tradingModel.update({
+        const model = await db.tradingModel.update({
             where: { id: modelId },
             data: { currentDrawdown }
         });
@@ -174,7 +176,7 @@ export class ModelService {
         if (currentDrawdown >= DRAWDOWN_THRESHOLD) {
             console.log(`[ModelService] Drawdown ${currentDrawdown}% >= ${DRAWDOWN_THRESHOLD}%. Triggering retrain.`);
 
-            await prisma.tradingModel.update({
+            await db.tradingModel.update({
                 where: { id: modelId },
                 data: { status: 'RETRAINING', isActive: false }
             });
@@ -201,7 +203,7 @@ export class ModelService {
      * Get cached market analysis if still valid (< 4 hours old)
      */
     async getCachedMarketAnalysis(userId: string) {
-        const user = await prisma.user.findUnique({
+        const user = await db.user.findUnique({
             where: { id: userId },
             select: {
                 lastMarketAnalysisAt: true,
@@ -225,7 +227,7 @@ export class ModelService {
      * Cache market analysis result
      */
     async cacheMarketAnalysis(userId: string, analysis: any) {
-        await prisma.user.update({
+        await db.user.update({
             where: { id: userId },
             data: {
                 lastMarketAnalysisAt: new Date(),
