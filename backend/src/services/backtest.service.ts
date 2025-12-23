@@ -173,6 +173,7 @@ class BacktestService {
                 const indicators = TechnicalAnalysisService.analyze(highs, lows, closes, opens, methodology);
 
                 marketData = {
+                    ...indicators, // Include all strategy-specific fields first
                     symbol: session.symbol,
                     currentPrice: ticker.price,
                     change24h: ticker.priceChangePercent,
@@ -180,11 +181,10 @@ class BacktestService {
                     low24h: ticker.low24h,
                     volume: ticker.volume24h,
                     rsi: indicators.rsi,
-                    macd: indicators.macd.MACD || 0,
+                    macd: indicators.macd.MACD || 0, // Overwrite object with scalar for prompt compatibility
                     atr: indicators.atr,
                     bollinger: indicators.bollinger,
                     methodology: methodology,
-                    ...indicators, // Include all strategy-specific fields
                     timestamp: nextDate
                 };
 

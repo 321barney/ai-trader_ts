@@ -218,18 +218,43 @@ export class TradingService {
         }
 
         // Run orchestrator with REAL context
-        const decision = await this.orchestrator.analyzeAndDecide({
-            userId,
-            symbol,
-            marketData,
-            riskMetrics: {
-                ...rlMetrics,
-                portfolioValue,
-                currentExposure,
-                openPositions: openPositionsCount,
-            },
-            methodology: methodology,
-        });
+        let decision: any;
+        try {
+            decision = await this.orchestrator.analyzeAndDecide({
+                userId,
+                symbol,
+                marketData,
+                riskMetrics: {
+                    ...rlMetrics,
+                    portfolioValue,
+                    currentExposure,
+                    openPositions: openPositionsCount,
+                },
+                methodology: methodology,
+            }, user.strategyMode as any); // Pass user's preferred mode (deepseek/rl/hybrid)
+        } catch (error: any) {
+            console.error(`[TradingService] Orchestrator failed for ${symbol}:`, error);
+            // Create error record visible to user
+            await prisma.agentDecision.create({
+                data: {
+                    userId,
+                    agentType: 'ORCHESTRATOR',
+                    reasoning: `Analysis Failed: ${error.message || 'Unknown error'}`,
+                    thoughtSteps: [
+                        { step: 1, thought: 'Attempted live market analysis' },
+                        { step: 2, thought: `Error: ${error.message}` },
+                        { step: 3, thought: 'Check API keys and Strategy Settings.' }
+                    ],
+                    decision: 'BLOCKED',
+                    confidence: 0,
+                    symbol,
+                    marketData: marketData as any,
+                    isBacktest: false,
+                    sourceMode: (user.tradingEnabled && user.tradingMode === 'trade') ? 'TRADE' : 'SIGNAL'
+                }
+            });
+            throw error; // Re-throw to stop execution
+        }
 
         // Determine source mode: TRADE if executing, SIGNAL if signal-only
         const sourceMode = (user.tradingEnabled && user.tradingMode === 'trade') ? 'TRADE' : 'SIGNAL';
@@ -312,6 +337,7 @@ export class TradingService {
             const indicators = TechnicalAnalysisService.analyze(highs, lows, closes, opens, methodology);
 
             return {
+                ...indicators, // Include all strategy-specific fields first
                 symbol,
                 currentPrice: ticker.price,
                 change24h: ticker.priceChangePercent,
@@ -319,12 +345,11 @@ export class TradingService {
                 low24h: ticker.low24h,
                 volume: ticker.volume24h,
                 rsi: indicators.rsi,
-                macd: indicators.macd.MACD || 0,
+                macd: indicators.macd.MACD || 0, // Scalar value for prompt
                 atr: indicators.atr,
                 bollinger: indicators.bollinger,
                 // Strategy-specific data
                 methodology: methodology || 'GENERIC',
-                ...indicators // Include all strategy-specific fields (orderBlocks, fvg, ote, etc.)
             };
         } catch (error) {
             console.error(`Failed to fetch market data for ${symbol}:`, error);
