@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE } from "@/lib/api";
+import { api } from "@/lib/api";
 
 interface StepData {
     asterApiKey?: string;
@@ -31,7 +31,7 @@ export default function OnboardingPage() {
 
     // Check authentication on mount
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = api.getAccessToken();
         if (!token) {
             router.push("/login");
         }
@@ -76,21 +76,11 @@ export default function OnboardingPage() {
         setConnectionResult(null);
 
         try {
-            const token = localStorage.getItem("token");
-            const response = await fetch(`${API_BASE}/api/onboarding/test-connection`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    apiKey: data.asterApiKey,
-                    apiSecret: data.asterApiSecret,
-                    testnet: data.asterTestnet,
-                }),
+            const result: any = await api.post("/api/onboarding/test-connection", {
+                apiKey: data.asterApiKey,
+                apiSecret: data.asterApiSecret,
+                testnet: data.asterTestnet,
             });
-
-            const result = await response.json();
 
             if (result.success) {
                 setConnectionResult({
@@ -115,8 +105,8 @@ export default function OnboardingPage() {
 
     const saveStep = async (step: number) => {
         setIsLoading(true);
+        setIsLoading(true);
         try {
-            const token = localStorage.getItem("token");
             let stepData = {};
 
             // Prepare data based on step
@@ -145,16 +135,8 @@ export default function OnboardingPage() {
                     break;
             }
 
-            const res = await fetch(`${API_BASE}/api/onboarding/step`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({ step, data: stepData })
-            });
+            const result: any = await api.post("/api/onboarding/step", { step, data: stepData });
 
-            const result = await res.json();
             if (!result.success) {
                 throw new Error(result.error || "Failed to save step");
             }
@@ -176,16 +158,7 @@ export default function OnboardingPage() {
 
         setIsLoading(true);
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE}/api/onboarding/skip`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({ step: currentStep })
-            });
-            const result = await res.json();
+            const result: any = await api.post("/api/onboarding/skip", { step: currentStep });
 
             if (result.success) {
                 if (result.data.completed) {
