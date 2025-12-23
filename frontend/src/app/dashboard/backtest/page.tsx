@@ -290,29 +290,27 @@ function BacktestContent() {
                                             }`}>
                                             {model.status}
                                         </div>
-                                        {!model.isActive && (
-                                            <button
-                                                onClick={async () => {
-                                                    if (!confirm(`Delete strategy v${model.version}? This cannot be undone.`)) return;
-                                                    const token = api.getAccessToken();
-                                                    const res = await fetch(`${API_BASE}/api/models/${model.id}`, {
-                                                        method: 'DELETE',
-                                                        headers: { Authorization: `Bearer ${token}` }
-                                                    });
-                                                    if (res.ok) {
-                                                        alert('Strategy deleted');
-                                                        window.location.reload();
-                                                    } else {
-                                                        const data = await res.json();
-                                                        alert(`Failed: ${data.message || 'Unknown error'}`);
-                                                    }
-                                                }}
-                                                className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                                                title="Delete strategy"
-                                            >
-                                                🗑️
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={async () => {
+                                                if (!confirm(`Delete strategy v${model.version}? This cannot be undone.`)) return;
+                                                const token = api.getAccessToken();
+                                                const res = await fetch(`${API_BASE}/api/models/${model.id}`, {
+                                                    method: 'DELETE',
+                                                    headers: { Authorization: `Bearer ${token}` }
+                                                });
+                                                if (res.ok) {
+                                                    alert('Strategy deleted');
+                                                    window.location.reload();
+                                                } else {
+                                                    const data = await res.json();
+                                                    alert(`Failed: ${data.message || 'Unknown error'}`);
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                            title="Delete strategy"
+                                        >
+                                            🗑️
+                                        </button>
                                     </div>
                                 </div>
 
