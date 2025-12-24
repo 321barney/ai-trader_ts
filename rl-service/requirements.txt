@@ -10,6 +10,8 @@ pandas>=2.0.0
 # Real RL Training (CPU-only to keep image small)
 stable-baselines3>=2.2.1
 gymnasium>=0.29.1
+tqdm>=4.65.0
+rich>=13.0.0
 
 # PyTorch CPU-only (much smaller than CUDA version)
 --extra-index-url https://download.pytorch.org/whl/cpu
