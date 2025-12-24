@@ -17,6 +17,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy (required for Railway/load balancers)
+app.set('trust proxy', 1);
+
 // Initialize Sentry (first middleware)
 sentryService.initialize(app);
 if (sentryService.isAvailable()) {
