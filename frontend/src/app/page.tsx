@@ -1,6 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(api.isAuthenticated());
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">
       {/* Animated Background */}
@@ -41,16 +51,28 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-gray-400 hover:text-white transition-colors">
-            Login
-          </Link>
-          <Link
-            href="/register"
-            className="relative group px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 font-medium text-sm overflow-hidden"
-          >
-            <span className="relative z-10">Get Started</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="relative group px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 font-medium text-sm overflow-hidden"
+            >
+              <span className="relative z-10">Go to Dashboard</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="text-gray-400 hover:text-white transition-colors">
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="relative group px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 font-medium text-sm overflow-hidden"
+              >
+                <span className="relative z-10">Get Started</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 

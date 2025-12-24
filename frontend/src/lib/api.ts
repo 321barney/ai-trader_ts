@@ -37,6 +37,10 @@ class ApiClient {
         }
     }
 
+    isAuthenticated(): boolean {
+        return !!this.getAccessToken();
+    }
+
     getAccessToken(): string | null {
         // Double check memory state
         if (this.accessToken && this.accessToken !== 'undefined' && this.accessToken !== 'null') {
