@@ -119,13 +119,25 @@ router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandl
  * GET /api/agents/rl/status
  */
 router.get('/rl/status', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    const available = await rlService.isAvailable();
     const metrics = await rlService.getMetrics();
     const trainingStatus = await rlService.getTrainingStatus();
 
+    // Return real data or indicate service is offline
     return successResponse(res, {
-        ...metrics,
-        training: trainingStatus,
-        available: await rlService.isAvailable(),
+        available,
+        sharpeRatio: metrics?.sharpeRatio ?? null,
+        winRate: metrics?.winRate ?? null,
+        maxDrawdown: metrics?.maxDrawdown ?? null,
+        totalReturn: metrics?.totalReturn ?? null,
+        trainingStatus: metrics?.trainingStatus ?? 'offline',
+        isMock: metrics?.isMock ?? true,  // true if null (no real data)
+        training: trainingStatus ?? {
+            status: 'offline',
+            progress: 0,
+            currentEpisode: 0,
+            totalEpisodes: 0,
+        },
     });
 }));
 

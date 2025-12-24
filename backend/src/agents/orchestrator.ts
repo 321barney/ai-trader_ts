@@ -290,22 +290,37 @@ export class AgentOrchestrator {
         // Risk: ${riskAssessment.decision} (${(riskAssessment as RiskAssessment).riskLevel})
         // Market: ${(marketAnalysis as MarketAnalysis).sentiment}`);
 
-        // Get RL prediction if available and not in deepseek-only mode
+        // Get RL prediction - ALWAYS provide one (external API or local fallback)
         let rlPrediction: RLPrediction | undefined;
         let rlMetrics: RLMetrics | undefined;
 
-        if (mode !== 'deepseek' && this.rlAvailable) {
+        if (mode !== 'deepseek') {
             try {
-                // Build ENHANCED request with SMC + Volume features
-                const enhancedRequest = this.buildEnhancedPredictRequest(context);
-                rlPrediction = await this.rlService.predictEnhanced(enhancedRequest);
-                rlMetrics = await this.rlService.getMetrics();
-                console.log(`[Orchestrator] RL prediction: ${rlPrediction.action} (${rlPrediction.confidence})`);
-                if (rlPrediction.smcAnalysis) {
+                if (this.rlAvailable) {
+                    // Try external RL service first
+                    const enhancedRequest = this.buildEnhancedPredictRequest(context);
+                    rlPrediction = await this.rlService.predictEnhanced(enhancedRequest);
+                    rlMetrics = await this.rlService.getMetrics() ?? undefined;
+
+                    // Check if we got a mock response (service down)
+                    if (rlPrediction.modelVersion === 'mock') {
+                        console.log('[Orchestrator] External RL returned mock - using local fallback');
+                        rlPrediction = this.getLocalRLInterpretation(enhancedContext);
+                    } else {
+                        console.log(`[Orchestrator] RL prediction: ${rlPrediction.action} (${rlPrediction.confidence})`);
+                    }
+                } else {
+                    // External RL unavailable - use 100% local interpretation
+                    console.log('[Orchestrator] External RL unavailable - using local interpretation');
+                    rlPrediction = this.getLocalRLInterpretation(enhancedContext);
+                }
+
+                if (rlPrediction?.smcAnalysis) {
                     console.log(`[Orchestrator] RL SMC Analysis: ${rlPrediction.smcAnalysis}`);
                 }
             } catch (error) {
-                console.error('[Orchestrator] RL prediction failed:', error);
+                console.warn('[Orchestrator] RL prediction failed, using local fallback:', error);
+                rlPrediction = this.getLocalRLInterpretation(enhancedContext);
             }
         }
 
@@ -348,8 +363,8 @@ export class AgentOrchestrator {
     ): Promise<CounselResult> {
         console.log('[Counsel] Starting deliberation phase...');
 
-        // Get RL prediction for council (if model available)
-        let rlVote: { vote: string; confidence: number; reasoning: string } | null = null;
+        // Get RL prediction for council - ALWAYS provide one (external or local)
+        let rlVote: { vote: string; confidence: number; reasoning: string };
         try {
             const rlPrediction = await this.rlService.getModelPredictionForCouncil(
                 this.buildEnhancedPredictRequest(context)
@@ -360,23 +375,39 @@ export class AgentOrchestrator {
                     confidence: rlPrediction.confidence,
                     reasoning: rlPrediction.reasoning
                 };
-                console.log(`[Counsel] RL model vote: ${rlVote.vote} (${(rlVote.confidence * 100).toFixed(1)}%)`);
+                console.log(`[Counsel] External RL vote: ${rlVote.vote} (${(rlVote.confidence * 100).toFixed(1)}%)`);
+            } else {
+                // Use local RL when external unavailable
+                const localRL = this.getLocalRLInterpretation(context);
+                rlVote = {
+                    vote: localRL.action,
+                    confidence: localRL.confidence,
+                    reasoning: `[Local RL] ${localRL.reasoning}`
+                };
+                console.log(`[Counsel] Local RL vote: ${rlVote.vote} (${(rlVote.confidence * 100).toFixed(1)}%)`);
             }
         } catch (e) {
-            console.log('[Counsel] RL model unavailable for council');
+            // Fallback to local RL on any error
+            const localRL = this.getLocalRLInterpretation(context);
+            rlVote = {
+                vote: localRL.action,
+                confidence: localRL.confidence,
+                reasoning: `[Local RL Fallback] ${localRL.reasoning}`
+            };
+            console.log(`[Counsel] Local RL fallback vote: ${rlVote.vote} (${(rlVote.confidence * 100).toFixed(1)}%)`);
         }
 
-        // Collect initial votes (now including RL if available)
+        // Collect initial votes (now ALWAYS including RL - local or external)
         const initialVotes = {
             strategy: strategyDecision.decision,
             risk: riskAssessment.decision === 'APPROVED' ? strategyDecision.decision : 'HOLD',
             market: this.extractMarketVote(marketAnalysis),
-            rl: rlVote?.vote
+            rl: rlVote.vote  // Always have RL vote (local or external)
         };
 
-        // Check for unanimous agreement (3 agents + optional RL)
+        // Check for unanimous agreement (4 agents now - includes RL always)
         const humanVotes = [initialVotes.strategy, initialVotes.risk, initialVotes.market];
-        const allVotes = rlVote ? [...humanVotes, rlVote.vote] : humanVotes;
+        const allVotes = [...humanVotes, rlVote.vote];  // RL always included
         const longVotes = allVotes.filter(v => v === 'LONG').length;
         const shortVotes = allVotes.filter(v => v === 'SHORT').length;
         const holdVotes = allVotes.filter(v => v === 'HOLD' || v === 'BLOCKED').length;
@@ -598,6 +629,246 @@ REASON: [One-line summary of why this decision]`;
         };
     }
 
+    // ============================================
+    // LOCAL RL INTERPRETATION (No External API)
+    // ============================================
+
+    /**
+     * LOCAL RL-style trading interpretation
+     * Uses SMC + Volume + Technical indicators to generate trading signals
+     * 100% local - no external API calls required
+     * 
+     * This serves as a fallback when the Python RL service is offline,
+     * implementing the same RL-inspired decision logic but purely in TypeScript
+     */
+    public getLocalRLInterpretation(context: AgentContext): RLPrediction {
+        const md = context.marketData || {};
+        const currentPrice = md.currentPrice || 0;
+
+        console.log('[LocalRL] Starting local RL interpretation (no API)...');
+
+        // ========== STEP 1: Technical Indicator Scores ==========
+        let technicalScore = 0;
+        let technicalReason = '';
+
+        // RSI Analysis (-1 to +1)
+        const rsi = md.rsi || 50;
+        if (rsi < 30) {
+            technicalScore += 0.3; // Oversold = bullish
+            technicalReason += 'RSI oversold. ';
+        } else if (rsi > 70) {
+            technicalScore -= 0.3; // Overbought = bearish
+            technicalReason += 'RSI overbought. ';
+        } else if (rsi > 50) {
+            technicalScore += 0.1;
+        } else {
+            technicalScore -= 0.1;
+        }
+
+        // MACD Analysis
+        const macdHist = typeof md.macd === 'number' ? md.macd : md.macd?.histogram || 0;
+        if (macdHist > 0) {
+            technicalScore += 0.2;
+            technicalReason += 'MACD bullish. ';
+        } else if (macdHist < 0) {
+            technicalScore -= 0.2;
+            technicalReason += 'MACD bearish. ';
+        }
+
+        // EMA Crossover
+        const ema20 = md.ema20 || currentPrice;
+        const ema50 = md.ema50 || currentPrice;
+        if (ema20 > ema50 && currentPrice > ema20) {
+            technicalScore += 0.25;
+            technicalReason += 'Price above EMAs (bullish alignment). ';
+        } else if (ema20 < ema50 && currentPrice < ema20) {
+            technicalScore -= 0.25;
+            technicalReason += 'Price below EMAs (bearish alignment). ';
+        }
+
+        // ========== STEP 2: SMC Analysis ==========
+        let smcScore = 0;
+        let smcReason = '';
+
+        const orderBlocks = md.orderBlocks || [];
+        const fvgs = md.fairValueGaps || [];
+        const bosDirection = md.breakOfStructure?.direction || md.smcBias || 'NONE';
+
+        // Break of Structure
+        if (bosDirection === 'BULLISH') {
+            smcScore += 0.35;
+            smcReason += 'Bullish BOS confirmed. ';
+        } else if (bosDirection === 'BEARISH') {
+            smcScore -= 0.35;
+            smcReason += 'Bearish BOS confirmed. ';
+        }
+
+        // Order Block proximity
+        const bullishOBs = orderBlocks.filter((ob: any) => ob.type === 'BULLISH');
+        const bearishOBs = orderBlocks.filter((ob: any) => ob.type === 'BEARISH');
+
+        for (const ob of bullishOBs) {
+            const distance = (currentPrice - ob.low) / currentPrice;
+            if (distance >= 0 && distance < 0.02) {
+                smcScore += 0.3 * (ob.strength || 0.5);
+                smcReason += `Near bullish OB ($${ob.low?.toFixed(0)}). `;
+            }
+        }
+
+        for (const ob of bearishOBs) {
+            const distance = (ob.high - currentPrice) / currentPrice;
+            if (distance >= 0 && distance < 0.02) {
+                smcScore -= 0.3 * (ob.strength || 0.5);
+                smcReason += `Near bearish OB ($${ob.high?.toFixed(0)}). `;
+            }
+        }
+
+        // Fair Value Gaps
+        for (const fvg of fvgs) {
+            if (fvg.type === 'BULLISH' && currentPrice >= fvg.low && currentPrice <= fvg.high) {
+                smcScore += 0.2;
+                smcReason += 'Inside bullish FVG. ';
+            } else if (fvg.type === 'BEARISH' && currentPrice >= fvg.low && currentPrice <= fvg.high) {
+                smcScore -= 0.2;
+                smcReason += 'Inside bearish FVG. ';
+            }
+        }
+
+        // Kill Zone bonus
+        const killZone = md.killZone?.zone || 'NONE';
+        if (killZone === 'LONDON' || killZone === 'NEW_YORK') {
+            smcScore *= 1.2; // 20% bonus during active sessions
+            smcReason += `${killZone} session active. `;
+        }
+
+        // ========== STEP 3: Volume Analysis ==========
+        let volumeScore = 0;
+        let volumeReason = '';
+
+        const volumeRatio = md.indicators?.volumeProfile?.volumeRatio ||
+            (md.volume && md.avgVolume ? md.volume / md.avgVolume : 1);
+
+        if (volumeRatio > 1.5) {
+            volumeScore = 0.2; // High volume = confirmation
+            volumeReason = `High volume (${volumeRatio.toFixed(1)}x avg). `;
+        } else if (volumeRatio > 1.0) {
+            volumeScore = 0.1;
+            volumeReason = `Above avg volume. `;
+        } else if (volumeRatio < 0.5) {
+            volumeScore = -0.1; // Low volume = skeptical
+            volumeReason = `Low volume (${volumeRatio.toFixed(1)}x avg). `;
+        }
+
+        // ========== STEP 4: Combine Scores ==========
+        // Weights: Technical 35%, SMC 45%, Volume 20%
+        const totalScore = (technicalScore * 0.35) + (smcScore * 0.45) + (volumeScore * 0.20);
+
+        // Determine action and confidence
+        let action: 'LONG' | 'SHORT' | 'HOLD';
+        let confidence: number;
+
+        if (totalScore > 0.25) {
+            action = 'LONG';
+            confidence = Math.min(0.95, 0.5 + totalScore);
+        } else if (totalScore < -0.25) {
+            action = 'SHORT';
+            confidence = Math.min(0.95, 0.5 + Math.abs(totalScore));
+        } else {
+            action = 'HOLD';
+            confidence = 0.5 + (0.25 - Math.abs(totalScore));
+        }
+
+        // ========== STEP 5: Calculate Trade Levels ==========
+        const atr = md.atr || currentPrice * 0.02;
+        let entry: number | undefined;
+        let stopLoss: number | undefined;
+        let takeProfit: number | undefined;
+        let riskRewardRatio: number | undefined;
+
+        if (action !== 'HOLD') {
+            entry = currentPrice;
+
+            if (action === 'LONG') {
+                // Look for support from order blocks or technicals
+                const nearestBullishOB = bullishOBs
+                    .filter((ob: any) => ob.low < currentPrice)
+                    .sort((a: any, b: any) => b.low - a.low)[0];
+
+                stopLoss = nearestBullishOB ?
+                    nearestBullishOB.low * 0.998 :
+                    currentPrice - (atr * 1.5);
+
+                takeProfit = currentPrice + ((currentPrice - stopLoss!) * (2 + confidence));
+            } else {
+                // SHORT
+                const nearestBearishOB = bearishOBs
+                    .filter((ob: any) => ob.high > currentPrice)
+                    .sort((a: any, b: any) => a.high - b.high)[0];
+
+                stopLoss = nearestBearishOB ?
+                    nearestBearishOB.high * 1.002 :
+                    currentPrice + (atr * 1.5);
+
+                takeProfit = currentPrice - ((stopLoss! - currentPrice) * (2 + confidence));
+            }
+
+            riskRewardRatio = stopLoss !== undefined && entry !== undefined && takeProfit !== undefined
+                ? Math.abs(takeProfit - entry) / Math.abs(entry - stopLoss)
+                : undefined;
+        }
+
+        // Build reasoning summary
+        const reasoning = [
+            `[LOCAL RL INTERPRETATION - No External API]`,
+            `Technical Score: ${(technicalScore * 100).toFixed(0)}% - ${technicalReason || 'Neutral'}`,
+            `SMC Score: ${(smcScore * 100).toFixed(0)}% - ${smcReason || 'No clear SMC signals'}`,
+            `Volume Score: ${(volumeScore * 100).toFixed(0)}% - ${volumeReason || 'Normal volume'}`,
+            `Combined Score: ${(totalScore * 100).toFixed(0)}% → ${action}`,
+        ].join(' | ');
+
+        console.log(`[LocalRL] Result: ${action} @ ${(confidence * 100).toFixed(1)}% confidence`);
+        console.log(`[LocalRL] ${reasoning}`);
+
+        return {
+            action,
+            confidence: Math.round(confidence * 10000) / 10000,
+            expectedReturn: action !== 'HOLD' ? (confidence - 0.5) * 0.15 : 0,
+            modelVersion: 'local-rl-v1.0',
+            reasoning,
+            smcAnalysis: smcReason || 'No SMC signals',
+            volumeAnalysis: volumeReason || 'Normal volume',
+            entry,
+            stopLoss,
+            takeProfit,
+            riskRewardRatio,
+        };
+    }
+
+    /**
+     * Get RL prediction - tries external API first, falls back to local interpretation
+     */
+    public async getRLPredictionWithFallback(context: AgentContext): Promise<RLPrediction> {
+        // Try external RL service first
+        if (this.rlAvailable) {
+            try {
+                const enhancedRequest = this.buildEnhancedPredictRequest(context);
+                const prediction = await this.rlService.predictEnhanced(enhancedRequest);
+
+                // Check if we got a real prediction (not mock)
+                if (prediction.modelVersion !== 'mock') {
+                    console.log('[Orchestrator] Using external RL service prediction');
+                    return prediction;
+                }
+            } catch (error) {
+                console.warn('[Orchestrator] External RL service failed:', error);
+            }
+        }
+
+        // Fallback to local RL interpretation
+        console.log('[Orchestrator] Falling back to local RL interpretation');
+        return this.getLocalRLInterpretation(context);
+    }
+
     /**
      * Aggregate agent decisions using priority rules
      * Now includes RL model input for hybrid decision making
@@ -802,7 +1073,7 @@ REASON: [One-line summary of why this decision]`;
     /**
      * Get RL model metrics
      */
-    public async getRLMetrics(): Promise<RLMetrics> {
+    public async getRLMetrics(): Promise<RLMetrics | null> {
         return this.rlService.getMetrics();
     }
 

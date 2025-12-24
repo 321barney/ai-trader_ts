@@ -23,8 +23,11 @@ interface AgentDecision {
 
 interface RLStatus {
     available: boolean;
-    sharpeRatio?: number;
-    winRate?: number;
+    sharpeRatio?: number | null;
+    winRate?: number | null;
+    maxDrawdown?: number | null;
+    totalReturn?: number | null;
+    isMock?: boolean;  // true = data from mock/offline, false = real RL service data
     // Backend returns 'status' string, not 'isTraining' boolean
     training: {
         status: string;
@@ -396,11 +399,15 @@ export default function AgentDashboardPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="grid grid-cols-5 gap-4">
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Status</div>
                             <div className={rlStatus?.available ? "text-green-400 font-bold" : "text-gray-500 font-bold"}>
                                 {isTraining ? 'Training...' : rlStatus?.available ? 'Active' : 'Offline'}
+                            </div>
+                            {/* Show data source indicator */}
+                            <div className={`text-xs mt-1 ${rlStatus?.isMock === false ? 'text-green-500' : 'text-yellow-500'}`}>
+                                {rlStatus?.isMock === false ? '✓ Real Data' : '⚠ Mock/Offline'}
                             </div>
                             {isTraining && (
                                 <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
@@ -410,11 +417,21 @@ export default function AgentDashboardPage() {
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Sharpe Ratio</div>
-                            <div className="text-white font-bold">{rlStatus?.sharpeRatio ? rlStatus.sharpeRatio.toFixed(2) : 'N/A'}</div>
+                            <div className="text-white font-bold">
+                                {rlStatus?.sharpeRatio != null ? rlStatus.sharpeRatio.toFixed(2) : '—'}
+                            </div>
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Win Rate</div>
-                            <div className="text-white font-bold">{rlStatus?.winRate ? (rlStatus.winRate * 100).toFixed(1) + '%' : 'N/A'}</div>
+                            <div className="text-white font-bold">
+                                {rlStatus?.winRate != null ? (rlStatus.winRate * 100).toFixed(1) + '%' : '—'}
+                            </div>
+                        </div>
+                        <div className="bg-[#1a1a25] rounded-lg p-4">
+                            <div className="text-gray-400 text-sm">Max Drawdown</div>
+                            <div className="text-white font-bold">
+                                {rlStatus?.maxDrawdown != null ? (rlStatus.maxDrawdown * 100).toFixed(1) + '%' : '—'}
+                            </div>
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Episodes</div>

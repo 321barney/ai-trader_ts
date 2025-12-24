@@ -74,6 +74,7 @@ export interface RLMetrics {
     maxDrawdown: number;
     totalReturn: number;
     trainingStatus: string;
+    isMock?: boolean;  // Indicates if data is from mock/fallback
 }
 
 export interface RLParams {
@@ -125,6 +126,7 @@ export class RLService {
     /**
      * Get ENHANCED prediction from RL model with SMC + Volume features
      * This is the primary method for predictions with full context
+     * THROWS ERROR if unavailable - orchestrator should use local RL fallback
      */
     async predictEnhanced(request: EnhancedPredictRequest): Promise<RLPrediction> {
         try {
@@ -132,10 +134,11 @@ export class RLService {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(request),
+                signal: AbortSignal.timeout(10000), // 10s timeout
             });
 
             if (!response.ok) {
-                throw new Error('RL prediction failed');
+                throw new Error(`RL prediction failed: ${response.status}`);
             }
 
             const result = await response.json() as unknown as RLPrediction;
@@ -148,45 +151,33 @@ export class RLService {
             }
 
             return result;
-        } catch (error) {
-            console.error('[RL Service] Prediction error:', error);
-            // Return mock prediction if service unavailable
-            return {
-                action: 'HOLD',
-                confidence: 0.5,
-                expectedReturn: 0,
-                modelVersion: 'mock',
-                reasoning: 'RL service unavailable - using mock prediction',
-            };
+        } catch (error: any) {
+            console.error('[RL Service] Prediction error - NO MOCK, use local RL:', error.message);
+            // THROW ERROR - orchestrator will use local RL interpretation
+            throw new Error('RL service unavailable - use local interpretation');
         }
     }
 
     /**
      * Get current model metrics
+     * Returns null if service is unavailable (no mock fallback)
      */
-    async getMetrics(): Promise<RLMetrics> {
+    async getMetrics(): Promise<RLMetrics | null> {
         try {
-            const response = await fetch(`${this.baseUrl}/metrics`);
+            const response = await fetch(`${this.baseUrl}/metrics`, {
+                signal: AbortSignal.timeout(5000),
+            });
 
             if (!response.ok) {
                 throw new Error('Failed to get metrics');
             }
 
-            return await response.json() as unknown as RLMetrics;
+            const data = await response.json() as unknown as RLMetrics;
+            return { ...data, isMock: false };
         } catch (error: any) {
-            // Only log if it's NOT a connection refused error (service offline)
-            if (error?.cause?.code !== 'ECONNREFUSED' && error?.message !== 'fetch failed') {
-                console.warn('[RL Service] Metrics unavailable:', error.message);
-            }
-
-            // Return mock metrics
-            return {
-                sharpeRatio: 1.2,
-                winRate: 0.58,
-                maxDrawdown: 0.12,
-                totalReturn: 0.25,
-                trainingStatus: 'idle (offline)',
-            };
+            console.warn('[RL Service] Metrics unavailable:', error.message);
+            // Return null instead of mock - let frontend handle display
+            return null;
         }
     }
 
@@ -254,15 +245,18 @@ export class RLService {
 
     /**
      * Get training status
+     * Returns null if service is unavailable
      */
     async getTrainingStatus(): Promise<{
         status: string;
         progress: number;
         currentEpisode: number;
         totalEpisodes: number;
-    }> {
+    } | null> {
         try {
-            const response = await fetch(`${this.baseUrl}/training/status`);
+            const response = await fetch(`${this.baseUrl}/training/status`, {
+                signal: AbortSignal.timeout(5000),
+            });
 
             if (!response.ok) {
                 throw new Error('Failed to get training status');
@@ -275,12 +269,7 @@ export class RLService {
                 totalEpisodes: number;
             };
         } catch (error) {
-            return {
-                status: 'idle',
-                progress: 0,
-                currentEpisode: 0,
-                totalEpisodes: 0,
-            };
+            return null;
         }
     }
 
@@ -363,10 +352,10 @@ export class RLService {
             while (Date.now() - startTime < maxWaitTime) {
                 const status = await this.getTrainingStatus();
 
-                if (status.status === 'completed') {
+                if (status?.status === 'completed') {
                     console.log('[RL Service] Training completed successfully');
                     break;
-                } else if (status.status === 'failed') {
+                } else if (status?.status === 'failed') {
                     throw new Error('Training failed');
                 }
 
@@ -392,9 +381,9 @@ export class RLService {
                 success: true,
                 modelId: trainResult.modelId,
                 metrics: {
-                    winRate: backtestMetrics.winRate || metrics.winRate,
-                    sharpeRatio: backtestMetrics.sharpeRatio || metrics.sharpeRatio,
-                    maxDrawdown: backtestMetrics.maxDrawdown || metrics.maxDrawdown
+                    winRate: backtestMetrics.winRate || metrics?.winRate || 0,
+                    sharpeRatio: backtestMetrics.sharpeRatio || metrics?.sharpeRatio || 0,
+                    maxDrawdown: backtestMetrics.maxDrawdown || metrics?.maxDrawdown || 0
                 }
             };
 

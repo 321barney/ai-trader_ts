@@ -23,6 +23,119 @@ router.get('/signals', authMiddleware, asyncHandler(async (req: Request, res: Re
 }));
 
 /**
+ * POST /api/trading/signal
+ * Generate a new trading signal using local RL interpretation
+ * Works 100% offline - no external RL API required
+ */
+router.post('/signal', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    const { symbol } = req.body;
+
+    if (!symbol) {
+        return errorResponse(res, 'Symbol is required');
+    }
+
+    try {
+        const { AgentOrchestrator } = await import('../agents/orchestrator.js');
+        const { signalTrackerService } = await import('../services/signal-tracker.service.js');
+        const { prisma } = await import('../utils/prisma.js');
+        const { schedulerService } = await import('../services/scheduler.service.js');
+
+        // Get user settings
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (!user) return errorResponse(res, 'User not found');
+
+        // Fetch market data
+        const multiTF = await schedulerService.fetchMultiTFData(
+            symbol,
+            user.asterApiKey || undefined,
+            user.asterApiSecret || undefined
+        );
+
+        // Get latest candle from 15m timeframe for market data
+        const tf15m = multiTF.timeframes.tf15m;
+        const latestCandle = tf15m[tf15m.length - 1] || {};
+
+        // Build context for local RL
+        const orchestrator = new AgentOrchestrator();
+        const context = {
+            userId: req.userId!,
+            symbol,
+            marketData: {
+                currentPrice: latestCandle.close || 0,
+                high: latestCandle.high || 0,
+                low: latestCandle.low || 0,
+                open: latestCandle.open || 0,
+                volume: latestCandle.volume || 0,
+                ...latestCandle,
+            },
+            methodology: user.methodology || 'SMC',
+        };
+
+        // Use LOCAL RL interpretation (no external API)
+        const rlPrediction = orchestrator.getLocalRLInterpretation(context);
+
+        // Skip if HOLD
+        if (rlPrediction.action === 'HOLD') {
+            return successResponse(res, {
+                action: 'HOLD',
+                reasoning: rlPrediction.reasoning,
+                message: 'No clear trading opportunity - holding position',
+                signal: null
+            });
+        }
+
+        // Create signal via signal tracker service
+        const signal = await signalTrackerService.createSignal(
+            req.userId!,
+            null, // strategyVersionId
+            {
+                symbol,
+                direction: rlPrediction.action,
+                entryPrice: rlPrediction.entry || latestCandle.close || 0,
+                stopLoss: rlPrediction.stopLoss || 0,
+                takeProfit: rlPrediction.takeProfit || 0,
+                confidence: rlPrediction.confidence,
+                agentReasoning: {
+                    strategyConsultant: 'Local RL Technical Analysis',
+                    riskOfficer: `R:R ${rlPrediction.riskRewardRatio?.toFixed(2) || 'N/A'}`,
+                    marketAnalyst: rlPrediction.smcAnalysis || 'SMC Analysis',
+                },
+                indicators: {
+                    modelVersion: rlPrediction.modelVersion,
+                    volumeAnalysis: rlPrediction.volumeAnalysis,
+                    reasoning: rlPrediction.reasoning,
+                    expectedReturn: rlPrediction.expectedReturn,
+                },
+            },
+            24 // expires in 24 hours
+        );
+
+        return successResponse(res, {
+            action: rlPrediction.action,
+            confidence: rlPrediction.confidence,
+            entry: rlPrediction.entry,
+            stopLoss: rlPrediction.stopLoss,
+            takeProfit: rlPrediction.takeProfit,
+            riskRewardRatio: rlPrediction.riskRewardRatio,
+            reasoning: rlPrediction.reasoning,
+            smcAnalysis: rlPrediction.smcAnalysis,
+            volumeAnalysis: rlPrediction.volumeAnalysis,
+            modelVersion: rlPrediction.modelVersion,
+            signal: {
+                id: signal.id,
+                status: signal.status,
+                createdAt: signal.createdAt,
+            },
+            message: `${rlPrediction.action} signal generated using Local RL (no external API)`
+        });
+
+    } catch (error: any) {
+        console.error('[Signal Endpoint] Error:', error);
+        return errorResponse(res, error.message);
+    }
+}));
+
+/**
  * GET /api/trading/status
  */
 router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
