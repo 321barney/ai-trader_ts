@@ -191,10 +191,14 @@ function PricingContent() {
             {/* Navigation */}
             <nav className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
                 <Link href="/" className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-white font-bold">A</span>
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
+                            <path d="M12 4L4 20H20L12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M12 14L9 19H15L12 14Z" fill="currentColor" fillOpacity="0.2" stroke="none" />
+                            <path d="M8 19L12 11L16 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                     </div>
-                    <span className="text-xl font-bold">AISTER</span>
+                    <span className="text-xl font-bold tracking-wide">AISTER</span>
                 </Link>
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard" className="text-gray-400 hover:text-white transition-colors">

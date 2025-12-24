@@ -157,6 +157,20 @@ class NOWPaymentsService {
     }
 
     /**
+     * Get valid webhook URL
+     */
+    private getCallbackUrl(): string {
+        if (process.env.NOWPAYMENTS_WEBHOOK_URL) {
+            return process.env.NOWPAYMENTS_WEBHOOK_URL;
+        }
+
+        const baseUrl = process.env.BACKEND_URL || 'https://backend-production-eb39.up.railway.app'; // Fallback to presumed prod URL if env missing
+        // Ensure no double slashes
+        const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+        return `${cleanBaseUrl}/api/subscription/webhook`;
+    }
+
+    /**
      * Create a payment invoice (recommended for subscriptions)
      * Returns a hosted payment page URL
      */
@@ -174,7 +188,7 @@ class NOWPaymentsService {
                 order_description: params.orderDescription,
                 success_url: params.successUrl,
                 cancel_url: params.cancelUrl,
-                ipn_callback_url: process.env.NOWPAYMENTS_WEBHOOK_URL || `${process.env.BACKEND_URL}/api/subscription/webhook`
+                ipn_callback_url: this.getCallbackUrl()
             })
         });
 
