@@ -19,6 +19,7 @@ import { GeminiService } from '../services/gemini.service.js';
 import { DeepSeekService } from '../services/deepseek.service.js';
 import { IAiService } from '../services/ai-service.interface.js';
 import { modelService } from '../services/model.service.js';
+import { newsService, NewsSearchResult } from '../services/news.service.js';
 
 // Counsel deliberation result
 export interface CounselResult {
@@ -26,12 +27,17 @@ export interface CounselResult {
     votes: {
         strategy: string;
         risk: string;
-        market: string;
+        market: string;  // Now from TIME CYCLE analyst
     };
     consensus: boolean;
     finalVerdict: 'LONG' | 'SHORT' | 'HOLD';
     escalated: boolean;    // Should be escalated to human review
     escalationReason?: string;
+    // Trade levels from council deliberation
+    entry?: number;
+    stopLoss?: number;
+    takeProfit?: number;
+    positionSize?: number;
 }
 
 export interface OrchestratorDecision {
@@ -251,10 +257,24 @@ export class AgentOrchestrator {
         // Generate performance-based prompt hints for dynamic optimization
         const performanceHints = await this.generatePerformanceHints(context.userId, context.methodology);
 
-        // Enhance context with performance hints for prompt fine-tuning
+        // Fetch news for market context
+        let newsData: NewsSearchResult | undefined;
+        try {
+            newsData = await newsService.searchNews(context.symbol || 'BTC');
+            console.log(`[Orchestrator] News sentiment: ${newsData.overallSentiment.toFixed(2)}, major events: ${newsData.majorEvents.length}`);
+        } catch (error) {
+            console.warn('[Orchestrator] News fetch failed:', error);
+        }
+
+        // Enhance context with performance hints and news for prompt fine-tuning
         const enhancedContext = {
             ...context,
-            performanceHints
+            performanceHints,
+            newsData: newsData ? {
+                sentiment: newsData.overallSentiment,
+                majorEvents: newsData.majorEvents,
+                summary: newsService.formatForAgentContext(newsData)
+            } : undefined
         };
 
         // Run AI agents in parallel with injected services and performance hints
@@ -352,59 +372,75 @@ export class AgentOrchestrator {
         }
 
         // Need deliberation - agents discuss disagreements
-        const deliberationPrompt = `
-=== AGENT COUNSEL DELIBERATION ===
-You are facilitating a counsel meeting among 3 AI trading agents.
-They must reach consensus on whether to take a trade.
+        // Cast to access time cycle data
+        const marketWithCycles = marketAnalysis as any;
+        const timeCycleInfo = marketWithCycles.timeCycles ?
+            `Gann Cycles: ${marketWithCycles.timeCycles.cycleBias}, Confluence: ${marketWithCycles.timeCycles.cycleConfluence}` :
+            'No cycle data';
+        const newsInfo = (context as any).newsData?.summary || 'No news data';
 
-INITIAL POSITIONS:
+        const deliberationPrompt = `
+=== TRADING COUNCIL DELIBERATION ===
+You are the HEAD TRADER facilitating a council of 3 AI trading agents.
+Your job: Reach consensus and determine the FINAL TRADE with Entry, TP, and SL.
+
+THE COUNCIL:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📊 STRATEGY CONSULTANT votes: ${initialVotes.strategy}
-Reasoning: ${strategyDecision.reasoning.substring(0, 500)}...
+(SMC/ICT Technical Analysis)
+Entry: $${(strategyDecision as any).entryPrice || 'TBD'}
+SL: $${(strategyDecision as any).stopLoss || 'TBD'}
+TP: $${(strategyDecision as any).takeProfit || 'TBD'}
+Reasoning: ${strategyDecision.reasoning.substring(0, 400)}...
 
 🛡️ RISK OFFICER votes: ${initialVotes.risk}
-Reasoning: ${riskAssessment.reasoning.substring(0, 500)}...
+(Risk Management & Position Sizing)
+Max Position: ${(riskAssessment as any).positionSize || 'TBD'}%
+Suggested SL: $${(riskAssessment as any).suggestedStopLoss || 'TBD'}
+Suggested TP: $${(riskAssessment as any).suggestedTakeProfit || 'TBD'}
+Reasoning: ${riskAssessment.reasoning.substring(0, 400)}...
 
-📈 MARKET ANALYST votes: ${initialVotes.market}
-Reasoning: ${marketAnalysis.reasoning.substring(0, 500)}...
+🔮 TIME CYCLE ANALYST votes: ${initialVotes.market}
+(Gann Cycles, Fibonacci Time, Lunar Phases, Session Analysis)
+${timeCycleInfo}
+Reasoning: ${marketAnalysis.reasoning.substring(0, 400)}...
+
+📰 NEWS CONTEXT:
+${newsInfo}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CURRENT VOTE COUNT:
-- LONG: ${longVotes}/3
-- SHORT: ${shortVotes}/3
-- HOLD: ${holdVotes}/3
-
-DELIBERATION RULES:
-1. Majority (2/3) is required to take a trade
-2. Risk Officer has VETO power if risk is too high
-3. If no consensus, default to HOLD
-4. Consider the strength of each agent's conviction (confidence scores)
+VOTE COUNT: LONG=${longVotes} | SHORT=${shortVotes} | HOLD=${holdVotes}
 
 CONFIDENCE SCORES:
-- Strategy: ${strategyDecision.confidence}
-- Risk: ${riskAssessment.confidence}
-- Market: ${marketAnalysis.confidence}
+- Strategy: ${strategyDecision.confidence.toFixed(2)}
+- Risk: ${riskAssessment.confidence.toFixed(2)}  
+- Market/Cycles: ${marketAnalysis.confidence.toFixed(2)}
 
-Analyze the disagreement and provide:
-3. FINAL COUNSEL VERDICT: [LONG|SHORT|HOLD]
-4. Should this be ESCALATED for human review? [YES|NO]
-5. Brief explanation of the final decision
+DELIBERATION RULES:
+1. Time Cycles provide TIMING - if cycles say "turn window", be cautious
+2. Strategy provides DIRECTION and LEVELS
+3. Risk Officer provides SIZING and PROTECTION
+4. 2/3 majority needed for trade, but TIME must align
+5. If Time Cycle says HOLD but others say trade - reduce size
 
-IMPORTANT: You are the HEAD TRADER. You have the authority to OVERRIDE the Risk Officer if the Strategy/Market arguments are compelling and the risk is managed (not EXTREME).
-If Risk Officer says "High Risk", you can still Approve if you simply reduce the position size (suggest that in reason).
-Do not just default to HOLD. If there is an edge, TAKE IT, but safe.
+YOUR TASK:
+Synthesize all inputs and provide a FINAL TRADE DECISION with concrete levels.
 
-Format your response:
-DELIBERATION: [Your analysis of the discussion]
+REQUIRED OUTPUT FORMAT:
+DELIBERATION: [Your synthesis of all three agents' views]
 FINAL_VERDICT: [LONG|SHORT|HOLD]
+ENTRY: [Exact price or "MARKET"]
+STOP_LOSS: [Exact price]
+TAKE_PROFIT: [Exact price]
+POSITION_SIZE: [% of capital]
 ESCALATE: [YES|NO]
-REASON: [Why this decision was reached]`;
+REASON: [One-line summary of why this decision]`;
 
         try {
             const deliberation = await aiService.chat([
-                { role: 'system', content: 'You are a senior trading counsel facilitator. Your job is to help AI agents reach consensus on trading decisions.' },
+                { role: 'system', content: 'You are a senior HEAD TRADER. Synthesize inputs from Strategy, Risk, and Time Cycle analysts to make final trading decisions with exact Entry, SL, and TP levels.' },
                 { role: 'user', content: deliberationPrompt }
             ]);
 
@@ -413,10 +449,28 @@ REASON: [Why this decision was reached]`;
             const escalateMatch = deliberation.match(/ESCALATE:\s*(YES|NO)/i);
             const reasonMatch = deliberation.match(/REASON:\s*(.+?)(?:\n|$)/i);
 
+            // Parse trade levels from HEAD TRADER deliberation
+            const entryMatch = deliberation.match(/ENTRY:\s*\$?([\d.,]+|MARKET)/i);
+            const slMatch = deliberation.match(/STOP_LOSS:\s*\$?([\d.,]+)/i);
+            const tpMatch = deliberation.match(/TAKE_PROFIT:\s*\$?([\d.,]+)/i);
+            const sizeMatch = deliberation.match(/POSITION_SIZE:\s*([\d.]+)%?/i);
+
             const finalVerdict = verdictMatch ? verdictMatch[1].toUpperCase() :
                 (longVotes >= 2 ? 'LONG' : shortVotes >= 2 ? 'SHORT' : 'HOLD');
 
-            console.log(`[Counsel] Deliberation complete.Verdict: ${finalVerdict} `);
+            // Parse price values (handle commas in numbers)
+            const parsePrice = (match: RegExpMatchArray | null): number | undefined => {
+                if (!match || match[1] === 'MARKET') return undefined;
+                return parseFloat(match[1].replace(/,/g, ''));
+            };
+
+            const counselEntry = parsePrice(entryMatch);
+            const counselSL = parsePrice(slMatch);
+            const counselTP = parsePrice(tpMatch);
+            const counselSize = sizeMatch ? parseFloat(sizeMatch[1]) : undefined;
+
+            console.log(`[Counsel] Deliberation complete. Verdict: ${finalVerdict}`);
+            if (counselEntry) console.log(`[Counsel] Trade Levels: Entry=$${counselEntry}, SL=$${counselSL}, TP=$${counselTP}, Size=${counselSize}%`);
 
             return {
                 deliberation: deliberation,
@@ -424,7 +478,12 @@ REASON: [Why this decision was reached]`;
                 consensus: longVotes >= 2 || shortVotes >= 2 || holdVotes >= 2,
                 finalVerdict: finalVerdict as 'LONG' | 'SHORT' | 'HOLD',
                 escalated: escalateMatch ? escalateMatch[1].toUpperCase() === 'YES' : false,
-                escalationReason: reasonMatch ? reasonMatch[1] : undefined
+                escalationReason: reasonMatch ? reasonMatch[1] : undefined,
+                // Trade levels from council
+                entry: counselEntry,
+                stopLoss: counselSL,
+                takeProfit: counselTP,
+                positionSize: counselSize,
             };
         } catch (error) {
             console.error('[Counsel] Deliberation failed:', error);
@@ -588,6 +647,14 @@ REASON: [Why this decision was reached]`;
                 counselConfidence > 0.6 &&
                 (risk.riskLevel as string) !== 'EXTREME';
 
+            // PRIORITY: Counsel levels > Risk levels > Strategy levels > RL levels
+            const finalEntry = counsel.entry || strategy.entryPrice || (rlPrediction as any)?.entry;
+            const finalSL = counsel.stopLoss || risk.suggestedStopLoss || strategy.stopLoss || (rlPrediction as any)?.stopLoss;
+            const finalTP = counsel.takeProfit || risk.suggestedTakeProfit || strategy.takeProfit || (rlPrediction as any)?.takeProfit;
+            const finalSize = counsel.positionSize || risk.positionSize;
+
+            console.log(`[Aggregator] Final trade: ${counselDecision} Entry=$${finalEntry} SL=$${finalSL} TP=$${finalTP} Size=${finalSize}%`);
+
             return {
                 finalDecision: counselDecision,
                 confidence: counselConfidence,
@@ -597,11 +664,11 @@ REASON: [Why this decision was reached]`;
                 marketAnalysis: market,
                 executionReady,
                 readyToExecute: executionReady,
-                entryPrice: strategy.entryPrice,
-                // PRIORITIZE RISK OFFICER'S TP/SL
-                stopLoss: risk.suggestedStopLoss || strategy.stopLoss,
-                takeProfit: risk.suggestedTakeProfit || strategy.takeProfit,
-                positionSize: risk.positionSize,
+                // Trade levels prioritized from Council deliberation
+                entryPrice: finalEntry,
+                stopLoss: finalSL,
+                takeProfit: finalTP,
+                positionSize: finalSize,
                 agentDecisions,
                 counsel,
                 rlPrediction,
