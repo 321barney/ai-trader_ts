@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -31,7 +31,26 @@ interface SubscriptionStatus {
     planDetails: Plan;
 }
 
+// Loading fallback for Suspense
+function PricingLoading() {
+    return (
+        <div className="min-h-screen bg-[#0a0a0f] text-white flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+    );
+}
+
+// Main page wrapper with Suspense boundary
 export default function PricingPage() {
+    return (
+        <Suspense fallback={<PricingLoading />}>
+            <PricingContent />
+        </Suspense>
+    );
+}
+
+// Actual pricing content that uses useSearchParams
+function PricingContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [plans, setPlans] = useState<PlansResponse | null>(null);
