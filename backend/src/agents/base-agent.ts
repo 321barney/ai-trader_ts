@@ -35,6 +35,7 @@ export interface AgentContext {
         avoidPatterns?: string[];  // Patterns that have been losing
         preferPatterns?: string[];  // Patterns that have been winning
     };
+    strategyParameters?: any; // User-defined strategy parameters (e.g. RSI > 70)
 }
 
 export interface AgentDecisionResult {

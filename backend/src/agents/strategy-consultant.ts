@@ -176,6 +176,9 @@ ${this.formatPerformanceAdjustments(context.performanceHints)}
 
 === YOUR TASK ===
 Use Chain-of-Thought reasoning following the ${methodology} methodology.
+
+${this.formatStrategyParams(context.strategyParameters)}
+
 IMPORTANT: Adjust your analysis based on the performance hints above.
 Provide your decision with specific entry, stop-loss, and take-profit based on the methodology's key levels.`;
 
@@ -197,6 +200,40 @@ Provide your decision with specific entry, stop-loss, and take-profit based on t
         }
 
         return result;
+    }
+
+    private formatStrategyParams(params?: any): string {
+        if (!params) return '';
+
+        // Handle standard parameter structure
+        const entryRules = params.entryRules || {};
+        const exitRules = params.exitRules || {};
+
+        let prompt = '=== USER STRATEGY RULES ===\n';
+        prompt += 'You MUST strictly adhere to the following user-defined rules:\n';
+
+        // Format Entry Rules
+        if (entryRules.indicators && entryRules.indicators.length > 0) {
+            prompt += `Required Indicators: ${entryRules.indicators.join(', ')}\n`;
+        }
+        if (entryRules.conditions && entryRules.conditions.length > 0) {
+            prompt += `Entry Conditions:\n${entryRules.conditions.map((c: string) => `  - ${c}`).join('\n')}\n`;
+        }
+
+        // Format Exit Rules
+        if (exitRules.stopLossPercent) {
+            prompt += `Stop Loss: ${exitRules.stopLossPercent}%\n`;
+        }
+        if (exitRules.takeProfitPercent) {
+            prompt += `Take Profit: ${exitRules.takeProfitPercent}%\n`;
+        }
+
+        // Handle generic params object if not structured above
+        if (Object.keys(params).length > 0 && !entryRules.indicators) {
+            prompt += `Custom Parameters:\n${JSON.stringify(params, null, 2)}\n`;
+        }
+
+        return prompt;
     }
 
     protected getMockResponse(): string {

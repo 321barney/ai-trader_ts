@@ -356,12 +356,15 @@ export class TradingService {
 
         if (!user) return;
 
-        // Fetch ACTIVE Strategy Version
-        const activeStrategy = await prisma.strategyVersion.findFirst({
-            where: { userId, status: 'ACTIVE' }
+
+        // Fetch ACTIVE Trading Model (New Architecture)
+        // We use cast to any because TradingModel might be not fully typed in client yet
+        const activeModel = await (prisma as any).tradingModel.findFirst({
+            where: { userId, isActive: true }
         });
 
-        const methodology = activeStrategy?.baseMethodology || user.methodology || 'SMC';
+        const methodology = activeModel?.methodology || user.methodology || 'SMC';
+        const strategyParameters = activeModel?.parameters || {};
 
         // Prepare Market Data from Multi-TF
         // We use 1h data for the primary analysis as per current logic
@@ -419,11 +422,12 @@ export class TradingService {
                     currentExposure: 0,
                     openPositions: 0
                 },
-                methodology: methodology
+                methodology: methodology,
+                strategyParameters: strategyParameters
             }, user.strategyMode as any);
 
             // Handle Decision (Signal + Trade)
-            await this.handleTradingDecision(userId, symbol, decision, user, activeStrategy);
+            await this.handleTradingDecision(userId, symbol, decision, user, activeModel);
 
         } catch (error) {
             console.error(`[TradingService] Scheduled analysis failed via Orchestrator:`, error);
