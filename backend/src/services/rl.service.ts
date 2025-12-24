@@ -89,15 +89,19 @@ export class RLService {
             }
 
             return await response.json() as unknown as RLMetrics;
-        } catch (error) {
-            console.error('[RL Service] Metrics error:', error);
+        } catch (error: any) {
+            // Only log if it's NOT a connection refused error (service offline)
+            if (error?.cause?.code !== 'ECONNREFUSED' && error?.message !== 'fetch failed') {
+                console.warn('[RL Service] Metrics unavailable:', error.message);
+            }
+
             // Return mock metrics
             return {
                 sharpeRatio: 1.2,
                 winRate: 0.58,
                 maxDrawdown: 0.12,
                 totalReturn: 0.25,
-                trainingStatus: 'idle',
+                trainingStatus: 'idle (offline)',
             };
         }
     }
