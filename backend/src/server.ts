@@ -1,6 +1,6 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import apiRouter from './routes/index.js';
@@ -11,8 +11,7 @@ import { redisService } from './services/redis.service.js';
 import { jobQueueService } from './services/queue.service.js';
 import { sentryService } from './services/sentry.service.js';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables (loaded via import 'dotenv/config')
 
 const app = express();
 const PORT = process.env.PORT || 3001;

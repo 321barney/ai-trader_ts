@@ -26,20 +26,17 @@ export default function Home() {
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-2.5 shadow-lg shadow-indigo-500/25 relative overflow-hidden group">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 p-2.5 shadow-lg shadow-purple-500/25 relative overflow-hidden group">
             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
             <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-white drop-shadow-md" stroke="currentColor" strokeWidth="1.5">
-              <path d="M12 2L2 22h20L12 2zm0 5l5 10H7l5-10z" fill="currentColor" fillOpacity="0.1" stroke="none" />
-              <path d="M12 2L4.5 17M12 2l7.5 15M4.5 17h15M12 11l-2.5 5M12 11l2.5 5" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="12" cy="2" r="1" className="fill-white animate-pulse" stroke="none" />
-              <circle cx="12" cy="11" r="1" className="fill-purple-200" stroke="none" />
-              <circle cx="4.5" cy="17" r="1" className="fill-indigo-200" stroke="none" />
-              <circle cx="19.5" cy="17" r="1" className="fill-indigo-200" stroke="none" />
+              <path d="M12 4L4 20H20L12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12 14L9 19H15L12 14Z" fill="currentColor" fillOpacity="0.2" stroke="none" />
+              <path d="M8 19L12 11L16 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <div className="flex flex-col">
             <span className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">AISTER</span>
-            <span className="text-xs text-gray-500 -mt-1">Multi-Agent AI Trading</span>
+            <span className="text-xs text-gray-500 -mt-1 font-medium tracking-wide">Multi-Agent AI Trading</span>
           </div>
         </div>
 
