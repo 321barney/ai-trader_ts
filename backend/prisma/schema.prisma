@@ -236,8 +236,8 @@ model TrackedSignal {
   id                String   @id @default(uuid())
   userId            String
   user              User     @relation(fields: [userId], references: [id])
-  strategyVersionId String
-  strategyVersion   StrategyVersion @relation(fields: [strategyVersionId], references: [id])
+  strategyVersionId String?
+  strategyVersion   StrategyVersion? @relation(fields: [strategyVersionId], references: [id])
   
   symbol          String
   direction       String   // LONG | SHORT

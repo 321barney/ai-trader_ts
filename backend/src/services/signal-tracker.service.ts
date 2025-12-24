@@ -13,7 +13,7 @@ import { asterService } from './aster.service.js';
 export interface TrackedSignal {
     id: string;
     userId: string;
-    strategyVersionId: string;
+    strategyVersionId?: string | null;
     symbol: string;
     direction: 'LONG' | 'SHORT';
     entryPrice: number;
@@ -66,7 +66,7 @@ export class SignalTrackerService {
      */
     async createSignal(
         userId: string,
-        strategyVersionId: string,
+        strategyVersionId: string | null | undefined,
         signal: {
             symbol: string;
             direction: 'LONG' | 'SHORT';
@@ -86,7 +86,7 @@ export class SignalTrackerService {
         const trackedSignal: TrackedSignal = {
             id: crypto.randomUUID(),
             userId,
-            strategyVersionId,
+            strategyVersionId: strategyVersionId || null,
             symbol: signal.symbol,
             direction: signal.direction,
             entryPrice: signal.entryPrice,
@@ -105,7 +105,7 @@ export class SignalTrackerService {
             data: {
                 id: trackedSignal.id,
                 userId: trackedSignal.userId,
-                strategyVersionId: trackedSignal.strategyVersionId,
+                strategyVersionId: trackedSignal.strategyVersionId || undefined,
                 symbol: trackedSignal.symbol,
                 direction: trackedSignal.direction,
                 entryPrice: trackedSignal.entryPrice,

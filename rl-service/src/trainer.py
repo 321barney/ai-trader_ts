@@ -2,6 +2,7 @@
 RL Trainer - Real Training with stable-baselines3
 
 Handles model training, saving, loading, and incremental updates.
+Automatically uses GPU (CUDA) if available, otherwise CPU.
 """
 
 import os
@@ -12,6 +13,15 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+# Detect available device (GPU or CPU)
+try:
+    import torch
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"[Trainer] Using device: {DEVICE}" + (" (NVIDIA GPU)" if DEVICE == "cuda" else " (CPU)"))
+except ImportError:
+    DEVICE = "cpu"
+    print("[Trainer] PyTorch not installed, will use CPU")
 
 # Try to import RL libraries (gracefully handle if not installed)
 try:
@@ -165,7 +175,8 @@ class RLTrainer:
             env = TradingEnv(df)
             vec_env = DummyVecEnv([lambda: env])
             
-            # Create PPO model
+            # Create PPO model (uses GPU if available, else CPU)
+            print(f"[Trainer] Creating PPO model on device: {DEVICE}")
             self.model = PPO(
                 "MlpPolicy",
                 vec_env,
@@ -176,7 +187,8 @@ class RLTrainer:
                 gamma=0.99,
                 gae_lambda=0.95,
                 clip_range=0.2,
-                verbose=1
+                verbose=1,
+                device=DEVICE  # Use GPU if available, else CPU
             )
             
             # Training callback
