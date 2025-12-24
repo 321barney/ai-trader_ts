@@ -4,13 +4,25 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import apiRouter from './routes/index.js';
+import { healthRouter } from './routes/health.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
+import { requestLogger, errorLogger } from './middleware/logging.js';
+import { redisService } from './services/redis.service.js';
+import { jobQueueService } from './services/queue.service.js';
+import { sentryService } from './services/sentry.service.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize Sentry (first middleware)
+sentryService.initialize(app);
+if (sentryService.isAvailable()) {
+    app.use(sentryService.requestHandler());
+    app.use(sentryService.tracingHandler());
+}
 
 // Security headers
 app.use(helmet({
@@ -24,6 +36,9 @@ app.use(helmet({
     },
     crossOriginEmbedderPolicy: false, // Allow embedding
 }));
+
+// Request logging
+app.use(requestLogger);
 
 // Rate limiting for auth routes (prevent brute force)
 const authLimiter = rateLimit({
@@ -56,18 +71,18 @@ app.use(express.json({ limit: '10mb' })); // Limit payload size
 app.use('/api/auth', authLimiter);
 app.use('/api', generalLimiter);
 
-// Health check (no rate limit)
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-    });
-});
+// Health check routes (no rate limit)
+app.use('/health', healthRouter);
 
 // API Routes
 console.log('[Server] Mounting API routes at /api');
 app.use('/api', apiRouter);
+
+// Error logging (before error handler)
+app.use(errorLogger);
+if (sentryService.isAvailable()) {
+    app.use(sentryService.errorHandler());
+}
 
 // Error handling
 app.use(notFoundHandler);

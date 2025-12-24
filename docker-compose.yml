@@ -15,7 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,7 +30,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,14 +45,16 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=3001
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/aitrader?schema=public
+      - REDIS_URL=redis://redis:6379
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production
-      - JWT_EXPIRES_IN=24h
+      - JWT_EXPIRES_IN=48h
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - DEEPSEEK_MODEL=deepseek-chat
       - RL_SERVICE_URL=http://rl-service:8000
+      - PAYMENT_REQUIRED=${PAYMENT_REQUIRED:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,6 +63,33 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ./logs:/app/logs
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3001/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Background Worker (BullMQ)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-trader-worker
+    restart: unless-stopped
+    command: [ "node", "dist/worker.js" ]
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/aitrader?schema=public
+      - REDIS_URL=redis://redis:6379
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    depends_on:
+      - backend
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    deploy:
+      replicas: 2
 
   # Frontend (Next.js)
   frontend:
@@ -101,13 +130,14 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [ gpu ]
     # GPU support optional - comment out deploy section if no GPU
 
 volumes:
   postgres_data:
   redis_data:
   rl_models:
+
 
 networks:
   default:
