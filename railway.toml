@@ -16,3 +16,10 @@ name = "frontend"
 root = "frontend"
 dockerfilePath = "Dockerfile"
 watchPatterns = ["frontend/**"]
+
+[[services]]
+name = "rl-service"
+root = "rl-service"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["rl-service/**"]
+

@@ -11,7 +11,7 @@ import BaseAgent, { AgentContext, AgentDecisionResult } from './base-agent.js';
 import { StrategyConsultantAgent, StrategyDecision } from './strategy-consultant.js';
 import { RiskOfficerAgent, RiskAssessment } from './risk-officer.js';
 import { MarketAnalystAgent, MarketAnalysis } from './market-analyst.js';
-import { RLService, RLPrediction, RLMetrics, RLParams } from '../services/rl.service.js';
+import { RLService, RLPrediction, RLMetrics, RLParams, SMCFeatures, VolumeFeatures, EnhancedPredictRequest } from '../services/rl.service.js';
 import { prisma } from '../utils/prisma.js';
 import { OpenAIService } from '../services/openai.service.js';
 import { ClaudeService } from '../services/claude.service.js';
@@ -275,11 +275,14 @@ export class AgentOrchestrator {
 
         if (mode !== 'deepseek' && this.rlAvailable) {
             try {
-                // Build feature vector from market data
-                const features = this.buildFeatureVector(context);
-                rlPrediction = await this.rlService.predict(context.symbol || 'BTCUSDT', features);
+                // Build ENHANCED request with SMC + Volume features
+                const enhancedRequest = this.buildEnhancedPredictRequest(context);
+                rlPrediction = await this.rlService.predictEnhanced(enhancedRequest);
                 rlMetrics = await this.rlService.getMetrics();
                 console.log(`[Orchestrator] RL prediction: ${rlPrediction.action} (${rlPrediction.confidence})`);
+                if (rlPrediction.smcAnalysis) {
+                    console.log(`[Orchestrator] RL SMC Analysis: ${rlPrediction.smcAnalysis}`);
+                }
             } catch (error) {
                 console.error('[Orchestrator] RL prediction failed:', error);
             }
@@ -464,8 +467,48 @@ REASON: [Why this decision was reached]`;
             md.ema50 || 0,
             md.atr || 0,
             md.volume || 0,
-            // Normalize between 0 and 1 where possible
         ].map(v => typeof v === 'number' ? v : 0);
+    }
+
+    /**
+     * Build ENHANCED prediction request with SMC + Volume features
+     * Extracts real Aster market data for RL model enhancement
+     */
+    private buildEnhancedPredictRequest(context: AgentContext): EnhancedPredictRequest {
+        const md = context.marketData || {};
+
+        // Build base feature vector
+        const features = this.buildFeatureVector(context);
+
+        // Extract SMC features from market data
+        const smc: SMCFeatures = {
+            orderBlocks: md.orderBlocks || [],
+            fairValueGaps: md.fairValueGaps || [],
+            bosDirection: md.breakOfStructure?.direction || md.smcBias || 'NONE',
+            oteZone: md.ote || undefined,
+            killZone: md.killZone?.zone || 'NONE',
+            smcBias: md.smcBias,
+        };
+
+        // Extract Volume features
+        const volume: VolumeFeatures = {
+            volumeRatio: md.indicators?.volumeProfile?.volumeRatio || 1.0,
+            avgVolume: md.indicators?.volumeProfile?.avgVolume || 0,
+            currentVolume: md.indicators?.volumeProfile?.currentVolume || md.volume || 0,
+        };
+
+        console.log(`[Orchestrator] Building enhanced RL request:`);
+        console.log(`  SMC: ${smc.orderBlocks.length} OBs, ${smc.fairValueGaps.length} FVGs, BOS=${smc.bosDirection}`);
+        console.log(`  Volume: ratio=${volume.volumeRatio}x, current=${volume.currentVolume}`);
+
+        return {
+            symbol: context.symbol || 'BTCUSDT',
+            features,
+            smc,
+            volume,
+            methodology: context.methodology || 'SMC',
+            currentPrice: md.currentPrice,
+        };
     }
 
     /**

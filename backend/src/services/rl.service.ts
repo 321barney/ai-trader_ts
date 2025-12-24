@@ -2,13 +2,70 @@
  * RL Service Client
  * 
  * Communicates with the Python RL Docker container
+ * Enhanced with SMC + Volume feature support
  */
+
+// ============================================================================
+// SMC + Volume Feature Interfaces
+// ============================================================================
+
+export interface OrderBlock {
+    type: 'BULLISH' | 'BEARISH';
+    high: number;
+    low: number;
+    strength: number;
+    index?: number;
+}
+
+export interface FairValueGap {
+    type: 'BULLISH' | 'BEARISH';
+    high: number;
+    low: number;
+    size: number;
+}
+
+export interface SMCFeatures {
+    orderBlocks: OrderBlock[];
+    fairValueGaps: FairValueGap[];
+    bosDirection: 'BULLISH' | 'BEARISH' | 'NONE';
+    oteZone?: { high: number; low: number; direction: string };
+    killZone: string;
+    smcBias?: string;
+}
+
+export interface VolumeFeatures {
+    volumeRatio: number;
+    avgVolume: number;
+    currentVolume: number;
+}
+
+export interface EnhancedPredictRequest {
+    symbol: string;
+    features: number[];
+    smc?: SMCFeatures;
+    volume?: VolumeFeatures;
+    methodology?: string;
+    currentPrice?: number;
+}
+
+// ============================================================================
+// Response Interfaces
+// ============================================================================
 
 export interface RLPrediction {
     action: 'LONG' | 'SHORT' | 'HOLD';
     confidence: number;
     expectedReturn: number;
     modelVersion: string;
+    // Enhanced response with reasoning
+    reasoning?: string;
+    smcAnalysis?: string;
+    volumeAnalysis?: string;
+    // Trade parameters
+    entry?: number;
+    stopLoss?: number;
+    takeProfit?: number;
+    riskRewardRatio?: number;
 }
 
 export interface RLMetrics {
@@ -26,6 +83,10 @@ export interface RLParams {
     total_timesteps?: number;
     algorithm?: 'PPO' | 'SAC' | 'A2C';
 }
+
+// ============================================================================
+// RL Service Class
+// ============================================================================
 
 export class RLService {
     private baseUrl: string;
@@ -50,21 +111,38 @@ export class RLService {
     }
 
     /**
-     * Get prediction from RL model
+     * Get prediction from RL model (LEGACY - basic features only)
      */
     async predict(symbol: string, features: number[]): Promise<RLPrediction> {
+        return this.predictEnhanced({ symbol, features });
+    }
+
+    /**
+     * Get ENHANCED prediction from RL model with SMC + Volume features
+     * This is the primary method for predictions with full context
+     */
+    async predictEnhanced(request: EnhancedPredictRequest): Promise<RLPrediction> {
         try {
             const response = await fetch(`${this.baseUrl}/predict`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ symbol, features }),
+                body: JSON.stringify(request),
             });
 
             if (!response.ok) {
                 throw new Error('RL prediction failed');
             }
 
-            return await response.json() as unknown as RLPrediction;
+            const result = await response.json() as unknown as RLPrediction;
+
+            // Log enhanced prediction with SMC analysis
+            if (result.smcAnalysis || result.volumeAnalysis) {
+                console.log(`[RL Service] Enhanced prediction: ${result.action} @ ${(result.confidence * 100).toFixed(1)}%`);
+                console.log(`[RL Service] SMC: ${result.smcAnalysis || 'N/A'}`);
+                console.log(`[RL Service] Volume: ${result.volumeAnalysis || 'N/A'}`);
+            }
+
+            return result;
         } catch (error) {
             console.error('[RL Service] Prediction error:', error);
             // Return mock prediction if service unavailable
@@ -73,6 +151,7 @@ export class RLService {
                 confidence: 0.5,
                 expectedReturn: 0,
                 modelVersion: 'mock',
+                reasoning: 'RL service unavailable - using mock prediction',
             };
         }
     }
