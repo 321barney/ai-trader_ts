@@ -177,11 +177,11 @@ class JobQueueService {
                 return handlers.onSignalJob!(job as Job<SignalJobData>);
             }, { connection: connection as any, concurrency: 5 });
 
-            worker.on('completed', (job) => {
+            worker.on('completed', (job: Job) => {
                 console.log(`[Worker:signals] Job ${job.id} completed`);
             });
 
-            worker.on('failed', (job, err) => {
+            worker.on('failed', (job: Job | undefined, err: Error) => {
                 console.error(`[Worker:signals] Job ${job?.id} failed:`, err.message);
             });
 
@@ -195,11 +195,11 @@ class JobQueueService {
                 return handlers.onBacktestJob!(job as Job<BacktestJobData>);
             }, { connection: connection as any, concurrency: 2 });
 
-            worker.on('completed', (job) => {
+            worker.on('completed', (job: Job) => {
                 console.log(`[Worker:backtests] Job ${job.id} completed`);
             });
 
-            worker.on('failed', (job, err) => {
+            worker.on('failed', (job: Job | undefined, err: Error) => {
                 console.error(`[Worker:backtests] Job ${job?.id} failed:`, err.message);
             });
 

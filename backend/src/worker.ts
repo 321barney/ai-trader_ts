@@ -50,23 +50,30 @@ async function main() {
                     (user as any).asterApiSecret || undefined
                 );
 
+                // Aggregate market data (using the public method I just exposed)
+                const marketData = schedulerService.aggregateMultiTFData(multiTF);
+
                 // Run orchestrator
                 const orchestrator = new AgentOrchestrator();
-                const result = await orchestrator.runFullAnalysis({
+
+                // Use analyzeAndDecide instead of non-existent runFullAnalysis
+                const methodology = data.methodology || (user as any).methodology || 'SMC';
+                const result = await orchestrator.analyzeAndDecide({
                     userId: data.userId,
                     symbol: data.symbol,
                     marketData: {
                         symbol: data.symbol,
-                        price: multiTF.price,
-                        ...multiTF.md
+                        ...marketData
                     },
-                    settings: {
-                        methodology: data.methodology || (user as any).methodology || 'SMC',
-                        riskPercent: (user as any).riskMaxPerTrade || 0.02
+                    methodology: methodology,
+                    riskMetrics: {
+                        portfolioValue: 10000, // Default for signal generation context if unknown
+                        currentExposure: 0,
+                        openPositions: 0
                     }
-                });
+                }, 'hybrid'); // Default to hybrid mode
 
-                logger.info(`Signal job completed for ${data.symbol}`, { result: result.decision });
+                logger.info(`Signal job completed for ${data.symbol}`, { result: result.finalDecision });
                 return result;
             } catch (error: any) {
                 logger.error(`Signal job failed: ${error.message}`);
@@ -85,18 +92,47 @@ async function main() {
                 // Update job progress
                 await job.updateProgress(10);
 
-                // Run backtest
-                const result = await backtestService.runBacktest(
-                    data.strategyId,
-                    data.symbol,
-                    data.startDate,
-                    data.endDate,
-                    data.initialCapital
-                );
+                // Start backtest (returns session immediately)
+                const session = await backtestService.startBacktest(data.userId, {
+                    symbol: data.symbol,
+                    initDate: new Date(data.startDate),
+                    endDate: new Date(data.endDate),
+                    initialCapital: data.initialCapital,
+                    strategyVersionId: data.strategyId
+                });
+
+                logger.info(`Backtest session ${session.id} started, polling for completion...`);
+
+                // Poll for completion
+                let completed = false;
+                let resultSession;
+                let attempts = 0;
+
+                while (!completed && attempts < 3600) { // Max 1 hour timeout
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Poll every 2s
+                    attempts++;
+
+                    resultSession = await backtestService.getSession(session.id);
+                    if (!resultSession) continue;
+
+                    if (resultSession.status === 'COMPLETED' || resultSession.status === 'FAILED') {
+                        completed = true;
+                    }
+
+                    // Update job progress based on steps
+                    if (resultSession.totalSteps > 0) {
+                        const progress = Math.min(99, Math.round((resultSession.currentStep / resultSession.totalSteps) * 100));
+                        await job.updateProgress(progress);
+                    }
+                }
+
+                if (!completed) {
+                    throw new Error('Backtest timed out');
+                }
 
                 await job.updateProgress(100);
                 logger.info(`Backtest job completed for strategy ${data.strategyId}`);
-                return result;
+                return resultSession;
             } catch (error: any) {
                 logger.error(`Backtest job failed: ${error.message}`);
                 throw error;

@@ -299,7 +299,7 @@ export class SchedulerService {
     /**
      * Aggregate multi-TF data into market data object
      */
-    private aggregateMultiTFData(multiTF: MultiTFData): any {
+    public aggregateMultiTFData(multiTF: MultiTFData): any {
         const tf1h = multiTF.timeframes.tf1h;
         const latest = tf1h[tf1h.length - 1] || {};
 

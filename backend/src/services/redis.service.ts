@@ -74,7 +74,7 @@ class RedisService {
                 this.reconnectAttempts = 0;
             });
 
-            this.client.on('error', (err) => {
+            this.client.on('error', (err: any) => {
                 console.error('[Redis] Connection error:', err.message);
                 this.isConnected = false;
             });

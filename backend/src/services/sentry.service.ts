@@ -35,7 +35,7 @@ class SentryService {
                     ...(app ? [Sentry.expressIntegration()] : []),
                 ],
                 // Filter out sensitive data
-                beforeSend(event) {
+                beforeSend(event: any) {
                     // Remove sensitive headers
                     if (event.request?.headers) {
                         delete event.request.headers['authorization'];
