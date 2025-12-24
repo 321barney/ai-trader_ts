@@ -5,6 +5,7 @@ import { api, API_BASE } from "@/lib/api";
 import Link from "next/link";
 import PositionsWidget from "@/components/PositionsWidget";
 import PortfolioWidget from "@/components/PortfolioWidget";
+import ScannerSettingsModal from "@/components/ScannerSettingsModal";
 
 interface Balance {
     asset: string;
@@ -26,6 +27,7 @@ interface ActiveModel {
     methodology: string;
     status: string;
     winRate?: number;
+    timeframes?: string[];
 }
 
 export default function DashboardPage() {
@@ -36,6 +38,7 @@ export default function DashboardPage() {
     const [totalValue, setTotalValue] = useState(0);
     const [positions, setPositions] = useState<Position[]>([]);
     const [activeModel, setActiveModel] = useState<ActiveModel | null>(null);
+    const [showScannerSettings, setShowScannerSettings] = useState(false);
 
     useEffect(() => {
         fetchDashboardData();
@@ -194,8 +197,14 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Scanner Status (Cron) */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border border-orange-500/20 p-6">
+                <div
+                    onClick={() => setShowScannerSettings(true)}
+                    className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border border-orange-500/20 p-6 cursor-pointer hover:bg-orange-500/10 transition-colors group"
+                >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl"></div>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-orange-400">
+                        ⚙️
+                    </div>
                     <div className="relative">
                         <div className="text-gray-400 text-sm mb-2">Scanner</div>
                         <div className="text-3xl font-bold text-white flex items-center gap-2">
@@ -203,7 +212,7 @@ export default function DashboardPage() {
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
                         </div>
                         <div className="text-orange-400 text-sm mt-2 flex items-center gap-1">
-                            <span>⚡</span> Real-Time
+                            <span>⚡</span> {activeModel?.timeframes?.join(', ') || 'Auto'}
                         </div>
                     </div>
                 </div>
@@ -289,6 +298,16 @@ export default function DashboardPage() {
                 <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                     {error}
                 </div>
+            )}
+
+            {/* Scanner Settings Modal */}
+            {showScannerSettings && (
+                <ScannerSettingsModal
+                    activeModelId={activeModel?.id || null}
+                    currentTimeframes={activeModel?.timeframes || []}
+                    onClose={() => setShowScannerSettings(false)}
+                    onSave={fetchDashboardData}
+                />
             )}
         </div>
     );

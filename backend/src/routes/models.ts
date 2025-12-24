@@ -127,6 +127,41 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 });
 
 /**
+ * PUT /api/models/:id
+ * Update a model (timeframes, parameters)
+ */
+router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { timeframes, parameters, methodology } = req.body;
+
+        const model = await db.tradingModel.findFirst({
+            where: {
+                id: req.params.id,
+                userId: req.userId
+            }
+        });
+
+        if (!model) {
+            return errorResponse(res, 'Model not found', 404);
+        }
+
+        const updateData: any = {};
+        if (timeframes) updateData.timeframes = timeframes;
+        if (parameters) updateData.parameters = parameters;
+        if (methodology) updateData.methodology = methodology;
+
+        const updatedModel = await db.tradingModel.update({
+            where: { id: req.params.id },
+            data: updateData
+        });
+
+        return successResponse(res, updatedModel, 'Model updated successfully');
+    } catch (error: any) {
+        return errorResponse(res, error.message, 500);
+    }
+});
+
+/**
  * POST /api/models
  * Create a new draft model
  */
