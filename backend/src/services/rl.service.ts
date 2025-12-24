@@ -92,7 +92,12 @@ export class RLService {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = process.env.RL_SERVICE_URL || 'http://localhost:8000';
+        let url = process.env.RL_SERVICE_URL || 'http://localhost:8000';
+        // Ensure URL has protocol prefix
+        if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+            url = `https://${url}`;
+        }
+        this.baseUrl = url;
     }
 
     /**
