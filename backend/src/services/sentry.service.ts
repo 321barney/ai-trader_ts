@@ -9,6 +9,7 @@
  */
 
 import * as Sentry from '@sentry/node';
+import * as Tracing from '@sentry/tracing'; // Required for Integrations
 import { Express, Request, Response, NextFunction } from 'express';
 
 class SentryService {
@@ -31,8 +32,10 @@ class SentryService {
                 environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
                 tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
                 integrations: [
-                    // Enable HTTP calls tracing
-                    ...(app ? [Sentry.expressIntegration()] : []),
+                    // HTTP calls tracing
+                    new Sentry.Integrations.Http({ tracing: true }),
+                    // Enable Express.js tracing
+                    ...(app ? [new Sentry.Integrations.Express({ app })] : []),
                 ],
                 // Filter out sensitive data
                 beforeSend(event: any) {
@@ -71,7 +74,7 @@ class SentryService {
     /**
      * Get error handler middleware (use before other error handlers)
      */
-    errorHandler() {
+    errorHandler(): any {
         return Sentry.Handlers.errorHandler({
             shouldHandleError(error: any) {
                 // Capture 4xx and 5xx errors
