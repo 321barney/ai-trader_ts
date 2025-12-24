@@ -381,18 +381,23 @@ export class SchedulerService {
             const historicalData = await aster.getKlines(symbol, '1h', 500);
 
             // Initiate model creation
-            const result = await rlService.initiateModelCreation(symbol, historicalData);
+            try {
+                const result = await rlService.initiateModelCreation(symbol, historicalData);
 
-            if (result.success) {
-                console.log(`[Scheduler] RL model created successfully! Metrics:`, result.metrics);
+                if (result.success) {
+                    console.log(`[Scheduler] RL model created successfully! Metrics:`, result.metrics);
 
-                // Evaluate if model meets minimum criteria
-                if (result.metrics && result.metrics.winRate < 0.4) {
-                    console.log('[Scheduler] Model win rate below 40%, triggering retrain...');
-                    await rlService.startTraining({ symbols: [symbol], timesteps: 100000 });
+                    // Evaluate if model meets minimum criteria
+                    if (result.metrics && result.metrics.winRate < 0.4) {
+                        console.log('[Scheduler] Model win rate below 40%, triggering retrain...');
+                        await rlService.startTraining({ symbols: [symbol], timesteps: 100000 });
+                    }
+                } else {
+                    console.error('[Scheduler] RL model creation failed:', result.error);
                 }
-            } else {
-                console.error('[Scheduler] RL model creation failed:', result.error);
+            } catch (creationError) {
+                console.error('[Scheduler] Critical error during model creation process:', creationError);
+                // Swallow error to protect other scheduler jobs
             }
 
         } catch (error) {

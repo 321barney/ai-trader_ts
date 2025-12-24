@@ -25,9 +25,9 @@ interface RLStatus {
     available: boolean;
     sharpeRatio?: number;
     winRate?: number;
-    totalEpisodes?: number;
+    // Backend returns 'status' string, not 'isTraining' boolean
     training: {
-        isTraining: boolean;
+        status: string;
         currentEpisode?: number;
         totalEpisodes?: number;
         progress?: number;
@@ -95,7 +95,7 @@ export default function AgentDashboardPage() {
 
     useEffect(() => {
         fetchAgentsData();
-        const interval = setInterval(fetchAgentsData, 10000); // Poll every 10s
+        const interval = setInterval(fetchAgentsData, 5000); // Poll every 5s for faster updates
         return () => clearInterval(interval);
     }, [includeBacktest]);
 
@@ -160,6 +160,8 @@ export default function AgentDashboardPage() {
         return <div className="p-8 text-center text-gray-500">Loading Agents...</div>;
     }
 
+    const isTraining = rlStatus?.training?.status === 'training';
+
     return (
         <div className="p-8">
             {/* Header */}
@@ -177,7 +179,7 @@ export default function AgentDashboardPage() {
                         {runningAnalysis ? (
                             <>
                                 <span className="animate-spin text-lg">↻</span>
-                                <span>Running...</span>
+                                <span className="animate-pulse">Analyzing Market...</span>
                             </>
                         ) : (
                             <>
@@ -398,11 +400,11 @@ export default function AgentDashboardPage() {
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Status</div>
                             <div className={rlStatus?.available ? "text-green-400 font-bold" : "text-gray-500 font-bold"}>
-                                {rlStatus?.training?.isTraining ? 'Training...' : rlStatus?.available ? 'Active' : 'Offline'}
+                                {isTraining ? 'Training...' : rlStatus?.available ? 'Active' : 'Offline'}
                             </div>
-                            {rlStatus?.training?.isTraining && (
+                            {isTraining && (
                                 <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
-                                    <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(rlStatus.training.progress || 0) * 100}%` }}></div>
+                                    <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(rlStatus!.training.progress || 0) * 100}%` }}></div>
                                 </div>
                             )}
                         </div>
@@ -416,7 +418,12 @@ export default function AgentDashboardPage() {
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Episodes</div>
-                            <div className="text-gray-300 font-bold text-sm">{rlStatus?.training?.totalEpisodes || 0}</div>
+                            <div className="text-gray-300 font-bold text-sm">
+                                {isTraining
+                                    ? `${rlStatus?.training?.currentEpisode || 0} / ${rlStatus?.training?.totalEpisodes || 0}`
+                                    : (rlStatus?.training?.totalEpisodes || 0)
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
