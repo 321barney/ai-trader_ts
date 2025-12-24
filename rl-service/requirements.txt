@@ -7,7 +7,10 @@ python-dotenv>=1.0.0
 numpy>=1.24.0
 pandas>=2.0.0
 
-# Real RL Training
+# Real RL Training (CPU-only to keep image small)
 stable-baselines3>=2.2.1
 gymnasium>=0.29.1
+
+# PyTorch CPU-only (much smaller than CUDA version)
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.0.0
