@@ -8,7 +8,7 @@
  */
 
 import { prisma } from '../utils/prisma.js';
-import { asterService } from './aster.service.js';
+import { AsterService } from './aster.service.js';
 
 const db = prisma as any;
 
@@ -46,8 +46,25 @@ class PortfolioService {
      */
     async getSummary(userId: string): Promise<PortfolioSummary> {
         try {
+            // Get user credentials
+            const user = await db.user.findUnique({
+                where: { id: userId },
+                select: { asterApiKey: true, asterApiSecret: true }
+            });
+
+            if (!user?.asterApiKey || !user?.asterApiSecret) {
+                // User hasn't configured API keys yet
+                return this.getEmptySummary();
+            }
+
+            // Create user-specific AsterService instance
+            const userAsterService = new AsterService(
+                user.asterApiKey,
+                user.asterApiSecret
+            );
+
             // Get user's balances from exchange
-            const balances = await asterService.getBalance();
+            const balances = await userAsterService.getBalance();
 
             // Get open positions
             const openPositions = await db.position.findMany({
@@ -65,7 +82,7 @@ class PortfolioService {
             const positionSummaries: PositionSummary[] = [];
 
             for (const pos of openPositions) {
-                const currentPrice = await asterService.getPrice(pos.symbol).catch(() => pos.entryPrice);
+                const currentPrice = await userAsterService.getPrice(pos.symbol).catch(() => pos.entryPrice);
                 const positionValue = pos.size * currentPrice;
                 const entryValue = pos.size * pos.entryPrice;
 
@@ -128,18 +145,22 @@ class PortfolioService {
             };
         } catch (error) {
             console.error('[Portfolio] Error getting summary:', error);
-            return {
-                totalEquity: 0,
-                availableBalance: 0,
-                usedMargin: 0,
-                unrealizedPnl: 0,
-                realizedPnlToday: 0,
-                totalExposure: 0,
-                exposurePercent: 0,
-                positions: [],
-                assetAllocation: []
-            };
+            return this.getEmptySummary();
         }
+    }
+
+    private getEmptySummary(): PortfolioSummary {
+        return {
+            totalEquity: 0,
+            availableBalance: 0,
+            usedMargin: 0,
+            unrealizedPnl: 0,
+            realizedPnlToday: 0,
+            totalExposure: 0,
+            exposurePercent: 0,
+            positions: [],
+            assetAllocation: []
+        };
     }
 
     /**
