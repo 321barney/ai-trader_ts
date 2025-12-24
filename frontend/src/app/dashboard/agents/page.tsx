@@ -306,7 +306,7 @@ export default function AgentDashboardPage() {
                             {/* Summary */}
                             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
                                 <div className="text-indigo-400 font-medium mb-1">Summary</div>
-                                <p className="text-gray-300">{agent.reasoning?.substring(0, 500)}</p>
+                                <p className="text-gray-300">{agent.reasoning}</p>
                             </div>
 
                             {/* Counsel Debate (for Orchestrator with debate content) */}
