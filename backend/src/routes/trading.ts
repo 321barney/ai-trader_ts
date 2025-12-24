@@ -141,6 +141,35 @@ router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandl
 }));
 
 /**
+ * POST /api/trading/debug/trigger-analysis
+ * Manual trigger for debugging
+ */
+router.post('/debug/trigger-analysis', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    const { symbol } = req.body;
+    try {
+        const { schedulerService } = await import('../services/scheduler.service.js');
+        const { prisma } = await import('../utils/prisma.js');
+
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (!user) return errorResponse(res, 'User not found');
+
+        // Fetch Data
+        const multiTF = await schedulerService.fetchMultiTFData(
+            symbol || 'BTCUSDT',
+            user.asterApiKey || undefined,
+            user.asterApiSecret || undefined
+        );
+
+        // Execute
+        await tradingService.executeScheduledAnalysis(user.id, symbol || 'BTCUSDT', multiTF);
+
+        return successResponse(res, { message: 'Analysis triggered manually check server logs' });
+    } catch (error: any) {
+        return errorResponse(res, error.message);
+    }
+}));
+
+/**
  * GET /api/trading/signals
  */
 router.get('/signals', authMiddleware, asyncHandler(async (req: Request, res: Response) => {

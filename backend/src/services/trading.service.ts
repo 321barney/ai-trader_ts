@@ -325,7 +325,11 @@ export class TradingService {
                 await this.executeOrder(userId, decision, symbol);
             } else if (user.tradingEnabled && user.tradingMode === 'trade' && !activeStrategy) {
                 console.warn(`[TradingService] User ${userId} wants to trade but no ACTIVE strategy. Skipping execution.`);
+            } else {
+                console.log(`[TradingService] Decision ${decision.finalDecision} (Conf: ${decision.confidence}) - Skipping execution (Mode: ${user.tradingMode})`);
             }
+        } else {
+            console.log(`[TradingService] Decision Skipped: ${decision.finalDecision} (Confidence: ${decision.confidence}) - Threshold not met (>0.7)`);
         }
     }
 
