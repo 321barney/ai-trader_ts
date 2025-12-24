@@ -1,5 +1,5 @@
 {
-  "name": "ai-trader-backend",
+  "name": "AISTRE-backend",
   "version": "1.0.0",
   "description": "AI Trader Backend - Multi-Agent Trading Platform",
   "main": "dist/server.js",

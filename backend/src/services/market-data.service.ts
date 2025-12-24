@@ -6,6 +6,55 @@
  */
 
 import { asterService, OHLCV, Ticker } from './aster.service.js';
+import { AsterService } from './aster.service.js';
+import { TechnicalAnalysisService } from './technical-analysis.service.js';
+
+// ============================================================================
+// Multi-Timeframe Data Interface (Dynamic)
+// ============================================================================
+
+/**
+ * Dynamic Multi-Timeframe Data Structure
+ * Supports any user-configured timeframes (Scalping: 1m,5m | Swing: 4h,1d)
+ */
+export interface MultiTFData {
+    symbol: string;
+    /** Dynamic map of timeframes to their candle data */
+    timeframes: Record<string, OHLCV[]>;
+    /** The primary timeframe used for indicator calculations */
+    primaryTimeframe: string;
+    /** When this data was fetched */
+    fetchedAt: Date;
+}
+
+/**
+ * Aggregated market data ready for agent consumption
+ */
+export interface AggregatedMarketData {
+    symbol: string;
+    currentPrice: number;
+    change24h: number;
+    high24h: number;
+    low24h: number;
+    volume: number;
+    // Indicators calculated from PRIMARY timeframe
+    rsi: number;
+    macd: number;
+    atr: number;
+    bollinger: { upper: number; middle: number; lower: number };
+    // Raw arrays from primary TF for Gann/SMC analysis
+    highs: number[];
+    lows: number[];
+    closes: number[];
+    opens: number[];
+    // Multi-TF context for agents
+    multiTF: Record<string, OHLCV[]>;
+    // Strategy-specific patterns (populated by TechnicalAnalysisService)
+    orderBlocks?: any[];
+    fairValueGaps?: any[];
+    breakOfStructure?: any;
+    methodology?: string;
+}
 
 // Types
 export interface TechnicalIndicators {
@@ -431,6 +480,168 @@ RECENT CANDLES (Last 10)
 ${candles}
 `.trim();
     }
+
+    // ============================================================================
+    // Dynamic Multi-Timeframe Data Methods
+    // ============================================================================
+
+    /**
+     * Fetch multi-timeframe data dynamically based on user's configured timeframes.
+     * This is the SINGLE SOURCE OF TRUTH for multi-TF data fetching.
+     * 
+     * @param symbol Trading pair (e.g., 'BTCUSDT')
+     * @param timeframes Array of timeframes to fetch (e.g., ['1m', '5m'] for scalping, ['4h', '1d'] for swing)
+     * @param primaryTimeframe The main timeframe for indicator calculations (defaults to first in array)
+     * @param apiKey Optional user API key
+     * @param apiSecret Optional user API secret
+     */
+    async fetchMultiTFData(
+        symbol: string,
+        timeframes: string[] = ['1h'],
+        primaryTimeframe?: string,
+        apiKey?: string,
+        apiSecret?: string
+    ): Promise<MultiTFData> {
+        const aster = new AsterService(apiKey, apiSecret);
+        const primary = primaryTimeframe || timeframes[0] || '1h';
+
+        console.log(`[MarketData] Fetching multi-TF data for ${symbol}: [${timeframes.join(', ')}] (primary: ${primary})`);
+
+        // Determine minimum bars needed per timeframe for TA indicators
+        const getMinBars = (tf: string): number => {
+            if (tf.includes('m')) return 100;  // 1m, 5m, 15m
+            if (tf === '1h') return 100;
+            if (tf === '4h') return 50;
+            if (tf === '1d' || tf === '1w') return 30;
+            return 100; // Default
+        };
+
+        // Fetch all timeframes in parallel
+        const fetchPromises = timeframes.map(async (tf) => {
+            try {
+                const data = await aster.getKlines(symbol, tf as any, getMinBars(tf) + 5);
+                return { tf, data };
+            } catch (error) {
+                console.warn(`[MarketData] Failed to fetch ${tf} data for ${symbol}:`, error);
+                return { tf, data: [] };
+            }
+        });
+
+        const results = await Promise.all(fetchPromises);
+
+        // Build dynamic timeframes map
+        const tfMap: Record<string, OHLCV[]> = {};
+        for (const { tf, data } of results) {
+            tfMap[tf] = data;
+            console.log(`[MarketData] Fetched ${tf}: ${data.length} candles`);
+        }
+
+        return {
+            symbol,
+            timeframes: tfMap,
+            primaryTimeframe: primary,
+            fetchedAt: new Date()
+        };
+    }
+
+    /**
+     * Aggregate multi-TF data into a unified market data object for agents.
+     * Calculates indicators using the PRIMARY timeframe.
+     * 
+     * @param multiTF The multi-timeframe data structure
+     * @param methodology Trading methodology for pattern detection (SMC, ICT, GANN)
+     */
+    aggregateMultiTF(multiTF: MultiTFData, methodology?: string): AggregatedMarketData {
+        const primaryTF = multiTF.primaryTimeframe;
+        const primaryData = multiTF.timeframes[primaryTF] || [];
+
+        if (primaryData.length === 0) {
+            console.warn(`[MarketData] No data for primary timeframe ${primaryTF}`);
+            // Return minimal structure
+            return {
+                symbol: multiTF.symbol,
+                currentPrice: 0,
+                change24h: 0,
+                high24h: 0,
+                low24h: 0,
+                volume: 0,
+                rsi: 50,
+                macd: 0,
+                atr: 0,
+                bollinger: { upper: 0, middle: 0, lower: 0 },
+                highs: [],
+                lows: [],
+                closes: [],
+                opens: [],
+                multiTF: multiTF.timeframes,
+                methodology
+            };
+        }
+
+        // Extract arrays from primary timeframe
+        const highs = primaryData.map(k => k.high);
+        const lows = primaryData.map(k => k.low);
+        const closes = primaryData.map(k => k.close);
+        const opens = primaryData.map(k => k.open);
+
+        // Get latest candle
+        const latest = primaryData[primaryData.length - 1];
+        const currentPrice = latest.close;
+
+        // Calculate 24h metrics (dynamic based on timeframe)
+        const barsFor24h = this.getBarsFor24h(primaryTF);
+        const last24hData = primaryData.slice(-barsFor24h);
+        const high24h = Math.max(...last24hData.map(c => c.high));
+        const low24h = Math.min(...last24hData.map(c => c.low));
+        const volume = last24hData.reduce((sum, c) => sum + c.volume, 0);
+        const change24h = last24hData.length > 0 && last24hData[0].close > 0
+            ? ((currentPrice - last24hData[0].close) / last24hData[0].close) * 100
+            : 0;
+
+        // Calculate indicators using TechnicalAnalysisService (methodology-aware)
+        const indicators = TechnicalAnalysisService.analyze(highs, lows, closes, opens, methodology);
+
+        return {
+            symbol: multiTF.symbol,
+            currentPrice,
+            change24h,
+            high24h,
+            low24h,
+            volume,
+            rsi: indicators.rsi,
+            macd: typeof indicators.macd === 'number' ? indicators.macd : indicators.macd?.MACD || 0,
+            atr: indicators.atr,
+            bollinger: indicators.bollinger || { upper: 0, middle: 0, lower: 0 },
+            highs,
+            lows,
+            closes,
+            opens,
+            multiTF: multiTF.timeframes,
+            // SMC/ICT patterns from TechnicalAnalysisService
+            orderBlocks: indicators.orderBlocks,
+            fairValueGaps: indicators.fairValueGaps,
+            breakOfStructure: indicators.breakOfStructure,
+            methodology
+        };
+    }
+
+    /**
+     * Get number of bars representing ~24 hours for a given timeframe
+     */
+    private getBarsFor24h(timeframe: string): number {
+        const tfMap: Record<string, number> = {
+            '1m': 1440,
+            '5m': 288,
+            '15m': 96,
+            '30m': 48,
+            '1h': 24,
+            '4h': 6,
+            '1d': 1,
+            '1w': 1
+        };
+        return tfMap[timeframe] || 24;
+    }
 }
 
 export const marketDataService = new MarketDataService();
+

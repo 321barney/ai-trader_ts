@@ -10,7 +10,12 @@ const METHODOLOGIES = [
     { id: 'GANN', name: 'Gann Analysis', description: 'Time/Price squares, Geometric angles' },
 ];
 
-const TIMEFRAMES = ['5m', '15m', '1h', '4h'];
+// All supported timeframes grouped by category
+const TIMEFRAME_GROUPS: Record<string, string[]> = {
+    'Minutes': ['1m', '3m', '5m', '15m', '30m'],
+    'Hours': ['1h', '2h', '4h', '6h', '8h', '12h'],
+    'Days+': ['1d', '3d', '1w']
+};
 
 export default function StrategyLabPage() {
     const router = useRouter();
@@ -112,22 +117,29 @@ export default function StrategyLabPage() {
                         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                             <span>⏱️</span> Timeframes
                         </h3>
-                        <div className="flex flex-wrap gap-3">
-                            {TIMEFRAMES.map(tf => (
-                                <button
-                                    key={tf}
-                                    onClick={() => toggleTimeframe(tf)}
-                                    className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${selectedTimeframes.includes(tf)
-                                        ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
-                                        : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                                        }`}
-                                >
-                                    {tf}
-                                </button>
+                        <div className="space-y-4">
+                            {Object.entries(TIMEFRAME_GROUPS).map(([group, tfs]) => (
+                                <div key={group}>
+                                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">{group}</div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {tfs.map((tf: string) => (
+                                            <button
+                                                key={tf}
+                                                onClick={() => toggleTimeframe(tf)}
+                                                className={`px-4 py-2 rounded-lg font-medium transition-all ${selectedTimeframes.includes(tf)
+                                                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg'
+                                                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                                    }`}
+                                            >
+                                                {tf}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             ))}
                         </div>
-                        <p className="text-xs text-gray-500 mt-3">
-                            Multi-timeframe analysis uses all selected timeframes
+                        <p className="text-xs text-gray-500 mt-4">
+                            Selected: <span className="text-indigo-400">{selectedTimeframes.length > 0 ? selectedTimeframes.join(', ') : 'None'}</span>
                         </p>
                     </div>
 

@@ -42,6 +42,8 @@ export interface VolumeFeatures {
 export interface EnhancedPredictRequest {
     symbol: string;
     features: number[];
+    timeframes?: string[]; // Multi-timeframe config e.g. ['15m', '1h', '4h']
+    primaryTimeframe?: string; // Which TF was used for feature calculation
     smc?: SMCFeatures;
     volume?: VolumeFeatures;
     methodology?: string;
@@ -83,6 +85,7 @@ export interface RLParams {
     batch_size?: number;
     total_timesteps?: number;
     algorithm?: 'PPO' | 'SAC' | 'A2C';
+    timeframes?: string[]; // Training data timeframes
 }
 
 // ============================================================================

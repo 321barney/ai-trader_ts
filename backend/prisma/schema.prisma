@@ -215,6 +215,7 @@ model StrategyVersion {
   
   version         Int
   baseMethodology String   // SMC | ICT | Gann | Custom
+  timeframes      String[] @default(["1h"]) // Multi-timeframe configuration
   rules           Json     // StrategyRule[]
   learnings       Json     // string[] - COT learnings
   metrics         Json     // Performance metrics
@@ -401,6 +402,7 @@ model BacktestSession {
   
   // Configuration
   symbol            String
+  timeframes        String[] @default(["1h"]) // Multi-timeframe configuration
   initDate          DateTime
   endDate           DateTime
   initialCapital    Float

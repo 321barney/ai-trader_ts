@@ -154,15 +154,15 @@ export default function DashboardPage() {
                         <Link
                             href="/pricing"
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${subscription.plan === 'PRO'
-                                    ? 'bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20'
-                                    : subscription.plan === 'CUSTOM'
-                                        ? 'bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20'
-                                        : 'bg-gray-500/10 border border-gray-500/20 hover:bg-gray-500/20'
+                                ? 'bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20'
+                                : subscription.plan === 'CUSTOM'
+                                    ? 'bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20'
+                                    : 'bg-gray-500/10 border border-gray-500/20 hover:bg-gray-500/20'
                                 }`}
                         >
                             <span className={`text-sm font-medium ${subscription.plan === 'PRO' ? 'text-indigo-400'
-                                    : subscription.plan === 'CUSTOM' ? 'text-purple-400'
-                                        : 'text-gray-400'
+                                : subscription.plan === 'CUSTOM' ? 'text-purple-400'
+                                    : 'text-gray-400'
                                 }`}>
                                 {subscription.plan === 'PRO' ? '⭐ Pro' : subscription.plan === 'CUSTOM' ? '🏆 Custom' : '🆓 Free'}
                             </span>
@@ -360,6 +360,7 @@ export default function DashboardPage() {
                 <ScannerSettingsModal
                     activeModelId={activeModel?.id || null}
                     currentTimeframes={activeModel?.timeframes || []}
+                    isModelActive={activeModel?.status === 'ACTIVE'}
                     onClose={() => setShowScannerSettings(false)}
                     onSave={fetchDashboardData}
                 />

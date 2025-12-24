@@ -135,10 +135,11 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 /**
  * PUT /api/models/:id
  * Update a model (timeframes, parameters)
+ * NOTE: Changing timeframes on an ACTIVE model resets status to DRAFT
  */
 router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     try {
-        const { timeframes, parameters, methodology } = req.body;
+        const { timeframes, parameters, methodology, resetStatusOnChange } = req.body;
 
         const model = await db.tradingModel.findFirst({
             where: {
@@ -156,12 +157,36 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
         if (parameters) updateData.parameters = parameters;
         if (methodology) updateData.methodology = methodology;
 
+        // Check if timeframes changed on an active model
+        let statusReset = false;
+        const isActiveModel = model.isActive || model.status === 'ACTIVE';
+        const timeframesChanged = timeframes &&
+            JSON.stringify([...model.timeframes].sort()) !== JSON.stringify([...timeframes].sort());
+
+        if (isActiveModel && timeframesChanged && resetStatusOnChange) {
+            console.log(`[Models API] Timeframes changed on active model ${req.params.id} - resetting to DRAFT`);
+            updateData.status = 'DRAFT';
+            updateData.isActive = false;
+            updateData.approvedBy = [];
+            updateData.backtestResults = null;
+            updateData.winRate = null;
+            updateData.sharpeRatio = null;
+            updateData.maxDrawdown = null;
+            updateData.totalReturn = null;
+            statusReset = true;
+        }
+
         const updatedModel = await db.tradingModel.update({
             where: { id: req.params.id },
             data: updateData
         });
 
-        return successResponse(res, updatedModel, 'Model updated successfully');
+        return res.json({
+            success: true,
+            data: updatedModel,
+            message: statusReset ? 'Timeframes updated - model reset to DRAFT' : 'Model updated successfully',
+            statusReset
+        });
     } catch (error: any) {
         return errorResponse(res, error.message, 500);
     }

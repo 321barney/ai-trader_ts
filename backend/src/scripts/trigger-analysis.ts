@@ -23,6 +23,7 @@ async function main() {
     // Fetch data manually using scheduler service helper
     const multiTF = await schedulerService.fetchMultiTFData(
         symbol,
+        ['1h'], // Default timeframe for manual trigger
         user.asterApiKey || undefined,
         user.asterApiSecret || undefined
     );

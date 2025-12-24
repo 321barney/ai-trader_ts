@@ -43,6 +43,9 @@ class PredictRequest(BaseModel):
     """Request body for prediction endpoint."""
     symbol: str
     features: list[float]
+    # Multi-timeframe configuration
+    timeframes: Optional[list[str]] = None  # e.g. ['15m', '1h', '4h']
+    primaryTimeframe: Optional[str] = None  # Which TF was used for features
     # Enhanced features for SMC + Volume analysis
     smc: Optional[SMCFeatures] = None
     volume: Optional[VolumeFeatures] = None
@@ -90,6 +93,7 @@ class TrainRequest(BaseModel):
     symbols: Optional[list[str]] = None
     timesteps: Optional[int] = None
     algorithm: Optional[str] = None
+    timeframes: Optional[list[str]] = None  # Multi-TF training data
 
 
 class TrainResponse(BaseModel):
@@ -538,6 +542,7 @@ class ModelCreateRequest(BaseModel):
     """Model creation request."""
     symbol: str
     data: list
+    timeframes: Optional[list[str]] = None  # Multi-TF training config
     config: Optional[dict] = None
 
 

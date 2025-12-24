@@ -53,13 +53,15 @@ router.post('/signal', authMiddleware, onboardingCompleteMiddleware, asyncHandle
         // Fetch market data
         const multiTF = await schedulerService.fetchMultiTFData(
             symbol,
+            ['15m'], // Default timeframe for signal generation
             user.asterApiKey || undefined,
             user.asterApiSecret || undefined
         );
 
-        // Get latest candle from 15m timeframe for market data
-        const tf15m = multiTF.timeframes.tf15m;
-        const latestCandle = tf15m[tf15m.length - 1] || {};
+        // Get latest candle from the primary timeframe
+        const primaryTF = multiTF.primaryTimeframe || '15m';
+        const tfData = multiTF.timeframes[primaryTF] || [];
+        const latestCandle = tfData[tfData.length - 1] || {};
 
         // Build context for local RL
         const orchestrator = new AgentOrchestrator();
@@ -72,7 +74,6 @@ router.post('/signal', authMiddleware, onboardingCompleteMiddleware, asyncHandle
                 low: latestCandle.low || 0,
                 open: latestCandle.open || 0,
                 volume: latestCandle.volume || 0,
-                ...latestCandle,
             },
             methodology: user.methodology || 'SMC',
         };
@@ -275,6 +276,7 @@ router.post('/debug/trigger-analysis', authMiddleware, asyncHandler(async (req: 
         // Fetch Data
         const multiTF = await schedulerService.fetchMultiTFData(
             symbol || 'BTCUSDT',
+            ['1h'], // Default timeframe for debug analysis
             user.asterApiKey || undefined,
             user.asterApiSecret || undefined
         );

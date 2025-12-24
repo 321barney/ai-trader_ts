@@ -14,25 +14,10 @@ import { AsterService } from './aster.service.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { tradingService } from './trading.service.js';
 import { rlService } from './rl.service.js';
+import { marketDataService, MultiTFData } from './market-data.service.js';
 
-// Multi-TF data requirements (need 50+ candles for TA indicators)
-const TF_CONFIG = {
-    '5m': { interval: '5m' as const, minBars: 100 },
-    '15m': { interval: '15m' as const, minBars: 100 },
-    '1h': { interval: '1h' as const, minBars: 100 },
-    '4h': { interval: '4h' as const, minBars: 50 }
-};
-
-export interface MultiTFData {
-    symbol: string;
-    timeframes: {
-        tf5m: any[];
-        tf15m: any[];
-        tf1h: any[];
-        tf4h: any[];
-    };
-    fetchedAt: Date;
-}
+// Use centralized MultiTFData from market-data.service.ts
+// Legacy TF_CONFIG kept for reference but data fetching is now dynamic
 
 export class SchedulerService {
     private orchestrator: AgentOrchestrator;
@@ -91,27 +76,100 @@ export class SchedulerService {
     }
 
     /**
-     * Fetch multi-timeframe data for a symbol
+     * Fetch multi-timeframe data for a symbol (DELEGATES to marketDataService)
+     * Kept for backwards compatibility - internally uses centralized service
      */
-    async fetchMultiTFData(symbol: string, apiKey?: string, apiSecret?: string): Promise<MultiTFData> {
-        const aster = new AsterService(apiKey, apiSecret);
+    async fetchMultiTFData(symbol: string, timeframes: string[] = ['1h'], apiKey?: string, apiSecret?: string): Promise<MultiTFData> {
+        console.log(`[Scheduler] Delegating multi-TF fetch to marketDataService for ${symbol}`);
+        return marketDataService.fetchMultiTFData(symbol, timeframes, timeframes[0], apiKey, apiSecret);
+    }
 
-        console.log(`[Scheduler] Fetching multi-TF data for ${symbol}...`);
+    /**
+     * Check if ANY of the user's configured timeframes just closed
+     * Supports ALL possible timeframe combinations:
+     * - Minutes: 1m, 3m, 5m, 15m, 30m
+     * - Hours: 1h, 2h, 4h, 6h, 8h, 12h
+     * - Days/Weeks: 1d, 3d, 1w
+     */
+    private shouldTriggerForTimeframes(timeframes: string[], now: Date): { shouldTrigger: boolean; triggerReason: string } {
+        const minutes = now.getMinutes();
+        const hours = now.getHours();
+        const dayOfWeek = now.getDay(); // 0 = Sunday
 
-        const [tf5m, tf15m, tf1h, tf4h] = await Promise.all([
-            aster.getKlines(symbol, '5m', TF_CONFIG['5m'].minBars + 5),
-            aster.getKlines(symbol, '15m', TF_CONFIG['15m'].minBars + 5),
-            aster.getKlines(symbol, '1h', TF_CONFIG['1h'].minBars + 5),
-            aster.getKlines(symbol, '4h', TF_CONFIG['4h'].minBars + 5)
-        ]);
+        // Check each timeframe - trigger on the SMALLEST matching timeframe
+        // This ensures frequent strategies (scalping) get checked first
+        const triggeredTF: string[] = [];
 
-        console.log(`[Scheduler] Fetched: 5m=${tf5m.length}, 15m=${tf15m.length}, 1h=${tf1h.length}, 4h=${tf4h.length}`);
+        for (const tf of timeframes) {
+            if (this.isTimeframeClosed(tf, minutes, hours, dayOfWeek)) {
+                triggeredTF.push(tf);
+            }
+        }
 
-        return {
-            symbol,
-            timeframes: { tf5m, tf15m, tf1h, tf4h },
-            fetchedAt: new Date()
-        };
+        if (triggeredTF.length > 0) {
+            return {
+                shouldTrigger: true,
+                triggerReason: `${triggeredTF.join(', ')} candle(s) closed`
+            };
+        }
+
+        return { shouldTrigger: false, triggerReason: '' };
+    }
+
+    /**
+     * Check if a specific timeframe candle just closed
+     */
+    private isTimeframeClosed(tf: string, minutes: number, hours: number, dayOfWeek: number): boolean {
+        switch (tf) {
+            // Minute-based timeframes
+            case '1m':
+                return true; // Always triggers (every minute)
+            case '3m':
+                return minutes % 3 === 0;
+            case '5m':
+                return minutes % 5 === 0;
+            case '15m':
+                return minutes % 15 === 0;
+            case '30m':
+                return minutes % 30 === 0;
+
+            // Hour-based timeframes (require minutes === 0)
+            case '1h':
+                return minutes === 0;
+            case '2h':
+                return minutes === 0 && hours % 2 === 0;
+            case '4h':
+                return minutes === 0 && hours % 4 === 0;
+            case '6h':
+                return minutes === 0 && hours % 6 === 0;
+            case '8h':
+                return minutes === 0 && hours % 8 === 0;
+            case '12h':
+                return minutes === 0 && hours % 12 === 0;
+
+            // Daily timeframe (trigger at 00:00 UTC)
+            case '1d':
+            case 'D':
+                return minutes === 0 && hours === 0;
+
+            // 3-day timeframe
+            case '3d':
+                return minutes === 0 && hours === 0 && dayOfWeek % 3 === 0;
+
+            // Weekly (trigger on Monday 00:00 UTC - start of trading week)
+            case '1w':
+            case 'W':
+                return minutes === 0 && hours === 0 && dayOfWeek === 1;
+
+            // Monthly (first day of month at 00:00) - handled separately
+            case '1M':
+            case 'M':
+                return minutes === 0 && hours === 0 && new Date().getDate() === 1;
+
+            default:
+                console.warn(`[Scheduler] Unknown timeframe: ${tf}`);
+                return false;
+        }
     }
 
     /**
@@ -144,28 +202,13 @@ export class SchedulerService {
                     // Default to 1h if no model (legacy support)
                     const timeframes = activeModel?.timeframes || ['1h'];
 
-                    console.log(`[Scheduler] User ${user.id} Timeframes: ${timeframes.join(',')} (Current Min: ${minutes})`);
+                    console.log(`[Scheduler] User ${user.id} Timeframes: ${timeframes.join(',')} (Current: ${hours}:${minutes})`);
 
-                    let shouldTrigger = false;
-                    let triggerReason = '';
-
-                    // Check if any timeframe just closed
-                    if (timeframes.includes('1m')) {
-                        shouldTrigger = true; // Always trigger for 1m
-                        triggerReason = '1m candle';
-                    } else if (timeframes.includes('5m') && minutes % 5 === 0) {
-                        shouldTrigger = true;
-                        triggerReason = '5m candle';
-                    } else if (timeframes.includes('15m') && minutes % 15 === 0) {
-                        shouldTrigger = true;
-                        triggerReason = '15m candle';
-                    } else if (timeframes.includes('1h') && minutes === 0) {
-                        shouldTrigger = true;
-                        triggerReason = '1h candle';
-                    } else if (timeframes.includes('4h') && minutes === 0 && hours % 4 === 0) {
-                        shouldTrigger = true;
-                        triggerReason = '4h candle';
-                    }
+                    // Dynamic trigger check for ALL possible timeframes
+                    const { shouldTrigger, triggerReason } = this.shouldTriggerForTimeframes(
+                        timeframes as string[],
+                        now
+                    );
 
                     if (shouldTrigger) {
                         console.log(`[Scheduler] Triggering analysis for User ${user.id} (${triggerReason} closed)`);
@@ -183,9 +226,10 @@ export class SchedulerService {
                         }
 
                         for (const symbol of pairs.slice(0, 3)) {
-                            // Fetch Data
+                            // Fetch Data using DYNAMIC timeframes from model
                             const multiTF = await this.fetchMultiTFData(
                                 symbol,
+                                timeframes as string[],
                                 user.asterApiKey || undefined,
                                 user.asterApiSecret || undefined
                             );
@@ -333,6 +377,7 @@ export class SchedulerService {
 
         const multiTF = await this.fetchMultiTFData(
             symbol,
+            ['1h'], // Default timeframe for manual analysis
             user.asterApiKey || undefined,
             user.asterApiSecret || undefined
         );

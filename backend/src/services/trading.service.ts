@@ -6,11 +6,10 @@ import { prisma } from '../utils/prisma.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from './rl.service.js';
 import { AsterService, Position } from './aster.service.js';
-// import { signalTrackerService } from './signal-tracker.service.js'; // Already added in previous step, but I must match context carefully or just leave it since previously I added it. 
-// Actually I should just modify the line I know exists.
 import { signalTrackerService } from './signal-tracker.service.js';
 import { TechnicalAnalysisService } from './technical-analysis.service.js';
-import { MultiTFData } from './scheduler.service.js';
+import { marketDataService, MultiTFData } from './market-data.service.js';
+import { modelService } from './model.service.js';
 
 export class TradingService {
     private orchestrator: AgentOrchestrator;
@@ -153,8 +152,7 @@ export class TradingService {
                 selectedPairs: true,
                 marketAnalystModel: true,
                 riskOfficerModel: true,
-                strategyConsultantModel: true,
-                orchestratorModel: true
+                strategyConsultantModel: true
             }
         });
 
@@ -182,16 +180,34 @@ export class TradingService {
             throw new Error('User not found');
         }
 
-        // Fetch ACTIVE Strategy Version
+        // Fetch ACTIVE Trading Model (Source of Truth for Timeframes)
+        const activeModel = await modelService.getActiveModel(userId);
+
+        // Fallback to legacy StrategyVersion if no TradingModel
         const activeStrategy = await prisma.strategyVersion.findFirst({
             where: { userId, status: 'ACTIVE' }
         });
 
-        // Use Strategy Methodology if available, fall back to user setting
-        const methodology = activeStrategy?.baseMethodology || user.methodology || 'SMC';
+        // Use Strategy/Model Methodology if available, fall back to user setting
+        const methodology = activeModel?.methodology || activeStrategy?.baseMethodology || user.methodology || 'SMC';
 
-        // Get market data with strategy-specific analysis (SMC/ICT/Gann patterns)
-        const marketData = await this.getMarketData(symbol, methodology);
+        // Get timeframes from active model, or use sensible defaults
+        const timeframes = (activeModel?.timeframes as string[]) || ['1h'];
+        const primaryTimeframe = timeframes[0] || '1h';
+
+        console.log(`[TradingService] Running analysis for ${symbol} with TFs: [${timeframes.join(', ')}] (primary: ${primaryTimeframe})`);
+
+        // DYNAMIC: Fetch multi-TF data using user's configured timeframes
+        const multiTFData = await marketDataService.fetchMultiTFData(
+            symbol,
+            timeframes,
+            primaryTimeframe,
+            user.asterApiKey || undefined,
+            user.asterApiSecret || undefined
+        );
+
+        // Aggregate into agent-ready format with indicators calculated on PRIMARY timeframe
+        const marketData = marketDataService.aggregateMultiTF(multiTFData, methodology);
 
         // Get RL metrics
         const rlMetrics = await rlService.getMetrics();

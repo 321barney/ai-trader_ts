@@ -11,14 +11,18 @@ export class StrategyService {
     /**
      * Create a new strategy draft
      */
-    async createDraft(userId: string, baseMethodology: string, params: any) {
-        // Deactivate other drafts? No, simple CRUD.
+    async createDraft(userId: string, baseMethodology: string, params: any, timeframes: string[] = ['1h']) {
+        // Validate timeframes
+        const validTimeframes = Array.isArray(timeframes) && timeframes.length > 0
+            ? timeframes
+            : ['1h'];
 
         return await prisma.strategyVersion.create({
             data: {
                 userId,
                 version: await this.getNextVersionNumber(userId),
                 baseMethodology,
+                timeframes: validTimeframes,
                 rules: params,
                 learnings: [],
                 metrics: {},
@@ -135,7 +139,7 @@ export class StrategyService {
         return this.getActiveStrategy(userId);
     }
 
-    async createFromMethodology(userId: string, methodology: string) {
+    async createFromMethodology(userId: string, methodology: string, timeframes: string[] = ['1h']) {
         // Create a default active strategy for the user based on methodology
         const rules = this.getDefaultRules(methodology);
 
@@ -144,6 +148,7 @@ export class StrategyService {
                 userId,
                 version: await this.getNextVersionNumber(userId),
                 baseMethodology: methodology,
+                timeframes,
                 rules,
                 learnings: [],
                 metrics: {},

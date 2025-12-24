@@ -65,7 +65,7 @@ router.get('/active', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
-        const { baseMethodology, rules } = req.body;
+        const { baseMethodology, rules, timeframes } = req.body;
 
         if (!baseMethodology) {
             return res.status(400).json({
@@ -74,7 +74,12 @@ router.post('/', async (req: Request, res: Response) => {
             });
         }
 
-        const draft = await strategyService.createDraft(userId, baseMethodology, rules || {});
+        // Validate timeframes or use default
+        const validTimeframes = Array.isArray(timeframes) && timeframes.length > 0
+            ? timeframes
+            : ['1h'];
+
+        const draft = await strategyService.createDraft(userId, baseMethodology, rules || {}, validTimeframes);
 
         res.json({
             success: true,

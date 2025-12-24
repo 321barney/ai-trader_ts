@@ -34,12 +34,23 @@ class BacktestService {
         const msPerDay = 24 * 60 * 60 * 1000;
         const totalDays = Math.ceil((config.endDate.getTime() - config.initDate.getTime()) / msPerDay);
 
-        // Create session in database
+        // Fetch strategy to get its configured timeframes
+        const strategy = await prisma.strategyVersion.findUnique({
+            where: { id: config.strategyVersionId }
+        });
+
+        // Get timeframes from strategy or use default
+        const timeframes = (strategy as any)?.timeframes || ['1h'];
+
+        console.log(`[Backtest] Starting with TFs: [${timeframes.join(', ')}] from strategy ${config.strategyVersionId}`);
+
+        // Create session in database with timeframes from strategy
         const session = await prisma.backtestSession.create({
             data: {
                 userId,
                 strategyVersionId: config.strategyVersionId,
                 symbol: config.symbol,
+                timeframes, // Copy from strategy
                 initDate: config.initDate,
                 endDate: config.endDate,
                 initialCapital: config.initialCapital,
@@ -53,7 +64,7 @@ class BacktestService {
             }
         });
 
-        console.log(`[Backtest] Started session ${session.id} for ${config.symbol}`);
+        console.log(`[Backtest] Started session ${session.id} for ${config.symbol} with TFs: [${timeframes.join(', ')}]`);
 
         // Start background processing
         this.processBacktest(session.id);
@@ -139,6 +150,10 @@ class BacktestService {
         // Get methodology from strategy or user setting
         const methodology = strategyVersion?.baseMethodology || session.user.methodology || 'SMC';
 
+        // Get timeframes from strategy, session, or default
+        const timeframes = (strategyVersion as any)?.timeframes || (session as any).timeframes || ['1h'];
+        const primaryTF = timeframes[0] || '1h';
+
         // Get current portfolio state
         const currentValue = session.portfolioValue || session.initialCapital;
         const trades = (session.trades as any[]) || [];
@@ -147,48 +162,31 @@ class BacktestService {
         try {
             // Import orchestrator dynamically to avoid circular deps
             const { AgentOrchestrator } = await import('../agents/index.js');
-            const { AsterService } = await import('./aster.service.js');
-            const { TechnicalAnalysisService } = await import('./technical-analysis.service.js');
 
             // Create orchestrator instance
             const orchestratorInstance = new AgentOrchestrator();
 
-            // Fetch REAL market data from exchange
+            // Fetch REAL market data from exchange using DYNAMIC TIMEFRAMES
             let marketData: any;
             try {
-                // Use public API (no keys needed for market data)
-                const asterService = new AsterService('', '', true);
+                // Use centralized marketDataService with dynamic timeframes
+                const multiTF = await marketDataService.fetchMultiTFData(
+                    session.symbol,
+                    timeframes,
+                    primaryTF
+                );
 
-                // Get 24hr ticker
-                const ticker = await asterService.getTicker(session.symbol);
-
-                // Get klines for technical analysis
-                const klines = await asterService.getKlines(session.symbol, '1h', 100);
-
-                // Calculate indicators with strategy-specific patterns
-                const highs = klines.map(k => k.high);
-                const lows = klines.map(k => k.low);
-                const closes = klines.map(k => k.close);
-                const opens = klines.map(k => k.open);
-                const indicators = TechnicalAnalysisService.analyze(highs, lows, closes, opens, methodology);
+                // Aggregate with methodology-specific indicator calculation
+                const aggregated = marketDataService.aggregateMultiTF(multiTF, methodology);
 
                 marketData = {
-                    ...indicators, // Include all strategy-specific fields first
-                    symbol: session.symbol,
-                    currentPrice: ticker.price,
-                    change24h: ticker.priceChangePercent,
-                    high24h: ticker.high24h,
-                    low24h: ticker.low24h,
-                    volume: ticker.volume24h,
-                    rsi: indicators.rsi,
-                    macd: indicators.macd.MACD || 0, // Overwrite object with scalar for prompt compatibility
-                    atr: indicators.atr,
-                    bollinger: indicators.bollinger,
-                    methodology: methodology,
-                    timestamp: nextDate
+                    ...aggregated,
+                    timestamp: nextDate,
+                    // Ensure scalar MACD for prompt compatibility
+                    macd: aggregated.macd,
                 };
 
-                console.log(`[Backtest] Step ${nextStep}: ${methodology} analysis - Price: $${ticker.price}, RSI: ${indicators.rsi?.toFixed(1)}`);
+                console.log(`[Backtest] Step ${nextStep}: ${methodology} TFs:[${timeframes.join(',')}] - Price: $${aggregated.currentPrice}, RSI: ${aggregated.rsi?.toFixed(1)}`);
             } catch (fetchError) {
                 console.warn(`[Backtest] Failed to fetch real data, using last known:`, fetchError);
                 // Fallback: minimal simulated data
