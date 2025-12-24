@@ -53,10 +53,10 @@ The core of AISTER is its multi-agent system. No single agent makes a decision a
 - **Powers**: **VETO Power** on any trade deemed too risky.
 - **Logic**: Calculates Kelly Criterion for sizing, checks portfolio exposure, and enforces max drawdown limits.
 
-### 3. Market Analyst (The "Navigator")
-- **Role**: Analyzes the broader environment.
-- **Focus**: Sentiment analysis, On-chain data (Whale tracking), and news impact.
-- **Input**: Provides the context (Bullish/Bearish/Neutral) to the Council.
+### 3. Market Analyst (The "Timekeeper")
+- **Role**: Analyzes market alignment and temporal patterns.
+- **Focus**: Time cycle analysis, session timing (London/NY), and cyclical turning points.
+- **Input**: Provides the "WHEN" to the Council (e.g., "Wait for 10am reversal").
 
 **Orchestrator**: The central system that facilitates the debate between these agents and executes the final consensus.
 
@@ -97,8 +97,8 @@ The lifecycle of a trade in AISTER:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/aister.git
-   cd aister
+   git clone https://github.com/321barney/ai-trader.git
+   cd ai-trader
    ```
 
 2. **Start Infrastructure**
