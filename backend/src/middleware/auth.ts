@@ -7,6 +7,26 @@ import { prisma } from '../utils/prisma.js';
 import { verifyToken, JwtPayload } from '../utils/jwt.js';
 import { unauthorizedResponse } from '../utils/response.js';
 
+// Rate-limited logging: track last log time per token prefix
+const authLogCache = new Map<string, number>();
+const AUTH_LOG_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+
+function shouldLogAuth(tokenPrefix: string): boolean {
+    const now = Date.now();
+    const lastLog = authLogCache.get(tokenPrefix);
+    if (!lastLog || now - lastLog > AUTH_LOG_INTERVAL_MS) {
+        authLogCache.set(tokenPrefix, now);
+        // Clean old entries periodically (keep map small)
+        if (authLogCache.size > 100) {
+            const cutoff = now - AUTH_LOG_INTERVAL_MS;
+            for (const [key, time] of authLogCache.entries()) {
+                if (time < cutoff) authLogCache.delete(key);
+            }
+        }
+        return true;
+    }
+    return false;
+}
 
 // Extend Express Request type
 declare global {
@@ -31,7 +51,12 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
         }
 
         const token = authHeader.split(' ')[1];
-        console.log('[Auth Middleware] Verifying token:', token.substring(0, 20) + '...');
+        const tokenPrefix = token.substring(0, 20);
+
+        // Rate-limited logging (once per 10 min per token)
+        if (shouldLogAuth(tokenPrefix)) {
+            console.log('[Auth Middleware] Verifying token:', tokenPrefix + '...');
+        }
 
         // Verify token
         const payload = verifyToken(token);

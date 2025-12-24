@@ -283,6 +283,197 @@ export class RLService {
             };
         }
     }
+
+    // ============================================================================
+    // Model Lifecycle Management
+    // ============================================================================
+
+    /**
+     * Check if a trained model is available on the RL service
+     */
+    async checkModelAvailability(): Promise<{ available: boolean; modelId?: string; lastTrained?: string; metrics?: RLMetrics }> {
+        try {
+            const response = await fetch(`${this.baseUrl}/model/status`, {
+                method: 'GET',
+                signal: AbortSignal.timeout(5000),
+            });
+
+            if (!response.ok) {
+                return { available: false };
+            }
+
+            const data = await response.json() as any;
+            return {
+                available: data.modelLoaded || false,
+                modelId: data.modelId,
+                lastTrained: data.lastTrained,
+                metrics: data.metrics
+            };
+        } catch (error) {
+            console.warn('[RL Service] Model availability check failed:', error);
+            return { available: false };
+        }
+    }
+
+    /**
+     * Initiate model creation workflow:
+     * 1. Fetch historical data
+     * 2. Send to RL for training
+     * 3. Wait for training completion
+     * 4. Backtest the model
+     * 5. Return performance metrics
+     */
+    async initiateModelCreation(symbol: string, historicalData: any[]): Promise<{
+        success: boolean;
+        modelId?: string;
+        metrics?: { winRate: number; sharpeRatio: number; maxDrawdown: number };
+        error?: string;
+    }> {
+        try {
+            console.log(`[RL Service] Initiating model creation for ${symbol} with ${historicalData.length} data points`);
+
+            // Step 1: Send data for training
+            const trainResponse = await fetch(`${this.baseUrl}/model/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol,
+                    data: historicalData,
+                    config: {
+                        algorithm: 'PPO',
+                        total_timesteps: 50000,
+                        learning_rate: 0.0003
+                    }
+                }),
+            });
+
+            if (!trainResponse.ok) {
+                const error = await trainResponse.text();
+                throw new Error(`Training initiation failed: ${error}`);
+            }
+
+            const trainResult = await trainResponse.json() as any;
+            console.log(`[RL Service] Training started, job ID: ${trainResult.jobId}`);
+
+            // Step 2: Poll for training completion (with timeout)
+            const maxWaitTime = 10 * 60 * 1000; // 10 minutes max
+            const pollInterval = 5000; // 5 seconds
+            const startTime = Date.now();
+
+            while (Date.now() - startTime < maxWaitTime) {
+                const status = await this.getTrainingStatus();
+
+                if (status.status === 'completed') {
+                    console.log('[RL Service] Training completed successfully');
+                    break;
+                } else if (status.status === 'failed') {
+                    throw new Error('Training failed');
+                }
+
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
+            }
+
+            // Step 3: Get model metrics
+            const metrics = await this.getMetrics();
+
+            // Step 4: Backtest (trigger backtest on RL service)
+            const backtestResponse = await fetch(`${this.baseUrl}/model/backtest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ symbol }),
+            });
+
+            let backtestMetrics = { winRate: 0, sharpeRatio: 0, maxDrawdown: 0 };
+            if (backtestResponse.ok) {
+                backtestMetrics = await backtestResponse.json() as any;
+            }
+
+            return {
+                success: true,
+                modelId: trainResult.modelId,
+                metrics: {
+                    winRate: backtestMetrics.winRate || metrics.winRate,
+                    sharpeRatio: backtestMetrics.sharpeRatio || metrics.sharpeRatio,
+                    maxDrawdown: backtestMetrics.maxDrawdown || metrics.maxDrawdown
+                }
+            };
+
+        } catch (error: any) {
+            console.error('[RL Service] Model creation failed:', error);
+            return {
+                success: false,
+                error: error.message || 'Unknown error'
+            };
+        }
+    }
+
+    /**
+     * Feed new market data to update model parameters (called every 6h)
+     */
+    async updateModelWithNewData(symbol: string, newData: any[]): Promise<boolean> {
+        try {
+            console.log(`[RL Service] Updating model with ${newData.length} new data points for ${symbol}`);
+
+            const response = await fetch(`${this.baseUrl}/model/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol,
+                    data: newData,
+                    updateType: 'incremental'
+                }),
+            });
+
+            if (response.ok) {
+                console.log('[RL Service] Model parameters updated successfully');
+                return true;
+            }
+
+            console.warn('[RL Service] Model update failed:', await response.text());
+            return false;
+        } catch (error) {
+            console.error('[RL Service] Model update error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Get RL prediction for council participation
+     * Returns structured decision for deliberation
+     */
+    async getModelPredictionForCouncil(request: EnhancedPredictRequest): Promise<{
+        vote: 'LONG' | 'SHORT' | 'HOLD';
+        confidence: number;
+        reasoning: string;
+        entryPrice?: number;
+        stopLoss?: number;
+        takeProfit?: number;
+    } | null> {
+        try {
+            // First check if model is available
+            const availability = await this.checkModelAvailability();
+            if (!availability.available) {
+                console.log('[RL Service] No model available for council participation');
+                return null;
+            }
+
+            // Get prediction
+            const prediction = await this.predictEnhanced(request);
+
+            return {
+                vote: prediction.action,
+                confidence: prediction.confidence,
+                reasoning: prediction.reasoning || `RL Model prediction: ${prediction.action} with ${(prediction.confidence * 100).toFixed(1)}% confidence. Expected return: ${(prediction.expectedReturn * 100).toFixed(2)}%`,
+                entryPrice: prediction.entry,
+                stopLoss: prediction.stopLoss,
+                takeProfit: prediction.takeProfit
+            };
+        } catch (error) {
+            console.error('[RL Service] Council prediction failed:', error);
+            return null;
+        }
+    }
 }
 
 export const rlService = new RLService();
+

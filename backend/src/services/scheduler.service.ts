@@ -13,13 +13,14 @@ import { modelService } from './model.service.js';
 import { AsterService } from './aster.service.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { tradingService } from './trading.service.js';
+import { rlService } from './rl.service.js';
 
-// Multi-TF data requirements
+// Multi-TF data requirements (need 50+ candles for TA indicators)
 const TF_CONFIG = {
-    '5m': { interval: '5m' as const, minBars: 10 },
-    '15m': { interval: '15m' as const, minBars: 5 },
-    '1h': { interval: '1h' as const, minBars: 4 },
-    '4h': { interval: '4h' as const, minBars: 12 }
+    '5m': { interval: '5m' as const, minBars: 100 },
+    '15m': { interval: '15m' as const, minBars: 100 },
+    '1h': { interval: '1h' as const, minBars: 100 },
+    '4h': { interval: '4h' as const, minBars: 50 }
 };
 
 export interface MultiTFData {
@@ -55,6 +56,16 @@ export class SchedulerService {
         // Market Analysis: Start fast polling (Every minute)
         cron.schedule('* * * * *', () => {
             this.runMarketAnalysisForAllUsers();
+        });
+
+        // RL Model Check: Every 10 minutes
+        cron.schedule('*/10 * * * *', () => {
+            this.checkRLModelLifecycle();
+        });
+
+        // RL Model Update: Every 6 hours (at minute 0)
+        cron.schedule('0 */6 * * *', () => {
+            this.updateRLModelWithNewData();
         });
 
         // Drawdown Check: Every hour
@@ -333,6 +344,102 @@ export class SchedulerService {
             marketData: this.aggregateMultiTFData(multiTF)
         });
     }
+
+    // ============================================================================
+    // RL Model Lifecycle Methods
+    // ============================================================================
+
+    /**
+     * Check RL service availability and model status (every 10 minutes)
+     * If online but no model, initiate model creation
+     */
+    async checkRLModelLifecycle() {
+        console.log('[Scheduler] Checking RL model lifecycle...');
+
+        try {
+            // Step 1: Check if RL service is online
+            const isOnline = await rlService.isAvailable();
+            if (!isOnline) {
+                console.log('[Scheduler] RL service offline, skipping lifecycle check');
+                return;
+            }
+
+            // Step 2: Check if a model is available
+            const modelStatus = await rlService.checkModelAvailability();
+
+            if (modelStatus.available) {
+                console.log(`[Scheduler] RL model available (ID: ${modelStatus.modelId})`);
+                return;
+            }
+
+            // Step 3: No model - initiate creation
+            console.log('[Scheduler] No RL model found, initiating creation...');
+
+            // Fetch historical data for training (use BTCUSDT as default)
+            const symbol = 'BTCUSDT';
+            const aster = new AsterService();
+            const historicalData = await aster.getKlines(symbol, '1h', 500);
+
+            // Initiate model creation
+            const result = await rlService.initiateModelCreation(symbol, historicalData);
+
+            if (result.success) {
+                console.log(`[Scheduler] RL model created successfully! Metrics:`, result.metrics);
+
+                // Evaluate if model meets minimum criteria
+                if (result.metrics && result.metrics.winRate < 0.4) {
+                    console.log('[Scheduler] Model win rate below 40%, triggering retrain...');
+                    await rlService.startTraining({ symbols: [symbol], timesteps: 100000 });
+                }
+            } else {
+                console.error('[Scheduler] RL model creation failed:', result.error);
+            }
+
+        } catch (error) {
+            console.error('[Scheduler] RL lifecycle check failed:', error);
+        }
+    }
+
+    /**
+     * Update RL model with new market data (every 6 hours)
+     */
+    async updateRLModelWithNewData() {
+        console.log('[Scheduler] Updating RL model with new data...');
+
+        try {
+            // Check if RL service is online
+            const isOnline = await rlService.isAvailable();
+            if (!isOnline) {
+                console.log('[Scheduler] RL service offline, skipping update');
+                return;
+            }
+
+            // Check if model exists
+            const modelStatus = await rlService.checkModelAvailability();
+            if (!modelStatus.available) {
+                console.log('[Scheduler] No model to update');
+                return;
+            }
+
+            // Fetch last 6 hours of data (6 * 60 / 5 = 72 candles for 5m, or 6 for 1h)
+            const symbol = 'BTCUSDT';
+            const aster = new AsterService();
+            const newData = await aster.getKlines(symbol, '1h', 24); // Last 24 hours
+
+            // Send to RL for parameter update
+            const updated = await rlService.updateModelWithNewData(symbol, newData);
+
+            if (updated) {
+                console.log('[Scheduler] RL model parameters updated successfully');
+            } else {
+                console.warn('[Scheduler] RL model update failed');
+            }
+
+        } catch (error) {
+            console.error('[Scheduler] RL model update failed:', error);
+        }
+    }
 }
 
 export const schedulerService = new SchedulerService();
+

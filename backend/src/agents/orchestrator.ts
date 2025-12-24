@@ -27,7 +27,8 @@ export interface CounselResult {
     votes: {
         strategy: string;
         risk: string;
-        market: string;  // Now from TIME CYCLE analyst
+        market: string;  // From TIME CYCLE analyst
+        rl?: string;     // From RL model (if available)
     };
     consensus: boolean;
     finalVerdict: 'LONG' | 'SHORT' | 'HOLD';
@@ -335,7 +336,7 @@ export class AgentOrchestrator {
     }
 
     /**
-     * Conduct a counsel deliberation among the 3 agents
+     * Conduct a counsel deliberation among the 3+ agents (includes RL if available)
      * Each agent reviews others' opinions and they vote to reach consensus
      */
     private async conductCounsel(
@@ -347,26 +348,47 @@ export class AgentOrchestrator {
     ): Promise<CounselResult> {
         console.log('[Counsel] Starting deliberation phase...');
 
-        // Collect initial votes
+        // Get RL prediction for council (if model available)
+        let rlVote: { vote: string; confidence: number; reasoning: string } | null = null;
+        try {
+            const rlPrediction = await this.rlService.getModelPredictionForCouncil(
+                this.buildEnhancedPredictRequest(context)
+            );
+            if (rlPrediction) {
+                rlVote = {
+                    vote: rlPrediction.vote,
+                    confidence: rlPrediction.confidence,
+                    reasoning: rlPrediction.reasoning
+                };
+                console.log(`[Counsel] RL model vote: ${rlVote.vote} (${(rlVote.confidence * 100).toFixed(1)}%)`);
+            }
+        } catch (e) {
+            console.log('[Counsel] RL model unavailable for council');
+        }
+
+        // Collect initial votes (now including RL if available)
         const initialVotes = {
             strategy: strategyDecision.decision,
             risk: riskAssessment.decision === 'APPROVED' ? strategyDecision.decision : 'HOLD',
-            market: this.extractMarketVote(marketAnalysis)
+            market: this.extractMarketVote(marketAnalysis),
+            rl: rlVote?.vote
         };
 
-        // Check for unanimous agreement
-        const votes = [initialVotes.strategy, initialVotes.risk, initialVotes.market];
-        const longVotes = votes.filter(v => v === 'LONG').length;
-        const shortVotes = votes.filter(v => v === 'SHORT').length;
-        const holdVotes = votes.filter(v => v === 'HOLD' || v === 'BLOCKED').length;
+        // Check for unanimous agreement (3 agents + optional RL)
+        const humanVotes = [initialVotes.strategy, initialVotes.risk, initialVotes.market];
+        const allVotes = rlVote ? [...humanVotes, rlVote.vote] : humanVotes;
+        const longVotes = allVotes.filter(v => v === 'LONG').length;
+        const shortVotes = allVotes.filter(v => v === 'SHORT').length;
+        const holdVotes = allVotes.filter(v => v === 'HOLD' || v === 'BLOCKED').length;
+        const totalVotes = allVotes.length;
 
-        // If unanimous, no deliberation needed
-        if (longVotes === 3 || shortVotes === 3) {
+        // If unanimous (all votes agree), no deliberation needed
+        if (longVotes === totalVotes || shortVotes === totalVotes) {
             return {
                 deliberation: 'Unanimous agreement - no deliberation needed.',
                 votes: initialVotes,
                 consensus: true,
-                finalVerdict: longVotes === 3 ? 'LONG' : 'SHORT',
+                finalVerdict: longVotes === totalVotes ? 'LONG' : 'SHORT',
                 escalated: false
             };
         }
@@ -409,14 +431,20 @@ Reasoning: ${marketAnalysis.reasoning.substring(0, 400)}...
 📰 NEWS CONTEXT:
 ${newsInfo}
 
+🤖 RL MODEL ${rlVote ? `votes: ${rlVote.vote}` : '(offline)'}
+${rlVote ? `(Reinforcement Learning Quantitative Analysis)
+Confidence: ${(rlVote.confidence * 100).toFixed(1)}%
+Reasoning: ${rlVote.reasoning.substring(0, 300)}...` : 'RL model not available for this session'}
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-VOTE COUNT: LONG=${longVotes} | SHORT=${shortVotes} | HOLD=${holdVotes}
+VOTE COUNT: LONG=${longVotes} | SHORT=${shortVotes} | HOLD=${holdVotes}${rlVote ? ` (includes RL)` : ''}
 
 CONFIDENCE SCORES:
 - Strategy: ${strategyDecision.confidence.toFixed(2)}
 - Risk: ${riskAssessment.confidence.toFixed(2)}  
-- Market/Cycles: ${marketAnalysis.confidence.toFixed(2)}
+- Market/Cycles: ${marketAnalysis.confidence.toFixed(2)}${rlVote ? `
+- RL Model: ${rlVote.confidence.toFixed(2)}` : ''}
 
 DELIBERATION RULES:
 1. Time Cycles provide TIMING - if cycles say "turn window", be cautious
