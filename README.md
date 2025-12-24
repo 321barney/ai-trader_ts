@@ -1,176 +1,136 @@
 # AISTER - AI Trader 🤖📈
 
-An AI-powered cryptocurrency trading platform with multi-agent decision making, self-improving strategies, and AsterDex exchange integration.
+An advanced, autonomous cryptocurrency trading platform powered by multi-agent AI, reinforcement learning, and real-time market analysis. AISTER integrates with the AsterDex exchange to execute trades with institutional-grade risk management.
 
 ## 🌟 Core Features
 
 | Feature | Description |
 |---------|-------------|
-| **Multi-Agent AI** | 3 specialized agents using Chain-of-Thought reasoning |
-| **Hybrid RL** | Combine LLM with trained RL model |
-| **Strategy Lifecycle** | Draft → Test → Approve → Active flow |
-| **Signal Tracking** | Monitor predictions with win/loss outcomes |
-| **Live Trading** | Auto-execute on AsterDex with risk controls |
+| **Multi-Agent Council** | A "brain" consisting of 3 specialized agents (Strategy, Risk, Market) that debate and vote on every trade. |
+| **Hybrid Intelligence** | Combines Large Language Models (DeepSeek/GPT-4) for reasoning with Reinforcement Learning (PPO/DQN) for precision. |
+| **Strategy Lab** | Create, backtest, and promote strategies from a visual interface. Strategies must pass backtests before activation. |
+| **Safety First** | Institutional-grade risk management with 'Circuit Breakers', automated position sizing, and draw-down protection. |
+| **Real-Time Execution** | Direct integration with AsterDex for low-latency trade execution and portfolio management. |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Technology Stack
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        FRONTEND                              │
-│  Next.js 15 • React 19 • TypeScript • TailwindCSS           │
-│                                                              │
-│  Pages: Dashboard, Strategy Lab, Backtest, Settings         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                        BACKEND                               │
-│  Express • TypeScript • Prisma ORM • PostgreSQL             │
-│                                                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Scheduler  │  │   Routes    │  │  Services   │         │
-│  │  (5m/1m)    │  │   (REST)    │  │   (Core)    │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     AI AGENTS                                │
-│  ┌───────────────┐ ┌───────────────┐ ┌───────────────┐     │
-│  │   Strategy    │ │     Risk      │ │    Market     │     │
-│  │  Consultant   │ │   Officer     │ │   Analyst     │     │
-│  │   (LLM)       │ │   (Veto)      │ │ (Sentiment)   │     │
-│  └───────────────┘ └───────────────┘ └───────────────┘     │
-│                           │                                  │
-│                     Orchestrator                             │
-└─────────────────────────────────────────────────────────────┘
-```
+AISTER is built with a modern, high-performance stack designed for reliability and speed.
+
+### Frontend (User Interface)
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+- **Language**: TypeScript
+- **Styling**: TailwindCSS 4
+- **State Management**: React 19 Hooks
+- **Features**: Real-time charts, Agent "Thought" visualization, Interactive Backtest Lab.
+
+### Backend (Core Logic)
+- **Runtime**: Node.js 20+
+- **Framework**: Express.js
+- **Database**: PostgreSQL (via Prisma ORM)
+- **Queue System**: BullMQ (Redis-based) for handling concurrent backtests and agent tasks.
+- **Security**: Helmet, Rate Limiting, JWT (Access + Refresh tokens).
+
+### AI & Data Science (The Brain)
+- **RL Service**: Python 3.10+, FastAPI, PyTorch / Stable-Baselines3.
+- **LLM Integration**: DeepSeek V3 (Reasoning), OpenAI (Fallback).
+- **Data Pipeline**: Real-time fetching from AsterDex, calculated technical indicators (RSI, MACD, Bollinger Bands).
 
 ---
 
-## 🤖 AI Agents
+## 🤖 The AI Council
 
-### Strategy Consultant
-- Analyzes market with SMC, ICT, or Gann methodology
-- Decides LONG / SHORT / HOLD
-- Provides entry, stop-loss, take-profit levels
+The core of AISTER is its multi-agent system. No single agent makes a decision alone; they function as a council.
 
-### Risk Officer
-- Calculates position sizing (Kelly Criterion)
-- **Veto power** on risky trades
-- Monitors portfolio exposure and drawdown
+### 1. Strategy Consultant ( The "Visionary")
+- **Role**: Identifies setups and proposes trades.
+- **Methodology**: Uses SMC (Smart Money Concepts), ICT, and Gann Theory.
+- **Output**: Proposal (Entry, SL, TP, Reasoning).
 
-### Market Analyst
-- Sentiment analysis from on-chain + social
-- Whale movement tracking
-- News event impact assessment
+### 2. Risk Officer (The "Guardian")
+- **Role**: Protects capital above all else.
+- **Powers**: **VETO Power** on any trade deemed too risky.
+- **Logic**: Calculates Kelly Criterion for sizing, checks portfolio exposure, and enforces max drawdown limits.
 
----
+### 3. Market Analyst (The "Navigator")
+- **Role**: Analyzes the broader environment.
+- **Focus**: Sentiment analysis, On-chain data (Whale tracking), and news impact.
+- **Input**: Provides the context (Bullish/Bearish/Neutral) to the Council.
 
-## 📊 Services
-
-| Service | Purpose |
-|---------|---------|
-| `AsterService` | Exchange API (pairs, OHLCV, orders, balances) |
-| `MarketDataService` | Technical indicators (RSI, MACD, EMA, ATR) |
-| `TradingService` | Analysis + execution orchestration |
-| `StrategyService` | Strategy lifecycle management |
-| `SignalTrackerService` | Track signal outcomes |
-| `PerformanceService` | Sharpe, drawdown, win rate |
+**Orchestrator**: The central system that facilitates the debate between these agents and executes the final consensus.
 
 ---
 
-## 🚀 Getting Started
+## 🛠️ Systems Overview
+
+### Trading Management System
+The lifecycle of a trade in AISTER:
+1.  **Signal Generation**: Strategy Consultant analyzes market data and proposes a trade.
+2.  **Council Deliberation**: Market Analyst adds context; Risk Officer evaluates safety.
+3.  **Vote**: If Consensus is reached and Risk Officer approves, the trade is "Greenlit".
+4.  **Execution**: The transaction is signed and sent to AsterDex.
+5.  **Monitoring**: Position Manager tracks the trade, adjusting trailing stops or closing regular TP/SL.
+
+### User Management & Security
+- **Onboarding Flow**: New users are guided through a setup wizard to configure API keys and risk preferences.
+- **Authentication**: Secure JWT-based auth with automatic token refreshing.
+- **Data Privacy**: API keys are encrypted at rest.
+
+---
+
+## 🚀 Speed & Performance
+- **Backtesting**: Optimized historical replay engine capable of processing months of data in seconds.
+- **Latency**: Minimized internal latency for "Tick-to-Trade" efficiency.
+
+---
+
+## 📦 Installation & Setup
 
 ### Prerequisites
 - Node.js 20+
+- Python 3.10+
 - PostgreSQL
-- AsterDex API credentials
-- LLM API key (DeepSeek, OpenAI, Claude, or Gemini)
+- Redis (for Queues)
 
 ### Quick Start
-```bash
-# Clone
-git clone https://github.com/yourusername/ai-trader.git
-cd ai-trader
 
-# Database
-docker-compose up -d
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/yourusername/aister.git
+   cd aister
+   ```
 
-# Backend
-cd backend
-npm install
-cp .env.example .env
-npx prisma generate && npx prisma db push
-npm run dev
+2. **Start Infrastructure**
+   ```bash
+   docker-compose up -d
+   ```
 
-# Frontend
-cd ../frontend
-npm install
-npm run dev
-```
+3. **Backend Setup**
+   ```bash
+   cd backend
+   npm install
+   cp .env.example .env
+   npx prisma db push
+   npm run dev
+   ```
 
----
+4. **Frontend Setup**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-## ⚙️ Configuration
-
-### Trading Modes
-| Mode | Behavior |
-|------|----------|
-| **Signal** | Generate signals only, no execution |
-| **Trade** | Auto-execute trades (requires tested strategy) |
-
-### Agent Decision Modes
-| Mode | Behavior |
-|------|----------|
-| **AI Agents** | LLM-based analysis |
-| **RL Only** | Trained model predictions |
-| **Hybrid** | AI + RL combined (consensus boost) |
-
----
-
-## 🔒 Safety Controls
-
-1. **Strategy Must Be Tested** - Can't go live without backtest
-2. **User Approval Required** - Must approve after backtest
-3. **Drawdown Protection** - Trading stops if max drawdown exceeded
-4. **Position Sizing** - Uses configurable % of capital
-
----
-
-## 📈 Performance Metrics
-
-- **Sharpe Ratio**: Risk-adjusted returns
-- **Sortino Ratio**: Downside risk only
-- **Max Drawdown**: Peak-to-trough loss
-- **Win Rate**: Percentage of winning trades
-- **Profit Factor**: Gross profit / gross loss
-
----
-
-## 🐳 Deployment (Railway)
-
-Both services have Docker builds:
-- Backend: `npm run build` in Dockerfile
-- Frontend: Multi-stage build with standalone output
-
-```toml
-# railway.toml
-[[services]]
-name = "backend"
-root = "backend"
-dockerfilePath = "Dockerfile"
-
-[[services]]
-name = "frontend"
-root = "frontend"
-dockerfilePath = "Dockerfile"
-```
+5. **AI Service Setup**
+   ```bash
+   cd rl-service
+   pip install -e .
+   uvicorn src.main:app --reload
+   ```
 
 ---
 
 ## 📜 License
 
-MIT
+MIT License. Built for the future of decentralized trading.
