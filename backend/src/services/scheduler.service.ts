@@ -12,6 +12,7 @@ import { prisma } from '../utils/prisma.js';
 import { modelService } from './model.service.js';
 import { AsterService } from './aster.service.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
+import { tradingService } from './trading.service.js';
 
 // Multi-TF data requirements
 const TF_CONFIG = {
@@ -131,13 +132,12 @@ export class SchedulerService {
                             user.asterApiSecret || undefined
                         );
 
-                        // Run analysis with caching (will update cache)
-                        await this.orchestrator.analyzeWithCaching({
-                            userId: user.id,
+                        // Run analysis and execution via TradingService
+                        await tradingService.executeScheduledAnalysis(
+                            user.id,
                             symbol,
-                            methodology: user.methodology,
-                            marketData: this.aggregateMultiTFData(multiTF)
-                        });
+                            multiTF
+                        );
                     }
 
                     console.log(`[Scheduler] Completed analysis for user ${user.id}`);

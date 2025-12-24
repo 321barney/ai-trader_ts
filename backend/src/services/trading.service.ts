@@ -7,6 +7,7 @@ import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from './rl.service.js';
 import { AsterService } from './aster.service.js';
 import { TechnicalAnalysisService } from './technical-analysis.service.js';
+import { MultiTFData } from './scheduler.service.js';
 
 export class TradingService {
     private orchestrator: AgentOrchestrator;
@@ -259,6 +260,21 @@ export class TradingService {
             throw error; // Re-throw to stop execution
         }
 
+        await this.handleTradingDecision(userId, symbol, decision, user, activeStrategy);
+
+        return decision;
+    }
+
+    /**
+     * Handle trading decision (Save DB, Create Signal, Execute Trade)
+     */
+    private async handleTradingDecision(
+        userId: string,
+        symbol: string,
+        decision: any,
+        user: any,
+        activeStrategy: any
+    ) {
         // Determine source mode: TRADE if executing, SIGNAL if signal-only
         const sourceMode = (user.tradingEnabled && user.tradingMode === 'trade') ? 'TRADE' : 'SIGNAL';
 
@@ -278,7 +294,7 @@ export class TradingService {
                 decision: decision.finalDecision,
                 confidence: decision.confidence,
                 symbol,
-                marketData: marketData as any,
+                marketData: decision.marketAnalysis?.data || {},
                 isBacktest: false,
                 sourceMode: sourceMode
             }
@@ -292,8 +308,8 @@ export class TradingService {
                     symbol,
                     direction: decision.finalDecision,
                     confidence: decision.confidence,
-                    methodology: decision.strategyMode || methodology,
-                    entryPrice: marketData.currentPrice,
+                    methodology: decision.strategyMode || user.methodology || 'SMC',
+                    entryPrice: decision.entryPrice || 0, // Ensure entry price is captured
                     stopLoss: decision.stopLoss,
                     takeProfit: decision.takeProfit,
                     agentDecisionId: agentDecision.id,
@@ -303,7 +319,7 @@ export class TradingService {
             });
         }
 
-        if (decision.finalDecision !== 'HOLD' && decision.confidence > 70) {
+        if (decision.finalDecision !== 'HOLD' && decision.confidence > 0.7) {
             // If trading is enabled and mode is 'trade' AND we have an active strategy, execute
             if (user.tradingEnabled && user.tradingMode === 'trade' && activeStrategy) {
                 await this.executeOrder(userId, decision, symbol);
@@ -311,12 +327,107 @@ export class TradingService {
                 console.warn(`[TradingService] User ${userId} wants to trade but no ACTIVE strategy. Skipping execution.`);
             }
         }
-
-        return decision;
     }
 
     /**
-     * Get market data (mock for now)
+     * Execute scheduled analysis (Called by Scheduler)
+     */
+    async executeScheduledAnalysis(userId: string, symbol: string, multiTFData: MultiTFData) {
+        console.log(`[TradingService] Executing scheduled analysis for ${userId} on ${symbol}`);
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                methodology: true,
+                strategyMode: true,
+                tradingEnabled: true,
+                tradingMode: true,
+                asterApiKey: true, // Need API key for execution check
+                asterApiSecret: true,
+                asterTestnet: true,
+                leverage: true,
+                tradingCapitalPercent: true,
+            },
+        });
+
+        if (!user) return;
+
+        // Fetch ACTIVE Strategy Version
+        const activeStrategy = await prisma.strategyVersion.findFirst({
+            where: { userId, status: 'ACTIVE' }
+        });
+
+        const methodology = activeStrategy?.baseMethodology || user.methodology || 'SMC';
+
+        // Prepare Market Data from Multi-TF
+        // We use 1h data for the primary analysis as per current logic
+        const tf1h = multiTFData.timeframes.tf1h;
+        if (!tf1h || tf1h.length < 50) {
+            console.warn(`[TradingService] Insufficient 1h data for ${symbol}`);
+            return;
+        }
+
+        // Format data for technical analysis
+        const highs = tf1h.map(k => k.high);
+        const lows = tf1h.map(k => k.low);
+        const closes = tf1h.map(k => k.close);
+        const opens = tf1h.map(k => k.open);
+
+        // Analyze
+        const indicators = TechnicalAnalysisService.analyze(highs, lows, closes, opens, methodology);
+
+        // Construct Market Data Object
+        const latest = tf1h[tf1h.length - 1];
+        const marketData = {
+            ...indicators,
+            symbol,
+            currentPrice: latest.close,
+            change24h: tf1h.length >= 24 ?
+                ((latest.close - tf1h[tf1h.length - 24]?.close) / tf1h[tf1h.length - 24]?.close * 100) : 0,
+            high24h: Math.max(...tf1h.slice(-24).map(c => c.high)),
+            low24h: Math.min(...tf1h.slice(-24).map(c => c.low)),
+            volume: tf1h.slice(-24).reduce((sum, c) => sum + c.volume, 0),
+            // Map calculated indicators to simplified flat structure if needed
+            rsi: indicators.rsi,
+            macd: indicators.macd.MACD || 0,
+            atr: indicators.atr,
+            methodology: methodology,
+            multiTF: multiTFData.timeframes
+        };
+
+        // Get RL metrics (simplified for scheduled run)
+        const rlMetrics = await rlService.getMetrics();
+
+        // Run Analysis using Orchestrator Caching
+        // We do typically want to use the caching here since it's the 4-hour cycle
+        // But Scheduler calls this every 4 hours. So cache might be expired anyway.
+        // However, if manual analysis was run 10 mins ago, we should use that cache?
+        // Yes, verify logic in orchestrator: checks if cache exists and is < 4h old.
+
+        try {
+            const decision = await this.orchestrator.analyzeWithCaching({
+                userId,
+                symbol,
+                marketData,
+                riskMetrics: {
+                    ...rlMetrics,
+                    portfolioValue: 0, // Simplified for background job (or fetch real)
+                    currentExposure: 0,
+                    openPositions: 0
+                },
+                methodology: methodology
+            }, user.strategyMode as any);
+
+            // Handle Decision (Signal + Trade)
+            await this.handleTradingDecision(userId, symbol, decision, user, activeStrategy);
+
+        } catch (error) {
+            console.error(`[TradingService] Scheduled analysis failed via Orchestrator:`, error);
+        }
+    }
+
+    /**
+     * Get market data from AsterDex with Strategy-Specific Analysis
      */
     /**
      * Get market data from AsterDex with Strategy-Specific Analysis
