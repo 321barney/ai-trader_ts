@@ -993,19 +993,89 @@ REASON: [One-line summary of why this decision]`;
 
     /**
      * Apply model rules to market data for quick decision
+     * Enhanced with methodology-aware logic (SMC, ICT, Gann)
      */
     private applyModelRules(
         params: any,
         marketData: any
     ): { decision: 'LONG' | 'SHORT' | 'HOLD'; confidence: number; reason: string } {
-        // Basic implementation - would be enhanced with actual model logic
+        const methodology = params.methodology || 'SMC';
         const rsi = marketData?.rsi || 50;
         const trend = marketData?.change24h || 0;
+        const smcBias = marketData?.smcBias;
+        const killZone = marketData?.killZone?.zone;
+        const orderBlocks = marketData?.orderBlocks || [];
+        const fvgs = marketData?.fairValueGaps || [];
 
+        // Kill zone timing bonus (London/NY sessions are high-volume)
+        const inKillZone = killZone && ['LONDON', 'NEW_YORK'].includes(killZone);
+        const killZoneBonus = inKillZone ? 0.1 : 0;
+
+        // ========== SMC-based signals ==========
+        if (methodology === 'SMC' && smcBias) {
+            // Bullish SMC setup: bullish bias + oversold + near bullish order block
+            const hasBullishOB = orderBlocks.some((ob: any) => ob.type === 'BULLISH');
+            const hasBearishOB = orderBlocks.some((ob: any) => ob.type === 'BEARISH');
+
+            if (smcBias === 'BULLISH' && rsi < 40 && hasBullishOB) {
+                return {
+                    decision: 'LONG',
+                    confidence: Math.min(0.85, 0.7 + killZoneBonus),
+                    reason: 'SMC bullish bias + oversold RSI + bullish OB'
+                };
+            }
+            if (smcBias === 'BEARISH' && rsi > 60 && hasBearishOB) {
+                return {
+                    decision: 'SHORT',
+                    confidence: Math.min(0.85, 0.7 + killZoneBonus),
+                    reason: 'SMC bearish bias + overbought RSI + bearish OB'
+                };
+            }
+
+            // FVG (Fair Value Gap) signals
+            if (fvgs.length > 0) {
+                const recentFvg = fvgs[0];
+                if (recentFvg.type === 'BULLISH' && smcBias === 'BULLISH') {
+                    return { decision: 'LONG', confidence: 0.65, reason: 'Bullish FVG with SMC bullish bias' };
+                }
+                if (recentFvg.type === 'BEARISH' && smcBias === 'BEARISH') {
+                    return { decision: 'SHORT', confidence: 0.65, reason: 'Bearish FVG with SMC bearish bias' };
+                }
+            }
+        }
+
+        // ========== ICT-based signals ==========
+        if (methodology === 'ICT') {
+            // ICT focuses on liquidity sweeps and order flow
+            const hasLiquiditySweep = marketData?.liquiditySweep;
+
+            if (hasLiquiditySweep && rsi < 35) {
+                return { decision: 'LONG', confidence: 0.7 + killZoneBonus, reason: 'ICT liquidity sweep + oversold' };
+            }
+            if (hasLiquiditySweep && rsi > 65) {
+                return { decision: 'SHORT', confidence: 0.7 + killZoneBonus, reason: 'ICT liquidity sweep + overbought' };
+            }
+        }
+
+        // ========== Gann-based signals ==========
+        if (methodology === 'GANN') {
+            // Gann focuses on time cycles
+            const gannCycle = marketData?.gannCycle;
+            const cycleBias = marketData?.timeCycles?.cycleBias;
+
+            if (cycleBias === 'BULLISH' && trend > 0) {
+                return { decision: 'LONG', confidence: 0.7, reason: 'Gann cycle bullish alignment' };
+            }
+            if (cycleBias === 'BEARISH' && trend < 0) {
+                return { decision: 'SHORT', confidence: 0.7, reason: 'Gann cycle bearish alignment' };
+            }
+        }
+
+        // ========== Basic RSI + trend logic (fallback) ==========
         if (rsi < 30 && trend > 0) {
-            return { decision: 'LONG', confidence: 0.7, reason: 'RSI oversold with positive trend' };
+            return { decision: 'LONG', confidence: 0.6 + killZoneBonus, reason: 'RSI oversold with positive trend' };
         } else if (rsi > 70 && trend < 0) {
-            return { decision: 'SHORT', confidence: 0.7, reason: 'RSI overbought with negative trend' };
+            return { decision: 'SHORT', confidence: 0.6 + killZoneBonus, reason: 'RSI overbought with negative trend' };
         }
 
         return { decision: 'HOLD', confidence: 0.5, reason: 'No clear signal from model' };

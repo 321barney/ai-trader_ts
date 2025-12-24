@@ -9,6 +9,7 @@
 
 import { AgentType } from '@prisma/client';
 import BaseAgent, { AgentContext, AgentDecisionResult, ThoughtStep } from './base-agent.js';
+import { gannAnglesService } from '../services/gann-angles.service.js';
 
 export interface RLControlAction {
     action: 'modify_params' | 'retrain' | 'stop' | 'none';
@@ -139,9 +140,30 @@ ICT Entry Criteria:
         }
 
         if (methodology?.toUpperCase() === 'GANN') {
+            // Calculate enhanced Gann angles if OHLC data available
+            let enhancedGannSection = '';
+            if (md.highs && md.lows && md.closes) {
+                try {
+                    const angleAnalysis = gannAnglesService.analyze(
+                        md.highs,
+                        md.lows,
+                        md.closes,
+                        md.atr || 0
+                    );
+                    enhancedGannSection = gannAnglesService.formatForAgent(angleAnalysis);
+                } catch (e) {
+                    enhancedGannSection = '';
+                }
+            }
+
             prompt += `
 
 === GANN ANALYSIS ===
+Swing Pivots:
+  Recent Swing Low: $${md.swingPivots?.recentLow?.toFixed(2) || 'N/A'} (${md.swingPivots?.barsSinceLow || 'N/A'} bars ago)
+  Recent Swing High: $${md.swingPivots?.recentHigh?.toFixed(2) || 'N/A'} (${md.swingPivots?.barsSinceHigh || 'N/A'} bars ago)
+Break of Structure: ${md.breakOfStructure?.direction || 'NONE'} at $${md.breakOfStructure?.level?.toFixed(2) || 'N/A'}
+
 Gann 1x1 Angle: $${md.gannLevels?.angle1x1?.toFixed(2) || 'N/A'}
 Gann 2x1 Angle: $${md.gannLevels?.angle2x1?.toFixed(2) || 'N/A'}
 Gann 1x2 Angle: $${md.gannLevels?.angle1x2?.toFixed(2) || 'N/A'}
@@ -149,11 +171,13 @@ Gann Bias: ${md.gannBias || 'NEUTRAL'}
 
 Square of 9 Levels (Support/Resistance):
 ${md.gannSquare9?.map((level: number) => `  $${level.toFixed(2)}`).join('\n') || '  N/A'}
-
+${enhancedGannSection}
 Gann Entry Criteria:
+- Use swing pivots as key reference points for entries
 - Price above 1x1 angle = Bullish, look for LONG
 - Price below 1x1 angle = Bearish, look for SHORT
-- Square of 9 levels are natural support/resistance`;
+- Square of 9 levels are natural support/resistance
+- Trend angle > 63° = Very strong momentum, follow trend`;
         }
 
         prompt += `

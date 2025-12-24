@@ -441,7 +441,12 @@ export class TradingService {
             macd: indicators.macd.MACD || 0,
             atr: indicators.atr,
             methodology: methodology,
-            multiTF: multiTFData.timeframes
+            multiTF: multiTFData.timeframes,
+            // Raw OHLC for Gann angle calculations
+            highs,
+            lows,
+            closes,
+            opens
         };
 
         // Get RL metrics (simplified for scheduled run)
@@ -514,6 +519,11 @@ export class TradingService {
                 bollinger: indicators.bollinger,
                 // Strategy-specific data
                 methodology: methodology || 'GENERIC',
+                // Raw OHLC for Gann angle calculations
+                highs,
+                lows,
+                closes,
+                opens
             };
         } catch (error) {
             console.error(`Failed to fetch market data for ${symbol}:`, error);

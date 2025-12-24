@@ -11,6 +11,7 @@
 
 import { AgentType } from '@prisma/client';
 import BaseAgent, { AgentContext, AgentDecisionResult } from './base-agent.js';
+import { gannAnglesService } from '../services/gann-angles.service.js';
 
 // ============================================================================
 // Time Cycle Types
@@ -130,6 +131,22 @@ KEY_INSIGHTS: bullet points`;
         const cycles = this.calculateTimeCycles();
         const session = this.getCurrentSession();
 
+        // Calculate Gann angle analysis from price data
+        let gannAngleSection = '';
+        if (md.highs && md.lows && md.closes) {
+            try {
+                const angleAnalysis = gannAnglesService.analyze(
+                    md.highs,
+                    md.lows,
+                    md.closes,
+                    md.atr || 0
+                );
+                gannAngleSection = gannAnglesService.formatForAgent(angleAnalysis);
+            } catch (e) {
+                gannAngleSection = '\n=== GANN ANGLE ANALYSIS ===\nInsufficient data for angle calculation';
+            }
+        }
+
         return `${context.symbol || 'BTCUSDT'} | ${context.methodology || 'TA'}
 Price: $${md.currentPrice || 'N/A'} | 24h: ${md.change24h?.toFixed(1) || 0}%
 RSI: ${md.rsi?.toFixed(0) || 'N/A'} | MACD: ${md.macd?.toFixed(2) || 'N/A'}
@@ -142,12 +159,13 @@ Fibonacci Time Zones: ${cycles.nextFibDays.join(', ')} days to next zones
 Lunar Phase: ${cycles.lunar.phase} (${cycles.lunar.daysUntilNext} days to next phase)
 Session: ${session.currentSession} | Kill Zone: ${session.killZoneActive ? 'ACTIVE' : 'Inactive'}
 Weekly Position: ${session.weeklyPosition}
+${gannAngleSection}
 
 === MARKET DATA ===
 OnChain: Netflow=${md.exchangeNetflow || 'N/A'}, Whales=${md.whaleTransactions || 'N/A'}
 Bias: ${bias}
 
-Analyze TIME CYCLES first, then sentiment. Provide: SENTIMENT, SENTIMENT_SCORE, CYCLE_BIAS, CYCLE_CONFLUENCE, NEXT_TURN_WINDOW, KEY_INSIGHTS`;
+Analyze TIME CYCLES and GANN ANGLES first, then sentiment. Provide: SENTIMENT, SENTIMENT_SCORE, CYCLE_BIAS, CYCLE_CONFLUENCE, NEXT_TURN_WINDOW, KEY_INSIGHTS`;
     }
 
     /**

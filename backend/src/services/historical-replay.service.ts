@@ -25,6 +25,7 @@ export interface ReplayState {
     config: ReplayConfig;
     currentTime: Date;
     capital: number;
+    peakCapital: number; // Track peak for drawdown calculation
     positions: ReplayPosition[];
     trades: ReplayTrade[];
     isRunning: boolean;
@@ -75,6 +76,7 @@ class HistoricalReplayService {
             config,
             currentTime: config.startDate,
             capital: config.initialCapital,
+            peakCapital: config.initialCapital, // Initialize peak
             positions: [],
             trades: [],
             isRunning: false,
@@ -122,6 +124,12 @@ class HistoricalReplayService {
             for (const pos of state.positions) {
                 const change = (Math.random() - 0.5) * 0.001 * pos.entryPrice;
                 pos.unrealizedPnl += change * pos.size;
+            }
+
+            // Track peak capital for drawdown calculation
+            const currentEquity = state.capital + state.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
+            if (currentEquity > state.peakCapital) {
+                state.peakCapital = currentEquity;
             }
         };
 
@@ -246,7 +254,9 @@ class HistoricalReplayService {
             avgWin: wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0,
             avgLoss: losses.length > 0 ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0,
             finalCapital: state.capital,
-            maxDrawdown: 0 // TODO: Track peak and calculate
+            maxDrawdown: state.peakCapital > 0
+                ? ((state.peakCapital - state.capital) / state.peakCapital) * 100
+                : 0
         };
     }
 

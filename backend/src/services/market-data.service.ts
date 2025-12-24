@@ -74,6 +74,12 @@ export interface AnalysisData {
         medium: 'BULLISH' | 'BEARISH' | 'NEUTRAL'; // Based on EMA50
         long: 'BULLISH' | 'BEARISH' | 'NEUTRAL';   // Based on EMA200
     };
+
+    // Raw OHLC arrays for advanced analysis
+    highs: number[];
+    lows: number[];
+    closes: number[];
+    opens: number[];
 }
 
 export class MarketDataService {
@@ -122,6 +128,11 @@ export class MarketDataService {
             indicators,
             levels,
             trend,
+            // Raw OHLC for Gann angle calculations
+            highs,
+            lows,
+            closes,
+            opens: ohlcv.map(k => k.open),
         };
     }
 

@@ -10,6 +10,7 @@
 import { prisma } from '../utils/prisma.js';
 import { notificationService } from './notification.service.js';
 import { positionManager } from './position-manager.service.js';
+import { portfolioService } from './portfolio.service.js';
 
 const db = prisma as any;
 
@@ -121,7 +122,18 @@ class RiskManagerService {
 
         // Calculate current equity and drawdown
         const totalPnl = openPositions.reduce((sum: number, p: any) => sum + (p.unrealizedPnl || 0), 0);
-        const accountSize = 10000; // TODO: Get from actual balance
+
+        // Get actual account size from portfolio (with fallback)
+        let accountSize = 10000; // Default fallback
+        try {
+            const portfolioSummary = await portfolioService.getSummary(userId);
+            if (portfolioSummary.totalEquity > 0) {
+                accountSize = portfolioSummary.totalEquity;
+            }
+        } catch (error) {
+            console.warn('[RiskManager] Failed to fetch portfolio, using default:', error);
+        }
+
         const currentEquity = accountSize + totalPnl;
 
         // Track peak equity for drawdown calculation

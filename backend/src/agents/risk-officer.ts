@@ -10,6 +10,7 @@
 
 import { AgentType } from '@prisma/client';
 import BaseAgent, { AgentContext, AgentDecisionResult } from './base-agent.js';
+import { gannAnglesService } from '../services/gann-angles.service.js';
 
 export interface RiskAssessment extends AgentDecisionResult {
     riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
@@ -62,6 +63,31 @@ export class RiskOfficerAgent extends BaseAgent {
         const rm = context.riskMetrics || {};
         const methodology = context.methodology || 'Technical';
 
+        // Calculate enhanced Gann angle levels for SL/TP placement
+        let gannAngleSection = '';
+        if (md.highs && md.lows && md.closes) {
+            try {
+                const angleAnalysis = gannAnglesService.analyze(
+                    md.highs,
+                    md.lows,
+                    md.closes,
+                    md.atr || 0
+                );
+                // Extract key levels for risk calculation
+                const keyLevels = angleAnalysis.keyLevels.slice(0, 5);
+                const supports = keyLevels.filter(l => l.type === 'SUPPORT');
+                const resistances = keyLevels.filter(l => l.type === 'RESISTANCE');
+
+                gannAngleSection = `
+Gann Angle Key Levels:
+${supports.length > 0 ? `  Supports: ${supports.map(s => `$${s.level.toFixed(2)} (${s.angle})`).join(', ')}` : ''}
+${resistances.length > 0 ? `  Resistances: ${resistances.map(r => `$${r.level.toFixed(2)} (${r.angle})`).join(', ')}` : ''}
+  Trend Angle: ${Math.abs(angleAnalysis.trendAngle).toFixed(1)}° (${angleAnalysis.trendBias})`;
+            } catch (e) {
+                gannAngleSection = '';
+            }
+        }
+
         return `Evaluate the risk of the following proposed trade:
 
 === TRADE DETAILS ===
@@ -84,10 +110,13 @@ ATR (14): $${md.atr?.toFixed(2) || 'N/A'}
 Bollinger Width: $${((md.bollinger?.upper - md.bollinger?.lower) || 0).toFixed(2)}
 
 === STRATEGY KEY LEVELS ===
+${md.swingPivots ? `Swing Low: $${md.swingPivots.recentLow?.toFixed(2)} (${md.swingPivots.barsSinceLow} bars ago)` : ''}
+${md.swingPivots ? `Swing High: $${md.swingPivots.recentHigh?.toFixed(2)} (${md.swingPivots.barsSinceHigh} bars ago)` : ''}
 ${md.orderBlocks?.length > 0 ? `Nearest Order Block: $${md.orderBlocks[0]?.low?.toFixed(2)} - $${md.orderBlocks[0]?.high?.toFixed(2)}` : ''}
 ${md.ote ? `ICT OTE Zone: $${md.ote.oteZoneLow?.toFixed(2)} - $${md.ote.oteZoneHigh?.toFixed(2)}` : ''}
 ${md.gannLevels ? `Gann 1x1 Level: $${md.gannLevels.angle1x1?.toFixed(2)}` : ''}
 ${md.fairValueGaps?.length > 0 ? `Nearest FVG: $${md.fairValueGaps[0]?.low?.toFixed(2)} - $${md.fairValueGaps[0]?.high?.toFixed(2)}` : ''}
+${gannAngleSection}
 
 === RISK STATUS ===
 Recent Losses: ${rm.recentLosses || 0}
@@ -96,6 +125,7 @@ Max Allowed Drawdown: 20%
 
 === YOUR TASK ===
 Calculate appropriate stop-loss using ${methodology} key levels (Order Blocks, FVG, Gann angles).
+Use Gann angle support levels for potential stop-loss placement.
 Ensure minimum 1:2 risk/reward ratio.
 Use Chain-of-Thought reasoning to assess risk and provide recommendations.`;
     }

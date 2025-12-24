@@ -218,8 +218,17 @@ async def predict(request: PredictRequest):
     # Extract current price from features or request
     current_price = request.currentPrice
     if not current_price and request.features:
-        # Assume first feature might be price, or use a placeholder
-        current_price = request.features[0] if request.features else 50000
+        # Feature layout: [price, change24h, rsi, macd_histogram, ema20, ema50, atr, volume]
+        # First feature is typically current price if > 100 (crypto price range)
+        first_feature = request.features[0] if request.features else 0
+        if first_feature > 100:  # Likely a price value (BTC/ETH/SOL range)
+            current_price = first_feature
+        elif len(request.features) > 4 and request.features[4] > 100:
+            # Try EMA20 (index 4) which should also be in price range
+            current_price = request.features[4]
+        else:
+            # Default fallback for BTC estimation
+            current_price = 50000
     
     # ========== STEP 1: Base prediction from features ==========
     feature_sum = sum(request.features) if request.features else 0

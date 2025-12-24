@@ -289,18 +289,32 @@ export class TechnicalAnalysisService {
                 // Find pivot low in recent history
                 const lookback = 50;
                 const recentLows = lows.slice(-lookback);
-                const pivotPrice = Math.min(...recentLows);
+                const recentHighs = highs.slice(-lookback);
+                const pivotLow = Math.min(...recentLows);
+                const pivotHigh = Math.max(...recentHighs);
 
                 // Calculate time delta (bars since pivot)
-                // lastIndexOf finds the most recent occurrence if multiple exist
-                const pivotIndexInSlice = recentLows.lastIndexOf(pivotPrice);
-                const barsSincePivot = lookback - 1 - pivotIndexInSlice;
+                const pivotLowIndex = recentLows.lastIndexOf(pivotLow);
+                const pivotHighIndex = recentHighs.lastIndexOf(pivotHigh);
+                const barsSinceLow = lookback - 1 - pivotLowIndex;
+                const barsSinceHigh = lookback - 1 - pivotHighIndex;
 
                 // Use ATR for dynamic slope, or fallback to 1% of price if ATR not ready
                 const slope = currentATR || (currentPrice * 0.01);
 
-                result.gannLevels = this.calculateGannLevels(pivotPrice, barsSincePivot, slope);
+                result.gannLevels = this.calculateGannLevels(pivotLow, barsSinceLow, slope);
                 result.gannSquare9 = this.calculateGannSquare9(currentPrice);
+
+                // Add swing pivots for strategy reference
+                result.swingPivots = {
+                    recentLow: pivotLow,
+                    recentHigh: pivotHigh,
+                    barsSinceLow,
+                    barsSinceHigh
+                };
+
+                // Also detect Break of Structure for Gann users
+                result.breakOfStructure = this.detectBOS(highs, lows);
 
                 // Bias: Price above 1x1 is Bullish, below is Bearish
                 result.gannBias = currentPrice > result.gannLevels.angle1x1 ? 'BULLISH' : 'BEARISH';
