@@ -2,7 +2,7 @@
  * Scheduler Service
  * 
  * Handles automated scheduled tasks:
- * - Market Analysis: Every 4 hours
+ * - Market Analysis: High-frequency polling (1m) with Candle Close triggers
  * - Model Refresh: Monthly
  * - Drawdown Check: Every hour
  */
@@ -52,8 +52,8 @@ export class SchedulerService {
 
         console.log('[Scheduler] Starting scheduled jobs...');
 
-        // Market Analysis: Every 4 hours (0:00, 4:00, 8:00, 12:00, 16:00, 20:00)
-        cron.schedule('0 */4 * * *', () => {
+        // Market Analysis: Start fast polling (Every minute)
+        cron.schedule('* * * * *', () => {
             this.runMarketAnalysisForAllUsers();
         });
 
@@ -107,7 +107,10 @@ export class SchedulerService {
      * Run market analysis for all active users
      */
     async runMarketAnalysisForAllUsers() {
-        console.log('[Scheduler] Running 4-hour market analysis for all users...');
+        console.log('[Scheduler] Polling for analysis triggers...');
+        const now = new Date();
+        const minutes = now.getMinutes();
+        const hours = now.getHours();
 
         try {
             const users = await prisma.user.findMany({
@@ -123,24 +126,57 @@ export class SchedulerService {
 
             for (const user of users) {
                 try {
-                    const pairs = (user.selectedPairs as string[]) || ['BTCUSDT'];
+                    // Check for active TRADING MODEL first (Source of Truth for Timeframes)
+                    const activeModel = await modelService.getActiveModel(user.id);
+                    // Default to 1h if no model (legacy support)
+                    const timeframes = activeModel?.timeframes || ['1h'];
 
-                    for (const symbol of pairs.slice(0, 3)) { // Limit to 3 pairs per user
-                        const multiTF = await this.fetchMultiTFData(
-                            symbol,
-                            user.asterApiKey || undefined,
-                            user.asterApiSecret || undefined
-                        );
+                    let shouldTrigger = false;
+                    let triggerReason = '';
 
-                        // Run analysis and execution via TradingService
-                        await tradingService.executeScheduledAnalysis(
-                            user.id,
-                            symbol,
-                            multiTF
-                        );
+                    // Check if any timeframe just closed
+                    if (timeframes.includes('1m')) {
+                        shouldTrigger = true; // Always trigger for 1m
+                        triggerReason = '1m candle';
+                    } else if (timeframes.includes('5m') && minutes % 5 === 0) {
+                        shouldTrigger = true;
+                        triggerReason = '5m candle';
+                    } else if (timeframes.includes('15m') && minutes % 15 === 0) {
+                        shouldTrigger = true;
+                        triggerReason = '15m candle';
+                    } else if (timeframes.includes('1h') && minutes === 0) {
+                        shouldTrigger = true;
+                        triggerReason = '1h candle';
+                    } else if (timeframes.includes('4h') && minutes === 0 && hours % 4 === 0) {
+                        shouldTrigger = true;
+                        triggerReason = '4h candle';
                     }
 
-                    console.log(`[Scheduler] Completed analysis for user ${user.id}`);
+                    if (shouldTrigger) {
+                        console.log(`[Scheduler] Triggering analysis for User ${user.id} (${triggerReason} closed)`);
+
+                        const pairs = (user.selectedPairs as string[]) || ['BTCUSDT'];
+
+                        for (const symbol of pairs.slice(0, 3)) {
+                            // Fetch Data
+                            const multiTF = await this.fetchMultiTFData(
+                                symbol,
+                                user.asterApiKey || undefined,
+                                user.asterApiSecret || undefined
+                            );
+
+                            // Execute Analysis
+                            await tradingService.executeScheduledAnalysis(
+                                user.id,
+                                symbol,
+                                multiTF
+                            );
+                        }
+                    } else {
+                        // Optional: verbose logging for debugging
+                        // console.log(`[Scheduler] User ${user.id}: Waiting for candle close (TFs: ${timeframes.join(',')})`);
+                    }
+
                 } catch (error) {
                     console.error(`[Scheduler] Error for user ${user.id}:`, error);
                 }

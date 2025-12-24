@@ -128,7 +128,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
                 {/* Total Value */}
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 p-6">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl"></div>
@@ -189,6 +189,21 @@ export default function DashboardPage() {
                         <div className="text-3xl font-bold text-white">{activeModel?.winRate?.toFixed(0) || '--'}%</div>
                         <div className="text-cyan-400 text-sm mt-2 flex items-center gap-1">
                             <span>🎯</span> Strategy
+                        </div>
+                    </div>
+                </div>
+
+                {/* Scanner Status (Cron) */}
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border border-orange-500/20 p-6">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl"></div>
+                    <div className="relative">
+                        <div className="text-gray-400 text-sm mb-2">Scanner</div>
+                        <div className="text-3xl font-bold text-white flex items-center gap-2">
+                            <span>1m</span>
+                            <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+                        </div>
+                        <div className="text-orange-400 text-sm mt-2 flex items-center gap-1">
+                            <span>⚡</span> Real-Time
                         </div>
                     </div>
                 </div>
