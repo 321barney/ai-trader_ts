@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                         <span className="text-white font-bold">A</span>
                     </div>
-                    <span className="text-xl font-bold">ASTER</span>
+                    <span className="text-xl font-bold">AISTER</span>
                 </Link>
                 <Link href="/" className="text-gray-400 hover:text-white transition-colors">
                     ← Back to Home
@@ -37,7 +37,7 @@ export default function PrivacyPolicy() {
                     <section>
                         <h2 className="text-2xl font-bold mb-4 text-white">2. How We Use Your Information</h2>
                         <ul className="list-disc list-inside space-y-2 ml-4">
-                            <li>To provide and maintain the ASTER platform</li>
+                            <li>To provide and maintain the AISTER platform</li>
                             <li>To process your trades and generate AI signals</li>
                             <li>To process subscription payments</li>
                             <li>To communicate with you about your account</li>
@@ -100,7 +100,7 @@ export default function PrivacyPolicy() {
                             For privacy-related inquiries, contact us at:
                         </p>
                         <p className="mt-4">
-                            <strong>Email:</strong> <a href="mailto:support@aster.ai" className="text-indigo-400 hover:text-indigo-300">support@aster.ai</a>
+                            <strong>Email:</strong> <a href="mailto:support@AISTER.ai" className="text-indigo-400 hover:text-indigo-300">support@AISTER.ai</a>
                         </p>
                     </section>
                 </div>
@@ -109,10 +109,10 @@ export default function PrivacyPolicy() {
             {/* Footer */}
             <footer className="border-t border-white/5 py-8 mt-16">
                 <div className="max-w-4xl mx-auto px-8 flex items-center justify-between">
-                    <p className="text-gray-500 text-sm">© 2024 ASTER</p>
+                    <p className="text-gray-500 text-sm">© 2024 AISTER</p>
                     <div className="flex items-center gap-4 text-gray-500 text-sm">
                         <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-                        <a href="mailto:support@aster.ai" className="hover:text-white transition-colors">Contact</a>
+                        <a href="mailto:support@AISTER.ai" className="hover:text-white transition-colors">Contact</a>
                     </div>
                 </div>
             </footer>

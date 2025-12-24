@@ -1,4 +1,4 @@
-# AI Trader 🤖📈
+# AISTER - AI Trader 🤖📈
 
 An AI-powered cryptocurrency trading platform with multi-agent decision making, self-improving strategies, and AsterDex exchange integration.
 

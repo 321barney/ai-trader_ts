@@ -9,7 +9,7 @@ export default function TermsOfService() {
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                         <span className="text-white font-bold">A</span>
                     </div>
-                    <span className="text-xl font-bold">ASTER</span>
+                    <span className="text-xl font-bold">AISTER</span>
                 </Link>
                 <Link href="/" className="text-gray-400 hover:text-white transition-colors">
                     ← Back to Home
@@ -26,11 +26,11 @@ export default function TermsOfService() {
                     <section>
                         <h2 className="text-2xl font-bold mb-4 text-white">1. Acceptance of Terms</h2>
                         <p className="mb-4">
-                            By accessing or using ASTER (&quot;the Platform&quot;), you agree to be bound by these Terms of Service.
+                            By accessing or using AISTER (&quot;the Platform&quot;), you agree to be bound by these Terms of Service.
                             If you do not agree to these terms, you may not use the Platform.
                         </p>
                         <p>
-                            ASTER is a software platform that provides AI-powered trading signals and automated trading execution.
+                            AISTER is a software platform that provides AI-powered trading signals and automated trading execution.
                             Use of this platform is at your own risk.
                         </p>
                     </section>
@@ -39,7 +39,7 @@ export default function TermsOfService() {
                     <section>
                         <h2 className="text-2xl font-bold mb-4 text-white">2. Service Description</h2>
                         <p className="mb-4">
-                            ASTER provides:
+                            AISTER provides:
                         </p>
                         <ul className="list-disc list-inside space-y-2 ml-4">
                             <li>Multi-agent AI trading analysis and signal generation</li>
@@ -122,11 +122,11 @@ export default function TermsOfService() {
                         <h2 className="text-2xl font-bold mb-4 text-yellow-400">6. Not Financial Advice</h2>
                         <p className="mb-4">
                             <strong className="text-white">
-                                ASTER and its operators are NOT registered financial advisors, broker-dealers, or investment advisors.
+                                AISTER and its operators are NOT registered financial advisors, broker-dealers, or investment advisors.
                             </strong>
                         </p>
                         <p className="mb-4">
-                            All information, signals, and analysis provided by ASTER are for <strong>informational purposes only</strong> and
+                            All information, signals, and analysis provided by AISTER are for <strong>informational purposes only</strong> and
                             should NOT be considered as:
                         </p>
                         <ul className="list-disc list-inside space-y-2 ml-4">
@@ -155,7 +155,7 @@ export default function TermsOfService() {
                             <li>You should only trade with funds you can afford to lose completely</li>
                         </ul>
                         <p className="mt-4">
-                            By using ASTER, you acknowledge that you understand these risks and accept full responsibility
+                            By using AISTER, you acknowledge that you understand these risks and accept full responsibility
                             for your trading decisions and their outcomes.
                         </p>
                     </section>
@@ -168,15 +168,15 @@ export default function TermsOfService() {
                         </p>
                         <ul className="list-disc list-inside space-y-2 ml-4">
                             <li>
-                                ASTER shall not be liable for any direct, indirect, incidental, special, consequential,
+                                AISTER shall not be liable for any direct, indirect, incidental, special, consequential,
                                 or punitive damages arising from your use of the Platform
                             </li>
                             <li>
-                                ASTER shall not be liable for any trading losses, regardless of whether such losses
+                                AISTER shall not be liable for any trading losses, regardless of whether such losses
                                 were caused by AI agent recommendations, system errors, or any other factor
                             </li>
                             <li>
-                                ASTER shall not be liable for errors, inaccuracies, or omissions in AI-generated analysis
+                                AISTER shall not be liable for errors, inaccuracies, or omissions in AI-generated analysis
                             </li>
                             <li>
                                 Total liability shall be limited to the amount you paid for your subscription in the
@@ -189,12 +189,12 @@ export default function TermsOfService() {
                     <section>
                         <h2 className="text-2xl font-bold mb-4 text-white">9. API Keys and Third-Party Services</h2>
                         <p className="mb-4">
-                            By providing API keys to ASTER, you acknowledge:
+                            By providing API keys to AISTER, you acknowledge:
                         </p>
                         <ul className="list-disc list-inside space-y-2 ml-4">
                             <li>You are authorizing the Platform to access your exchange and LLM provider accounts</li>
                             <li>You are responsible for costs incurred on your API provider accounts</li>
-                            <li>ASTER stores your API keys securely but cannot guarantee against all security breaches</li>
+                            <li>AISTER stores your API keys securely but cannot guarantee against all security breaches</li>
                             <li>You should use API keys with appropriate permissions and spending limits</li>
                         </ul>
                     </section>
@@ -226,9 +226,9 @@ export default function TermsOfService() {
                             For questions about these Terms of Service, please contact us at:
                         </p>
                         <p className="mt-4">
-                            <strong>Email:</strong> <a href="mailto:support@aster.ai" className="text-indigo-400 hover:text-indigo-300">support@aster.ai</a>
+                            <strong>Email:</strong> <a href="mailto:support@AISTER.ai" className="text-indigo-400 hover:text-indigo-300">support@AISTER.ai</a>
                             <br />
-                            <strong>Telegram:</strong> <a href="https://t.me/aster_support" className="text-indigo-400 hover:text-indigo-300">@aster_support</a>
+                            <strong>Telegram:</strong> <a href="https://t.me/AISTER_support" className="text-indigo-400 hover:text-indigo-300">@AISTER_support</a>
                         </p>
                     </section>
                 </div>
@@ -236,7 +236,7 @@ export default function TermsOfService() {
                 {/* Acceptance */}
                 <div className="mt-16 p-8 rounded-2xl bg-white/5 border border-white/10 text-center">
                     <p className="text-gray-400 mb-4">
-                        By using ASTER, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+                        By using AISTER, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
                     </p>
                     <Link
                         href="/register"
@@ -250,10 +250,10 @@ export default function TermsOfService() {
             {/* Footer */}
             <footer className="border-t border-white/5 py-8 mt-16">
                 <div className="max-w-4xl mx-auto px-8 flex items-center justify-between">
-                    <p className="text-gray-500 text-sm">© 2024 ASTER</p>
+                    <p className="text-gray-500 text-sm">© 2024 AISTER</p>
                     <div className="flex items-center gap-4 text-gray-500 text-sm">
                         <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-                        <a href="mailto:support@aster.ai" className="hover:text-white transition-colors">Contact</a>
+                        <a href="mailto:support@AISTER.ai" className="hover:text-white transition-colors">Contact</a>
                     </div>
                 </div>
             </footer>

@@ -139,7 +139,7 @@ function PricingContent() {
         }
 
         if (plan === 'CUSTOM') {
-            window.location.href = 'mailto:support@aster.ai?subject=Custom Plan Inquiry';
+            window.location.href = 'mailto:support@AISTER.ai?subject=Custom Plan Inquiry';
             return;
         }
 
@@ -194,7 +194,7 @@ function PricingContent() {
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                         <span className="text-white font-bold">A</span>
                     </div>
-                    <span className="text-xl font-bold">ASTER</span>
+                    <span className="text-xl font-bold">AISTER</span>
                 </Link>
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard" className="text-gray-400 hover:text-white transition-colors">
@@ -209,7 +209,7 @@ function PricingContent() {
                 {paymentSuccess && (
                     <div className="mb-8 p-4 rounded-xl bg-green-500/20 border border-green-500/50 text-center">
                         <h3 className="text-lg font-bold text-green-400">🎉 Payment Successful!</h3>
-                        <p className="text-gray-300">Your subscription is now active. Welcome to ASTER Pro!</p>
+                        <p className="text-gray-300">Your subscription is now active. Welcome to AISTER Pro!</p>
                         <Link href="/dashboard" className="inline-block mt-4 px-6 py-2 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600 transition-colors">
                             Go to Dashboard
                         </Link>
@@ -359,7 +359,7 @@ function PricingContent() {
                             </li>
                         </ul>
                         <a
-                            href="mailto:support@aster.ai?subject=Custom Plan Inquiry"
+                            href="mailto:support@AISTER.ai?subject=Custom Plan Inquiry"
                             className="block w-full py-3 rounded-xl border border-white/20 text-center font-medium hover:bg-white/5 transition-colors"
                         >
                             Contact Sales
@@ -405,13 +405,13 @@ function PricingContent() {
                     <h3 className="text-xl font-bold mb-4">Need Help?</h3>
                     <p className="text-gray-400 mb-6">Our support team is available 24/7</p>
                     <div className="flex items-center justify-center gap-8">
-                        <a href="mailto:support@aster.ai" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+                        <a href="mailto:support@AISTER.ai" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
                             <span>📧</span>
-                            support@aster.ai
+                            support@AISTER.ai
                         </a>
-                        <a href="https://t.me/aster_support" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+                        <a href="https://t.me/AISTER_support" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
                             <span>💬</span>
-                            @aster_support
+                            @AISTER_support
                         </a>
                     </div>
                 </div>
@@ -419,7 +419,7 @@ function PricingContent() {
                 {/* Disclaimers */}
                 <div className="mt-16 text-center text-gray-500 text-xs">
                     <p className="mb-2">
-                        ⚠️ Trading cryptocurrencies involves substantial risk of loss. ASTER is not a financial advisor.
+                        ⚠️ Trading cryptocurrencies involves substantial risk of loss. AISTER is not a financial advisor.
                     </p>
                     <p>
                         See our <Link href="/terms" className="text-gray-400 hover:text-white underline">Terms of Service</Link> and{' '}
@@ -431,7 +431,7 @@ function PricingContent() {
             {/* Footer */}
             <footer className="relative z-10 border-t border-white/5 py-8 mt-16">
                 <div className="max-w-6xl mx-auto px-8 text-center text-gray-500 text-sm">
-                    © 2024 ASTER. Multi-Agent AI Trading Platform.
+                    © 2024 AISTER. Multi-Agent AI Trading Platform.
                 </div>
             </footer>
         </div>

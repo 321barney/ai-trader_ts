@@ -16,11 +16,19 @@ export default function Home() {
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <span className="text-white font-bold text-xl">A</span>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-2.5 shadow-lg shadow-indigo-500/25 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-white drop-shadow-md" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 2L2 22h20L12 2zm0 5l5 10H7l5-10z" fill="currentColor" fillOpacity="0.1" stroke="none" />
+              <path d="M12 2L4.5 17M12 2l7.5 15M4.5 17h15M12 11l-2.5 5M12 11l2.5 5" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="2" r="1" className="fill-white animate-pulse" stroke="none" />
+              <circle cx="12" cy="11" r="1" className="fill-purple-200" stroke="none" />
+              <circle cx="4.5" cy="17" r="1" className="fill-indigo-200" stroke="none" />
+              <circle cx="19.5" cy="17" r="1" className="fill-indigo-200" stroke="none" />
+            </svg>
           </div>
           <div className="flex flex-col">
-            <span className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">ASTER</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">AISTER</span>
             <span className="text-xs text-gray-500 -mt-1">Multi-Agent AI Trading</span>
           </div>
         </div>
@@ -63,7 +71,7 @@ export default function Home() {
             <span className="bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">Meet</span>
             <br />
             <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
-              ASTER
+              AISTER
             </span>
           </h1>
 
@@ -142,7 +150,7 @@ export default function Home() {
           </div>
           <div>
             <h2 className="text-4xl font-bold mb-6">
-              How <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">ASTER</span> Solves This
+              How <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">AISTER</span> Solves This
             </h2>
             <ul className="space-y-4 text-gray-400">
               <li className="flex items-start gap-3">
@@ -166,7 +174,7 @@ export default function Home() {
       <section id="agents" className="relative z-10 max-w-7xl mx-auto px-8 py-32">
         <div className="text-center mb-20">
           <h2 className="text-5xl font-bold mb-6">
-            The <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">ASTER Council</span>
+            The <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">AISTER Council</span>
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto text-lg">
             Three specialized AI agents with distinct personalities deliberate on every decision.
@@ -238,7 +246,7 @@ export default function Home() {
       <section id="how-it-works" className="relative z-10 max-w-7xl mx-auto px-8 py-32 border-t border-white/5">
         <div className="text-center mb-20">
           <h2 className="text-5xl font-bold mb-6">
-            How <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">ASTER</span> Works
+            How <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">AISTER</span> Works
           </h2>
         </div>
 
@@ -358,7 +366,7 @@ export default function Home() {
                 <span className="text-green-400">✓</span> Volume discounts
               </li>
             </ul>
-            <a href="mailto:support@aster.ai" className="block w-full py-3 rounded-xl border border-white/20 text-center font-medium hover:bg-white/5 transition-colors">
+            <a href="mailto:support@AISTER.ai" className="block w-full py-3 rounded-xl border border-white/20 text-center font-medium hover:bg-white/5 transition-colors">
               Contact Sales
             </a>
           </div>
@@ -389,15 +397,15 @@ export default function Home() {
             },
             {
               q: "Can I see what the AI agents are thinking?",
-              a: "Yes! Full transparency is core to ASTER. Every decision includes Chain-of-Thought reasoning from all 3 agents. You can see exactly why a trade was made or rejected."
+              a: "Yes! Full transparency is core to AISTER. Every decision includes Chain-of-Thought reasoning from all 3 agents. You can see exactly why a trade was made or rejected."
             },
             {
               q: "What's your refund policy?",
               a: "You can request a refund any time BEFORE your first trading signal is generated. Once the AI agents have analyzed the market and produced a signal for you, no refunds are available. This is clearly stated in our Terms of Service."
             },
             {
-              q: "Is ASTER providing financial advice?",
-              a: "No. ASTER is a software tool that executes trading strategies you configure. We are not financial advisors. Trading cryptocurrencies involves substantial risk of loss. See our full disclaimer below."
+              q: "Is AISTER providing financial advice?",
+              a: "No. AISTER is a software tool that executes trading strategies you configure. We are not financial advisors. Trading cryptocurrencies involves substantial risk of loss. See our full disclaimer below."
             }
           ].map((faq, i) => (
             <div key={i} className="p-6 rounded-2xl bg-white/5 border border-white/10">
@@ -414,13 +422,13 @@ export default function Home() {
           <h3 className="text-2xl font-bold mb-4">Need Help?</h3>
           <p className="text-gray-400 mb-6">Our support team is here for you</p>
           <div className="flex items-center justify-center gap-8">
-            <a href="mailto:support@aster.ai" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+            <a href="mailto:support@AISTER.ai" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
               <span>📧</span>
-              support@aster.ai
+              support@AISTER.ai
             </a>
-            <a href="https://t.me/aster_support" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+            <a href="https://t.me/AISTER_support" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
               <span>💬</span>
-              @aster_support
+              @AISTER_support
             </a>
           </div>
         </div>
@@ -469,7 +477,7 @@ export default function Home() {
           <div className="p-6 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
             <h4 className="font-bold text-yellow-400 mb-2">Not Financial Advice</h4>
             <p>
-              ASTER and its operators are NOT registered financial advisors, broker-dealers, or investment advisors.
+              AISTER and its operators are NOT registered financial advisors, broker-dealers, or investment advisors.
               The information and signals provided by this platform are for informational purposes only and should NOT be considered as financial advice.
               Always do your own research and consider consulting with a licensed financial professional before making investment decisions.
             </p>
@@ -478,7 +486,7 @@ export default function Home() {
           <div className="p-6 rounded-xl bg-blue-500/5 border border-blue-500/20">
             <h4 className="font-bold text-blue-400 mb-2">AI System Limitations</h4>
             <p>
-              ASTER uses artificial intelligence and machine learning models that may produce errors or inaccurate predictions.
+              AISTER uses artificial intelligence and machine learning models that may produce errors or inaccurate predictions.
               AI systems can experience unexpected behaviors, and no trading system can guarantee profits.
               Users are fully responsible for their trading decisions and should verify all signals before execution.
             </p>
@@ -500,20 +508,24 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">A</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2 flex items-center justify-center">
+                <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-white" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M12 2L2 22h20L12 2z" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M12 10l-3 6h6l-3-6" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="12" cy="2" r="1" className="fill-white" stroke="none" />
+                </svg>
               </div>
-              <span className="font-bold text-lg">ASTER</span>
+              <span className="font-bold text-lg">AISTER</span>
             </div>
 
             <div className="flex items-center gap-6 text-gray-500 text-sm">
               <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-              <a href="mailto:support@aster.ai" className="hover:text-white transition-colors">Contact</a>
+              <a href="mailto:support@AISTER.ai" className="hover:text-white transition-colors">Contact</a>
             </div>
 
             <p className="text-gray-500 text-sm">
-              © 2024 ASTER. Multi-Agent AI Trading Platform.
+              © 2024 AISTER. Multi-Agent AI Trading Platform.
             </p>
           </div>
         </div>
