@@ -182,4 +182,19 @@ router.post('/rl/stop', authMiddleware, asyncHandler(async (req: Request, res: R
     return successResponse(res, null, 'Training stopped');
 }));
 
+/**
+ * POST /api/agents/rl/backtest
+ */
+router.post('/rl/backtest', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    const { symbol } = req.body;
+
+    const result = await rlService.runBacktest(symbol || 'BTC-USD');
+
+    if (!result) {
+        return errorResponse(res, 'Failed to run backtest');
+    }
+
+    return successResponse(res, result, 'Backtest completed');
+}));
+
 export const agentRouter = router;

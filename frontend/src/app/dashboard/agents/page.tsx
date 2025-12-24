@@ -353,19 +353,62 @@ export default function AgentDashboardPage() {
             {/* RL Control Panel (for Strategy Consultant) */}
             {expandedAgent === "Strategy Consultant" && (
                 <div className="card glass mt-6">
-                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                        <span>🎮</span> RL Model Control
-                    </h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <span>🎮</span> RL Model Control
+                        </h3>
+                        <div className="flex gap-2">
+                            <button
+                                className="btn-secondary text-xs px-3 py-1"
+                                onClick={async () => {
+                                    if (!confirm('Start training new model? This may take time.')) return;
+                                    try {
+                                        const token = api.getAccessToken();
+                                        await fetch(`${API_BASE}/api/agents/rl/train`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                            body: JSON.stringify({ symbols: ['BTC-USD'], timesteps: 50000, algorithm: 'PPO' })
+                                        });
+                                        fetchAgentsData();
+                                    } catch (e) { alert('Training start failed'); }
+                                }}
+                            >
+                                🏋️ Train New
+                            </button>
+                            <button
+                                className="btn-secondary text-xs px-3 py-1"
+                                onClick={async () => {
+                                    try {
+                                        const token = api.getAccessToken();
+                                        await fetch(`${API_BASE}/api/agents/rl/backtest`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                            body: JSON.stringify({ symbol: 'BTC-USD' })
+                                        });
+                                        fetchAgentsData();
+                                    } catch (e) { alert('Backtest failed'); }
+                                }}
+                            >
+                                📈 Backtest
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-4 gap-4">
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Status</div>
                             <div className={rlStatus?.available ? "text-green-400 font-bold" : "text-gray-500 font-bold"}>
                                 {rlStatus?.training?.isTraining ? 'Training...' : rlStatus?.available ? 'Active' : 'Offline'}
                             </div>
+                            {rlStatus?.training?.isTraining && (
+                                <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
+                                    <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(rlStatus.training.progress || 0) * 100}%` }}></div>
+                                </div>
+                            )}
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Sharpe Ratio</div>
-                            <div className="text-white font-bold">{rlStatus?.sharpeRatio?.toFixed(2) || 'N/A'}</div>
+                            <div className="text-white font-bold">{rlStatus?.sharpeRatio ? rlStatus.sharpeRatio.toFixed(2) : 'N/A'}</div>
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Win Rate</div>
@@ -373,7 +416,7 @@ export default function AgentDashboardPage() {
                         </div>
                         <div className="bg-[#1a1a25] rounded-lg p-4">
                             <div className="text-gray-400 text-sm">Episodes</div>
-                            <div className="text-gray-300 font-bold text-sm">{rlStatus?.totalEpisodes || 0}</div>
+                            <div className="text-gray-300 font-bold text-sm">{rlStatus?.training?.totalEpisodes || 0}</div>
                         </div>
                     </div>
                 </div>

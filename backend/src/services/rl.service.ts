@@ -438,6 +438,28 @@ export class RLService {
     }
 
     /**
+     * Run manual backtest on current model
+     */
+    async runBacktest(symbol: string): Promise<any> {
+        try {
+            const response = await fetch(`${this.baseUrl}/model/backtest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ symbol }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Backtest failed');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('[RL Service] Backtest error:', error);
+            return null;
+        }
+    }
+
+    /**
      * Get RL prediction for council participation
      * Returns structured decision for deliberation
      */
