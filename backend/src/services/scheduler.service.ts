@@ -124,12 +124,16 @@ export class SchedulerService {
                 }
             });
 
+            console.log(`[Scheduler] Found ${users.length} active users.`);
+
             for (const user of users) {
                 try {
                     // Check for active TRADING MODEL first (Source of Truth for Timeframes)
                     const activeModel = await modelService.getActiveModel(user.id);
                     // Default to 1h if no model (legacy support)
                     const timeframes = activeModel?.timeframes || ['1h'];
+
+                    console.log(`[Scheduler] User ${user.id} Timeframes: ${timeframes.join(',')} (Current Min: ${minutes})`);
 
                     let shouldTrigger = false;
                     let triggerReason = '';
@@ -174,7 +178,7 @@ export class SchedulerService {
                         }
                     } else {
                         // Optional: verbose logging for debugging
-                        // console.log(`[Scheduler] User ${user.id}: Waiting for candle close (TFs: ${timeframes.join(',')})`);
+                        console.log(`[Scheduler] User ${user.id}: Waiting for candle close (TFs: ${timeframes.join(',')})`);
                     }
 
                 } catch (error) {
