@@ -8,9 +8,10 @@
 
 import { prisma } from '../utils/prisma.js';
 import { asterService } from './aster.service.js';
+import { signalTrackerService } from './signal-tracker.service.js';
 
 // Cast prisma to any for unmigrated models
-const db = prisma as any;
+// const db = prisma as any;
 
 export type ExecutionMode = 'SIGNAL' | 'TRADE';
 
@@ -73,7 +74,7 @@ class ExecutionService {
      */
     private async processPendingSignals(userId: string): Promise<void> {
         try {
-            const pendingSignals = await db.tradingSignal.findMany({
+            const pendingSignals = await prisma.signal.findMany({
                 where: {
                     userId,
                     status: 'ACTIVE',
@@ -138,12 +139,12 @@ class ExecutionService {
             });
 
             if (orderResult?.orderId) {
-                await db.tradingSignal.update({
+                await prisma.signal.update({
                     where: { id: signal.id },
                     data: { status: 'EXECUTED' }
                 });
 
-                await db.position.create({
+                await prisma.position.create({
                     data: {
                         userId: signal.userId,
                         symbol: signal.symbol,
@@ -158,6 +159,42 @@ class ExecutionService {
                 });
 
                 console.log(`[Execution] Order placed: ${orderResult.orderId}`);
+
+                // Mark TrackedSignal as executed if it exists (Virtual Tracking -> Real Tracking)
+                // We use the same ID assumption or lookup. 
+                // Since TrackedSignal doesn't share ID with Signal, we might need to find it or we can't easily link them here without passing ID.
+                // Wait, TrackedSignal usually tracks the signals *we* generated.
+                // Correction: The Signal table is for the Agent's raw output. TrackedSignal is the "Performance Record".
+                // We should try to find the TrackedSignal corresponding to this Signal.
+                // Since this is tricky without a direct FK, we will just log for now or skip if complex.
+                // Actually, TradingService creates *both*.
+                // Let's assume we can find it by lookup or we add a TODO.
+                // BETTER: Just call markExecuted with a lookup by signal properties or if we had the ID.
+
+                // For now, let's leave it as is to avoid breaking risk, but adding the import was the first step.
+                // Actually, I will search for the TrackedSignal by matching timestamp/symbol/direction created around the same time
+
+                try {
+                    const tracked = await prisma.trackedSignal.findFirst({
+                        where: {
+                            userId: signal.userId,
+                            symbol: signal.symbol,
+                            direction: signal.direction,
+                            status: 'PENDING',
+                            createdAt: {
+                                gte: new Date(signal.createdAt.getTime() - 1000 * 60) // Created within last minute
+                            }
+                        }
+                    });
+
+                    if (tracked) {
+                        await signalTrackerService.markExecuted(tracked.id, orderResult.orderId, orderResult.avgPrice || signal.entryPrice);
+                        console.log(`[Execution] TrackedSignal ${tracked.id} marked as executed.`);
+                    }
+                } catch (e) {
+                    console.warn('[Execution] Failed to update TrackedSignal status', e);
+                }
+
                 return {
                     success: true,
                     orderId: orderResult.orderId,
@@ -209,7 +246,7 @@ class ExecutionService {
             });
 
             if (orderResult?.orderId) {
-                await db.position.create({
+                await prisma.position.create({
                     data: {
                         userId: request.userId,
                         symbol: request.symbol,

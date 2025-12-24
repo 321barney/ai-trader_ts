@@ -555,8 +555,9 @@ REASON: [Why this decision was reached]`;
                 executionReady,
                 readyToExecute: executionReady,
                 entryPrice: strategy.entryPrice,
-                stopLoss: strategy.stopLoss,
-                takeProfit: strategy.takeProfit,
+                // PRIORITIZE RISK OFFICER'S TP/SL
+                stopLoss: risk.suggestedStopLoss || strategy.stopLoss,
+                takeProfit: risk.suggestedTakeProfit || strategy.takeProfit,
                 positionSize: risk.positionSize,
                 agentDecisions,
                 counsel,
@@ -643,8 +644,10 @@ REASON: [Why this decision was reached]`;
             executionReady,
             readyToExecute: executionReady,
             entryPrice: strategy.entryPrice,
-            stopLoss: strategy.stopLoss,
-            takeProfit: strategy.takeProfit,
+            // PRIORITIZE RISK OFFICER'S TP/SL
+            stopLoss: risk.suggestedStopLoss || strategy.stopLoss,
+            takeProfit: risk.suggestedTakeProfit || strategy.takeProfit,
+            // positionSize: risk.positionSize, // Already used below
             positionSize: risk.positionSize,
             agentDecisions,
             counsel,

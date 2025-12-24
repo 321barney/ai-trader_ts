@@ -482,32 +482,18 @@ router.get('/portfolio', authMiddleware, asyncHandler(async (req: Request, res: 
  */
 router.get('/positions', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     try {
-        const { prisma } = await import('../utils/prisma.js');
-        const user = await prisma.user.findUnique({
-            where: { id: req.userId }
-        });
-
-        if (!user?.asterApiKey || !user?.asterApiSecret) {
-            return successResponse(res, {
-                positions: [],
-                error: 'AsterDex not connected'
-            });
-        }
-
-        const { createAsterService } = await import('../services/aster.service.js');
-        const aster = createAsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet ?? true);
-
-        const positions = await aster.getPositions();
+        // Use unified service method to get Real + Virtual positions
+        const result = await tradingService.getUnifiedPositions(req.userId!);
 
         return successResponse(res, {
-            positions,
-            count: positions.length
+            positions: result.real, // Keep 'positions' as real API positions for backward compat
+            virtual: result.virtual,
+            combined: result.combined,
+            count: result.real.length,
+            virtualCount: result.virtual.length
         });
     } catch (error: any) {
-        return successResponse(res, {
-            positions: [],
-            error: error.message
-        });
+        return errorResponse(res, error.message);
     }
 }));
 

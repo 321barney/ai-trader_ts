@@ -156,7 +156,16 @@ export class Scheduler {
             }
 
             // 2c. Iterate over selected pairs
-            const pairs = user.selectedPairs as string[] || [];
+            let pairs = user.selectedPairs as string[] || [];
+
+            // Enforce Strategy-Specific Pair (Backtested Pair)
+            const rules = activeStrategy.rules as any;
+            if (rules && (rules.symbol || rules.pair)) {
+                const strategyPair = rules.symbol || rules.pair;
+                pairs = [strategyPair];
+                console.log(`[Scheduler] Enforcing strategy pair constraint: ${strategyPair} for User ${user.username}`);
+            }
+
             for (const symbol of pairs) {
                 try {
                     console.log(`[Scheduler] Analyzing ${symbol} for ${user.username}...`);

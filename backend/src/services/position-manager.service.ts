@@ -11,7 +11,7 @@ import { prisma } from '../utils/prisma.js';
 import { asterService } from './aster.service.js';
 
 // Cast prisma to any for unmigrated models
-const db = prisma as any;
+// const db = prisma as any;
 
 export interface Position {
     id: string;
@@ -59,7 +59,7 @@ class PositionManagerService {
 
     private async monitorPositions(): Promise<void> {
         try {
-            const openPositions = await db.position.findMany({
+            const openPositions = await prisma.position.findMany({
                 where: { status: 'OPEN' }
             });
 
@@ -77,7 +77,7 @@ class PositionManagerService {
 
         const pnl = this.calculatePnl(position, currentPrice);
 
-        await db.position.update({
+        await prisma.position.update({
             where: { id: position.id },
             data: {
                 currentPrice,
@@ -134,7 +134,7 @@ class PositionManagerService {
 
             const pnl = this.calculatePnl(position, exitPrice);
 
-            await db.position.update({
+            await prisma.position.update({
                 where: { id: position.id },
                 data: {
                     status: 'CLOSED',
@@ -169,7 +169,7 @@ class PositionManagerService {
         }
 
         if (newStopLoss) {
-            await db.position.update({
+            await prisma.position.update({
                 where: { id: position.id },
                 data: { stopLoss: newStopLoss }
             });
@@ -209,7 +209,7 @@ class PositionManagerService {
     }
 
     async getOpenPositions(userId: string): Promise<Position[]> {
-        return await db.position.findMany({
+        return await prisma.position.findMany({
             where: { userId, status: 'OPEN' }
         }) as unknown as Position[];
     }

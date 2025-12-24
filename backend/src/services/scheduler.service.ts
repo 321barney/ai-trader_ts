@@ -159,7 +159,17 @@ export class SchedulerService {
                     if (shouldTrigger) {
                         console.log(`[Scheduler] Triggering analysis for User ${user.id} (${triggerReason} closed)`);
 
-                        const pairs = (user.selectedPairs as string[]) || ['BTCUSDT'];
+                        let pairs = (user.selectedPairs as string[]) || ['BTCUSDT'];
+
+                        // Enforce Strategy-Specific Pair (Backtested Pair)
+                        // This ensures the strategy only runs on the pair it was optimized for
+                        if (activeModel && activeModel.parameters) {
+                            const params = activeModel.parameters as any;
+                            if (params.symbol) {
+                                pairs = [params.symbol];
+                                console.log(`[Scheduler] Enforcing strategy pair constraint: ${params.symbol} for User ${user.id}`);
+                            }
+                        }
 
                         for (const symbol of pairs.slice(0, 3)) {
                             // Fetch Data

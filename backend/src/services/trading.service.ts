@@ -5,7 +5,10 @@
 import { prisma } from '../utils/prisma.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from './rl.service.js';
-import { AsterService } from './aster.service.js';
+import { AsterService, Position } from './aster.service.js';
+// import { signalTrackerService } from './signal-tracker.service.js'; // Already added in previous step, but I must match context carefully or just leave it since previously I added it. 
+// Actually I should just modify the line I know exists.
+import { signalTrackerService } from './signal-tracker.service.js';
 import { TechnicalAnalysisService } from './technical-analysis.service.js';
 import { MultiTFData } from './scheduler.service.js';
 
@@ -278,6 +281,14 @@ export class TradingService {
         // Determine source mode: TRADE if executing, SIGNAL if signal-only
         const sourceMode = (user.tradingEnabled && user.tradingMode === 'trade') ? 'TRADE' : 'SIGNAL';
 
+        // Strict Signal Validation (Entry, TP, SL)
+        if (decision.finalDecision === 'LONG' || decision.finalDecision === 'SHORT') {
+            if (!decision.entryPrice || !decision.stopLoss || !decision.takeProfit) {
+                console.warn(`[TradingService] Invalid Signal components for ${symbol}: Entry=${decision.entryPrice}, SL=${decision.stopLoss}, TP=${decision.takeProfit}. Rejected.`);
+                return;
+            }
+        }
+
         // Save AgentDecision to database (live trading, not backtest)
         const agentDecision = await prisma.agentDecision.create({
             data: {
@@ -317,6 +328,37 @@ export class TradingService {
                     sourceMode: sourceMode
                 }
             });
+
+            // Virtual Execution Tracking (TrackedSignal)
+            // Enables performance tracking even without execution
+            try {
+                // Determine Strategy Version ID (handle logic execution from Model or direct Strategy)
+                const strategyVersionId = activeStrategy?.strategyVersionId || activeStrategy?.id;
+
+                if (strategyVersionId) {
+                    await signalTrackerService.createSignal(
+                        userId,
+                        strategyVersionId,
+                        {
+                            symbol,
+                            direction: decision.finalDecision,
+                            entryPrice: decision.entryPrice,
+                            stopLoss: decision.stopLoss,
+                            takeProfit: decision.takeProfit,
+                            confidence: decision.confidence,
+                            agentReasoning: {
+                                strategyConsultant: decision.agentDecisions?.strategy?.reasoning || 'N/A',
+                                riskOfficer: decision.agentDecisions?.risk?.reasoning || 'N/A',
+                                marketAnalyst: decision.agentDecisions?.market?.reasoning || 'N/A'
+                            },
+                            indicators: decision.marketAnalysis?.data || {}
+                        }
+                    );
+                    console.log(`[TradingService] Virtual tracking started for ${symbol} ${decision.finalDecision}`);
+                }
+            } catch (err) {
+                console.error('[TradingService] Failed to create TrackedSignal for virtual tracking:', err);
+            }
         }
 
         if (decision.finalDecision !== 'HOLD' && decision.confidence > 0.7) {
@@ -693,6 +735,93 @@ export class TradingService {
             winRate: Math.round(winRate),
             pnlByPair,
             pnlByStrategy
+        };
+    }
+    /**
+     * Get Unified Positions (Real + Virtual)
+     */
+    async getUnifiedPositions(userId: string) {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                asterApiKey: true,
+                asterApiSecret: true,
+                asterTestnet: true,
+                tradingEnabled: true
+            }
+        });
+
+        if (!user) throw new Error('User not found');
+
+        let realPositions: Position[] = [];
+        const virtualPositions: (Position & { isVirtual: boolean, entryTime: Date })[] = [];
+
+        // 1. Fetch Real Positions
+        if (user.asterApiKey && user.asterApiSecret) {
+            try {
+                const aster = new AsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet || true);
+                realPositions = await aster.getPositions();
+            } catch (err) {
+                console.warn(`[TradingService] Failed to fetch real positions for ${userId}`, err);
+            }
+        }
+
+        // 2. Fetch Virtual Positions (Pending Signals)
+        try {
+            const pendingSignals = await prisma.trackedSignal.findMany({
+                where: { userId, status: 'PENDING' }
+            });
+
+            // Get current prices for valuation
+            if (pendingSignals.length > 0) {
+                // Optimize: get all tickers or just fetch needed
+                const uniqueSymbols = [...new Set(pendingSignals.map(s => s.symbol))];
+                const prices: Record<string, number> = {};
+
+                // Using public AsterService for prices
+                const publicAster = new AsterService();
+                await Promise.all(uniqueSymbols.map(async (sym) => {
+                    try {
+                        prices[sym] = await publicAster.getPrice(sym);
+                    } catch (e) {
+                        prices[sym] = 0;
+                    }
+                }));
+
+                for (const signal of pendingSignals) {
+                    const currentPrice = prices[signal.symbol] || signal.entryPrice;
+                    // const size = 100; // Unused
+
+                    let unrealizedPnL = 0;
+                    if (signal.direction === 'LONG') {
+                        unrealizedPnL = (currentPrice - signal.entryPrice) / signal.entryPrice * 100;
+                    } else {
+                        unrealizedPnL = (signal.entryPrice - currentPrice) / signal.entryPrice * 100;
+                    }
+
+                    virtualPositions.push({
+                        symbol: signal.symbol,
+                        side: signal.direction as 'LONG' | 'SHORT',
+                        size: 0, // Virtual
+                        entryPrice: signal.entryPrice,
+                        markPrice: currentPrice,
+                        unrealizedPnL: parseFloat(unrealizedPnL.toFixed(2)),
+                        leverage: 1,
+                        liquidationPrice: 0,
+                        isVirtual: true,
+                        entryTime: signal.createdAt
+                    });
+                }
+            }
+
+        } catch (err) {
+            console.error('[TradingService] Failed to fetch virtual positions:', err);
+        }
+
+        return {
+            real: realPositions,
+            virtual: virtualPositions,
+            combined: [...realPositions.map(p => ({ ...p, isVirtual: false })), ...virtualPositions]
         };
     }
 }
