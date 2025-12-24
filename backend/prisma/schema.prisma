@@ -57,6 +57,13 @@ model User {
   strategyMode         String  @default("deepseek") // deepseek | rl | hybrid
   disclaimerAccepted   Boolean @default(false)
   disclaimerAcceptedAt DateTime?
+  termsAccepted        Boolean @default(false)
+  termsAcceptedAt      DateTime?
+  
+  // Subscription (BYOK = Bring Your Own Key)
+  subscriptionPlan     SubscriptionPlan @default(FREE)
+  subscriptionStatus   SubscriptionStatus @default(ACTIVE)
+  subscriptionEndsAt   DateTime?
   
   // Onboarding
   onboardingStep      Int     @default(0)
@@ -72,6 +79,8 @@ model User {
   testSessions     TestSession[]
   backtestSessions BacktestSession[]
   tradingModels    TradingModel[]
+  subscriptions    Subscription[]
+  payments         PaymentHistory[]
   
   // Analysis Caching
   lastMarketAnalysisAt DateTime?
@@ -84,6 +93,7 @@ model User {
   
   @@index([email])
   @@index([username])
+  @@index([subscriptionPlan])
 }
 
 enum UserRole {
@@ -553,3 +563,94 @@ model Notification {
   @@index([read])
 }
 
+// ============================================
+// SUBSCRIPTION & PAYMENTS (NOWPayments Crypto)
+// ============================================
+
+enum SubscriptionPlan {
+  FREE      // Limited features, demo mode
+  PRO       // $25/month - Bring Your Own Key (BYOK)
+  CUSTOM    // Enterprise - We provide LLM keys
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+model Subscription {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  plan            SubscriptionPlan
+  status          SubscriptionStatus @default(PENDING)
+  
+  // NOWPayments Integration
+  paymentId       String?   // NOWPayments payment ID
+  invoiceId       String?   // NOWPayments invoice ID
+  invoiceUrl      String?   // Payment URL for user
+  
+  amount          Float     // Amount in crypto
+  currency        String    // BTC, ETH, USDT, etc.
+  amountUsd       Float     // USD equivalent
+  
+  // Subscription Period
+  startDate       DateTime?
+  endDate         DateTime?
+  
+  // First signal tracking (for refund policy)
+  firstSignalAt   DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([paymentId])
+}
+
+model PaymentHistory {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // NOWPayments Data
+  paymentId       String   @unique  // NOWPayments payment ID
+  invoiceId       String?
+  orderId         String?  // Our internal order reference
+  
+  // Amounts
+  amount          Float    // Original amount
+  actuallyPaid    Float?   // Amount actually received
+  currency        String   // Crypto currency used
+  amountUsd       Float    // USD equivalent at payment time
+  
+  // Status
+  status          PaymentStatus @default(PENDING)
+  
+  // Metadata
+  payAddress      String?  // Crypto address for payment
+  network         String?  // Blockchain network
+  metadata        Json?    // Full NOWPayments response
+  
+  createdAt       DateTime @default(now())
+  confirmedAt     DateTime?
+  
+  @@index([userId])
+  @@index([paymentId])
+  @@index([status])
+}
+
+enum PaymentStatus {
+  PENDING       // Waiting for payment
+  CONFIRMING    // Payment detected, waiting confirmations
+  CONFIRMED     // Payment confirmed
+  SENDING       // We're processing
+  FINISHED      // Complete
+  FAILED        // Payment failed
+  EXPIRED       // Invoice expired
+  REFUNDED      // Refunded (only before first signal)
+}

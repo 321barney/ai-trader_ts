@@ -5,12 +5,18 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../utils/prisma.js';
 import { authMiddleware, onboardingCompleteMiddleware } from '../middleware/auth.js';
+import { requireSubscription } from '../middleware/subscription.js';
 import { asyncHandler } from '../middleware/error.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from '../services/rl.service.js';
 
 const router = Router();
+
+// All agent routes require authentication AND active subscription
+router.use(authMiddleware);
+router.use(requireSubscription);
+
 
 /**
  * POST /api/agents/reset

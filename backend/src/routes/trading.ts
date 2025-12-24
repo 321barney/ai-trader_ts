@@ -5,10 +5,16 @@
 import { Router, Request, Response } from 'express';
 import { tradingService } from '../services/trading.service.js';
 import { authMiddleware, onboardingCompleteMiddleware } from '../middleware/auth.js';
+import { requireSubscription } from '../middleware/subscription.js';
 import { asyncHandler } from '../middleware/error.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 
 const router = Router();
+
+// All trading routes require authentication AND active subscription
+router.use(authMiddleware);
+router.use(requireSubscription);
+
 
 /**
  * GET /api/trading/signals

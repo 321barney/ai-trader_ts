@@ -142,6 +142,27 @@ class ApiClient {
             }
         }
 
+        // Handle 402 (Payment Required) - Redirect to pricing
+        if (response.status === 402) {
+            console.warn('[ApiClient] Got 402 Payment Required on', endpoint, '- subscription needed');
+            const data = await response.json();
+
+            // Store the error for display
+            if (typeof window !== 'undefined') {
+                // Redirect to pricing page
+                const currentPath = window.location.pathname;
+                if (currentPath !== '/pricing') {
+                    window.location.href = '/pricing?subscription_required=true&from=' + encodeURIComponent(currentPath);
+                }
+            }
+
+            return {
+                success: false,
+                error: data.error || 'Active subscription required',
+                code: data.code || 'SUBSCRIPTION_REQUIRED'
+            } as any;
+        }
+
         const data = await response.json();
         return data;
     }

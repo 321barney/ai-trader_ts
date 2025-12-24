@@ -4,6 +4,7 @@
 
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { requireSubscription } from '../middleware/subscription.js';
 import { positionManager } from '../services/position-manager.service.js';
 import { executionService } from '../services/execution.service.js';
 import { prisma } from '../utils/prisma.js';
@@ -11,6 +12,11 @@ import { successResponse, errorResponse } from '../utils/response.js';
 
 const db = prisma as any;
 const router = Router();
+
+// All position routes require authentication AND active subscription
+router.use(authMiddleware);
+router.use(requireSubscription);
+
 
 /**
  * GET /api/positions - Get open positions

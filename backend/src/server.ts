@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import apiRouter from './routes/index.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 
@@ -10,16 +12,51 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:"],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Allow embedding
+}));
+
+// Rate limiting for auth routes (prevent brute force)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 requests per window per IP
+    message: { error: 'Too many authentication attempts, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// General rate limiting
+const generalLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 100, // 100 requests per minute
+    message: { error: 'Too many requests, please slow down' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? ['https://aitrader.app', /\.railway\.app$/]
+        ? ['https://aitrader.app', 'https://aster.ai', /\.railway\.app$/]
         : ['http://localhost:3000'],
     credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Limit payload size
 
-// Health check
+// Apply rate limiting
+app.use('/api/auth', authLimiter);
+app.use('/api', generalLimiter);
+
+// Health check (no rate limit)
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -35,6 +72,7 @@ app.use('/api', apiRouter);
 // Error handling
 app.use(notFoundHandler);
 app.use(errorHandler);
+
 
 // Debug: Print all registered routes
 function printRoutes(app: express.Application) {

@@ -6,12 +6,15 @@
 import { Router, Request, Response } from 'express';
 import { backtestService } from '../services/backtest.service.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { requireSubscription } from '../middleware/subscription.js';
 import { asyncHandler } from '../middleware/error.js';
 
 const router = Router();
 
-// Apply auth to all routes
+// Apply auth and subscription check to all routes
 router.use(authMiddleware);
+router.use(requireSubscription);
+
 
 /**
  * POST /api/backtest/start

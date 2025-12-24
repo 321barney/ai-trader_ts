@@ -11,6 +11,7 @@ import { positionsRouter } from './positions.js';
 import { notificationsRouter } from './notifications.js';
 import { portfolioRouter } from './portfolio.js';
 import { analyticsRouter } from './analytics.js';
+import { subscriptionRouter } from './subscription.js';
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use('/positions', positionsRouter);
 router.use('/notifications', notificationsRouter);
 router.use('/portfolio', portfolioRouter);
 router.use('/analytics', analyticsRouter);
+router.use('/subscription', subscriptionRouter);
 
 export default router;

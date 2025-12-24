@@ -5,12 +5,15 @@
 
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
+import { requireSubscription } from '../middleware/subscription.js';
 import { strategyService } from '../services/strategy.service.js';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication AND active subscription
 router.use(authMiddleware);
+router.use(requireSubscription);
+
 
 /**
  * GET /api/strategies
