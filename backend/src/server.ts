@@ -63,7 +63,7 @@ const generalLimiter = rateLimit({
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? ['https://aitrader.app', 'https://aster.ai', /\.railway\.app$/]
+        ? ['https://aiaster.cc', 'https://www.aiaster.cc', /\.railway\.app$/]
         : ['http://localhost:3000'],
     credentials: true,
 }));
