@@ -217,11 +217,21 @@ export default function OnboardingPage() {
 
             {/* Sidebar - Steps */}
             <aside className="w-80 border-r border-white/5 p-8 relative z-10">
-                <div className="flex items-center gap-2 mb-12">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-xl">AI</span>
+                <div className="flex items-center gap-3 mb-12">
+                    <div className="relative w-11 h-11 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-pink-500 rounded-xl rotate-6 opacity-20 blur-md"></div>
+                        <div className="relative w-full h-full bg-gradient-to-tr from-purple-600 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white">
+                                <path d="M12 4L4 20H20L12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M12 14L9 19H15L12 14Z" fill="currentColor" fillOpacity="0.2" stroke="none" />
+                                <path d="M8 19L12 11L16 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </div>
                     </div>
-                    <span className="text-xl font-bold text-white">Trader</span>
+                    <div>
+                        <span className="text-xl font-bold text-white tracking-wide">AISTER</span>
+                        <div className="text-[10px] text-gray-400 font-medium tracking-wider">Multi-Agent AI Trading</div>
+                    </div>
                 </div>
 
                 <div className="space-y-4">
