@@ -139,7 +139,7 @@ function PricingContent() {
         }
 
         if (plan === 'CUSTOM') {
-            window.location.href = 'mailto:support@AISTER.ai?subject=Custom Plan Inquiry';
+            window.location.href = 'mailto:barnros89@gmail.com?subject=AISTER%20Custom%20Plan%20Inquiry';
             return;
         }
 
@@ -363,7 +363,7 @@ function PricingContent() {
                             </li>
                         </ul>
                         <a
-                            href="mailto:support@AISTER.ai?subject=Custom Plan Inquiry"
+                            href="mailto:barnros89@gmail.com?subject=AISTER%20Custom%20Plan%20Inquiry"
                             className="block w-full py-3 rounded-xl border border-white/20 text-center font-medium hover:bg-white/5 transition-colors"
                         >
                             Contact Sales
@@ -409,13 +409,13 @@ function PricingContent() {
                     <h3 className="text-xl font-bold mb-4">Need Help?</h3>
                     <p className="text-gray-400 mb-6">Our support team is available 24/7</p>
                     <div className="flex items-center justify-center gap-8">
-                        <a href="mailto:support@AISTER.ai" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+                        <a href="mailto:barnros89@gmail.com" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
                             <span>📧</span>
-                            support@AISTER.ai
+                            barnros89@gmail.com
                         </a>
-                        <a href="https://t.me/AISTER_support" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+                        <a href="https://t.me/barney_ro" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
                             <span>💬</span>
-                            @AISTER_support
+                            @barney_ro
                         </a>
                     </div>
                 </div>

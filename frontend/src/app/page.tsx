@@ -385,7 +385,7 @@ export default function Home() {
                 <span className="text-green-400">✓</span> Volume discounts
               </li>
             </ul>
-            <a href="mailto:support@AISTER.ai" className="block w-full py-3 rounded-xl border border-white/20 text-center font-medium hover:bg-white/5 transition-colors">
+            <a href="mailto:barnros89@gmail.com?subject=AISTER%20Custom%20Plan%20Inquiry" className="block w-full py-3 rounded-xl border border-white/20 text-center font-medium hover:bg-white/5 transition-colors">
               Contact Sales
             </a>
           </div>
@@ -441,13 +441,13 @@ export default function Home() {
           <h3 className="text-2xl font-bold mb-4">Need Help?</h3>
           <p className="text-gray-400 mb-6">Our support team is here for you</p>
           <div className="flex items-center justify-center gap-8">
-            <a href="mailto:support@AISTER.ai" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+            <a href="mailto:barnros89@gmail.com" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
               <span>📧</span>
-              support@AISTER.ai
+              barnros89@gmail.com
             </a>
-            <a href="https://t.me/AISTER_support" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+            <a href="https://t.me/barney_ro" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
               <span>💬</span>
-              @AISTER_support
+              @barney_ro
             </a>
           </div>
         </div>
@@ -540,7 +540,7 @@ export default function Home() {
             <div className="flex items-center gap-6 text-gray-500 text-sm">
               <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-              <a href="mailto:support@AISTER.ai" className="hover:text-white transition-colors">Contact</a>
+              <a href="mailto:barnros89@gmail.com" className="hover:text-white transition-colors">Contact</a>
             </div>
 
             <p className="text-gray-500 text-sm">
