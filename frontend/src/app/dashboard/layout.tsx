@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import NotificationsBell from "@/components/NotificationsBell";
+import ReportProblemModal from "@/components/ReportProblemModal";
 
 export default function DashboardLayout({
     children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
     const pathname = usePathname();
     const [mode, setMode] = useState<"test" | "live">("test");
     const [userEmail, setUserEmail] = useState("trader@example.com");
+    const [showReportModal, setShowReportModal] = useState(false);
 
     useEffect(() => {
         const savedMode = localStorage.getItem("tradingMode") as "test" | "live";
@@ -94,6 +96,17 @@ export default function DashboardLayout({
                     })}
                 </nav>
 
+                {/* Report Problem */}
+                <div className="px-4 py-2">
+                    <button
+                        onClick={() => setShowReportModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs text-gray-500 hover:text-amber-400 hover:bg-amber-500/5 transition-all w-full"
+                    >
+                        <span>🐛</span>
+                        <span>Report a Problem</span>
+                    </button>
+                </div>
+
                 {/* Mode Toggle */}
                 <div className="p-4 border-t border-white/5 bg-[#0a0a12]/50">
                     <div className="bg-[#12121a] rounded-xl p-1 border border-white/5">
@@ -161,6 +174,12 @@ export default function DashboardLayout({
                     {children}
                 </div>
             </main>
+
+            {/* Report Problem Modal */}
+            <ReportProblemModal
+                isOpen={showReportModal}
+                onClose={() => setShowReportModal(false)}
+            />
         </div>
     );
 }
