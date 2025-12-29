@@ -10,6 +10,8 @@ import { signalTrackerService } from './signal-tracker.service.js';
 import { TechnicalAnalysisService } from './technical-analysis.service.js';
 import { marketDataService, MultiTFData } from './market-data.service.js';
 import { modelService } from './model.service.js';
+import { ApiCreditExhaustedError } from './ai-service.interface.js';
+import { notificationService } from './notification.service.js';
 
 export class TradingService {
     private orchestrator: AgentOrchestrator;
@@ -257,7 +259,44 @@ export class TradingService {
             }, user.strategyMode as any); // Pass user's preferred mode (deepseek/rl/hybrid)
         } catch (error: any) {
             console.error(`[TradingService] Orchestrator failed for ${symbol}:`, error);
-            // Create error record visible to user
+
+            // Handle API credit exhaustion - auto-pause trading and notify user
+            if (error instanceof ApiCreditExhaustedError) {
+                console.warn(`[TradingService] API credits exhausted (${error.provider}) for user ${userId}, pausing trading.`);
+
+                // Auto-disable trading
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { tradingEnabled: false }
+                });
+
+                // Send notification to user
+                await notificationService.apiCreditExhausted(userId, error.provider);
+
+                // Create error record visible to user
+                await prisma.agentDecision.create({
+                    data: {
+                        userId,
+                        agentType: 'ORCHESTRATOR',
+                        reasoning: `API Credits Exhausted: ${error.provider.toUpperCase()}. Trading has been paused.`,
+                        thoughtSteps: [
+                            { step: 1, thought: 'Attempted live market analysis' },
+                            { step: 2, thought: `${error.provider.toUpperCase()} API credits exhausted` },
+                            { step: 3, thought: 'Trading auto-paused. Please add credits to resume.' }
+                        ],
+                        decision: 'BLOCKED',
+                        confidence: 0,
+                        symbol,
+                        marketData: marketData as any,
+                        isBacktest: false,
+                        sourceMode: 'SIGNAL'
+                    }
+                });
+
+                throw error; // Re-throw to stop execution
+            }
+
+            // Create error record visible to user (non-credit errors)
             await prisma.agentDecision.create({
                 data: {
                     userId,

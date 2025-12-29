@@ -2,7 +2,7 @@
  * Google Gemini Service
  */
 
-import { IAiService, ChatMessage, AiServiceOptions } from './ai-service.interface.js';
+import { IAiService, ChatMessage, AiServiceOptions, ApiCreditExhaustedError } from './ai-service.interface.js';
 
 export class GeminiService implements IAiService {
     private apiKey: string;
@@ -65,7 +65,17 @@ export class GeminiService implements IAiService {
 
             if (!response.ok) {
                 const error = await response.json() as any;
-                throw new Error(error.error?.message || 'Gemini API request failed');
+                const errorMessage = error.error?.message || 'Gemini API request failed';
+                const errorStatus = error.error?.status || '';
+
+                // Detect quota exhaustion
+                if (errorStatus === 'RESOURCE_EXHAUSTED' ||
+                    errorMessage.toLowerCase().includes('quota exceeded') ||
+                    errorMessage.toLowerCase().includes('rate limit')) {
+                    throw new ApiCreditExhaustedError('gemini', errorMessage);
+                }
+
+                throw new Error(errorMessage);
             }
 
             const data = await response.json() as any;
@@ -76,6 +86,10 @@ export class GeminiService implements IAiService {
                 return ''; // Empty response or filtered
             }
         } catch (error: any) {
+            // Re-throw ApiCreditExhaustedError as-is
+            if (error instanceof ApiCreditExhaustedError) {
+                throw error;
+            }
             console.error('Gemini API Error:', error);
             throw error;
         }

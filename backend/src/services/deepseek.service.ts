@@ -2,7 +2,7 @@
  * DeepSeek AI Service
  */
 
-import { IAiService, ChatMessage, AiServiceOptions } from './ai-service.interface.js';
+import { IAiService, ChatMessage, AiServiceOptions, ApiCreditExhaustedError } from './ai-service.interface.js';
 
 export interface DeepSeekResponse {
     id: string;
@@ -65,13 +65,26 @@ export class DeepSeekService implements IAiService {
             });
 
             if (!response.ok) {
-                const error = await response.text();
-                throw new Error(`DeepSeek API error: ${error}`);
+                const errorText = await response.text();
+                const errorLower = errorText.toLowerCase();
+
+                // Detect credit/quota exhaustion
+                if (errorLower.includes('insufficient balance') ||
+                    errorLower.includes('quota exceeded') ||
+                    errorLower.includes('billing')) {
+                    throw new ApiCreditExhaustedError('deepseek', errorText);
+                }
+
+                throw new Error(`DeepSeek API error: ${errorText}`);
             }
 
             const data: DeepSeekResponse = await response.json() as unknown as DeepSeekResponse;
             return data.choices[0]?.message?.content || '';
         } catch (error) {
+            // Re-throw ApiCreditExhaustedError as-is
+            if (error instanceof ApiCreditExhaustedError) {
+                throw error;
+            }
             console.error('[DeepSeek] API error:', error);
             throw error;
         }

@@ -1,4 +1,4 @@
-import { IAiService, ChatMessage, AiServiceOptions } from './ai-service.interface.js';
+import { IAiService, ChatMessage, AiServiceOptions, ApiCreditExhaustedError } from './ai-service.interface.js';
 
 export class OpenAIService implements IAiService {
     private apiKey: string;
@@ -43,12 +43,25 @@ export class OpenAIService implements IAiService {
 
             if (!response.ok) {
                 const error = await response.json() as any;
-                throw new Error(error.error?.message || 'OpenAI API request failed');
+                const errorMessage = error.error?.message || 'OpenAI API request failed';
+                const errorCode = error.error?.code || '';
+
+                // Detect credit/quota exhaustion
+                if (errorCode === 'insufficient_quota' ||
+                    errorMessage.toLowerCase().includes('exceeded your current quota')) {
+                    throw new ApiCreditExhaustedError('openai', errorMessage);
+                }
+
+                throw new Error(errorMessage);
             }
 
             const data = await response.json() as any;
             return data.choices[0].message.content;
         } catch (error: any) {
+            // Re-throw ApiCreditExhaustedError as-is
+            if (error instanceof ApiCreditExhaustedError) {
+                throw error;
+            }
             console.error('OpenAI API Error:', error);
             throw error;
         }

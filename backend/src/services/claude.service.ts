@@ -2,7 +2,7 @@
  * Anthropic (Claude) Service
  */
 
-import { IAiService, ChatMessage, AiServiceOptions } from './ai-service.interface.js';
+import { IAiService, ChatMessage, AiServiceOptions, ApiCreditExhaustedError } from './ai-service.interface.js';
 
 export class ClaudeService implements IAiService {
     private apiKey: string;
@@ -54,14 +54,23 @@ export class ClaudeService implements IAiService {
 
             if (!response.ok) {
                 const error = await response.json() as any;
-                // Include full error details for debugging
                 const errorMessage = error.error?.message || JSON.stringify(error);
+
+                // Detect credit exhaustion
+                if (errorMessage.toLowerCase().includes('credit balance is too low')) {
+                    throw new ApiCreditExhaustedError('anthropic', errorMessage);
+                }
+
                 throw new Error(`Anthropic API Error (${response.status}): ${errorMessage}`);
             }
 
             const data = await response.json() as any;
             return data.content[0].text;
         } catch (error: any) {
+            // Re-throw ApiCreditExhaustedError as-is
+            if (error instanceof ApiCreditExhaustedError) {
+                throw error;
+            }
             console.error('Anthropic API Error:', error);
             throw error;
         }

@@ -17,7 +17,8 @@ export type NotificationType =
     | 'DRAWDOWN_WARNING'
     | 'POSITION_CLOSED'
     | 'MODEL_APPROVED'
-    | 'BACKTEST_COMPLETE';
+    | 'BACKTEST_COMPLETE'
+    | 'API_CREDIT_EXHAUSTED';
 
 export interface Notification {
     id?: string;
@@ -95,6 +96,16 @@ class NotificationService {
 
     async backtestComplete(userId: string, modelVersion: number, totalReturn: number): Promise<void> {
         await this.send(userId, 'BACKTEST_COMPLETE', `Backtest Complete: v${modelVersion}`, `Return: ${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(1)}%`, { modelVersion, totalReturn });
+    }
+
+    async apiCreditExhausted(userId: string, provider: string): Promise<void> {
+        await this.send(
+            userId,
+            'API_CREDIT_EXHAUSTED',
+            `⚠️ API Credits Exhausted: ${provider.toUpperCase()}`,
+            `Your ${provider} API credits have run out. Trading has been paused. Please add credits to resume.`,
+            { provider }
+        );
     }
 
     addListener(userId: string, callback: (notification: Notification) => void): void {
