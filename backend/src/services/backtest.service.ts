@@ -605,13 +605,25 @@ VERDICT: APPROVE|REJECT|MODIFY`;
      * Resume any interrupted backtests on startup
      */
     async resumeInterruptedBacktests() {
-        const interrupted = await prisma.backtestSession.findMany({
-            where: { status: 'RUNNING' }
-        });
+        try {
+            const interrupted = await prisma.backtestSession.findMany({
+                where: { status: 'RUNNING' }
+            });
 
-        for (const session of interrupted) {
-            console.log(`[Backtest] Resuming interrupted session ${session.id}`);
-            this.processBacktest(session.id);
+            if (interrupted.length === 0) {
+                console.log('[Backtest] No interrupted sessions to resume');
+                return;
+            }
+
+            console.log(`[Backtest] Found ${interrupted.length} interrupted session(s)`);
+
+            for (const session of interrupted) {
+                console.log(`[Backtest] Resuming interrupted session ${session.id}`);
+                this.processBacktest(session.id);
+            }
+        } catch (error: any) {
+            console.error('[Backtest] Failed to resume interrupted backtests:', error.message);
+            // Don't throw - this runs on startup and shouldn't crash the server
         }
     }
 

@@ -110,27 +110,45 @@ function printRoutes(app: express.Application) {
 }
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`🚀 AI Trader Backend running on port ${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 API Base: http://localhost:${PORT}/api`);
     printRoutes(app);
 
-    // Start Scheduler
+    // Verify database connection before starting background services
+    const { verifyDatabaseConnection } = await import('./utils/prisma.js');
+    const dbReady = await verifyDatabaseConnection();
+
+    if (!dbReady) {
+        console.error('❌ Database connection failed - background services will not start');
+        console.error('💡 Check your DATABASE_URL in .env file');
+        return; // Don't start schedulers if DB is not ready
+    }
+
+    console.log('✅ Database connected - starting background services...');
+
+    // Start Scheduler (only after DB is ready)
     import('./scheduler.js').then(({ scheduler }) => {
         scheduler.startTradingLoop();
         scheduler.startSignalMonitoring();
+    }).catch(err => {
+        console.error('[Scheduler] Failed to start:', err.message);
     });
 
-    // Resume interrupted backtests
+    // Resume interrupted backtests (only after DB is ready)
     import('./services/backtest.service.js').then(({ backtestService }) => {
         backtestService.resumeInterruptedBacktests();
+    }).catch(err => {
+        console.error('[Backtest] Failed to resume:', err.message);
     });
 
     // Start Cost-Efficient Scheduler (4h market analysis, monthly model refresh)
     import('./services/scheduler.service.js').then(({ schedulerService }) => {
         schedulerService.start();
         console.log('📅 Cost-efficient scheduler started');
+    }).catch(err => {
+        console.error('[SchedulerService] Failed to start:', err.message);
     });
 });
 
