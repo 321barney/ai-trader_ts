@@ -63,8 +63,8 @@ router.post('/:id/close', authMiddleware, async (req: Request, res: Response) =>
         }
 
         // Get current price for PnL calculation
-        const { asterService } = await import('../services/aster.service.js');
-        const currentPrice = await asterService.getPrice(position.symbol);
+        const { exchangeFactory } = await import('../services/exchange.service.js');
+        const currentPrice = await exchangeFactory.getDefault().getPrice(position.symbol);
 
         await positionManager.closePosition(position, 'MANUAL', currentPrice);
 

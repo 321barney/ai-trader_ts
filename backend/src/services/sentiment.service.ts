@@ -8,7 +8,7 @@
  * - Funding rates
  */
 
-import { asterService } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 
 export interface SentimentData {
     symbol: string;
@@ -125,7 +125,7 @@ class SentimentService {
      */
     private async getPriceMomentum(symbol: string): Promise<SentimentSource | null> {
         try {
-            const klines = await asterService.getKlines(symbol, '1h', 24);
+            const klines = await exchangeFactory.getDefault().getKlines(symbol, '1h', 24);
             if (klines.length < 24) return null;
 
             const prices = klines.map(k => k.close);

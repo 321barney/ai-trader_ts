@@ -5,7 +5,8 @@
 import { prisma } from '../utils/prisma.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from './rl.service.js';
-import { AsterService, Position } from './aster.service.js';
+import { Position } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 import { signalTrackerService } from './signal-tracker.service.js';
 import { TechnicalAnalysisService } from './technical-analysis.service.js';
 import { marketDataService, MultiTFData } from './market-data.service.js';
@@ -15,18 +16,17 @@ import { notificationService } from './notification.service.js';
 
 export class TradingService {
     private orchestrator: AgentOrchestrator;
-    private asterService: AsterService;
+    private defaultExchange = exchangeFactory.getDefault();
 
     constructor() {
         this.orchestrator = new AgentOrchestrator();
-        this.asterService = new AsterService();
     }
 
     /**
      * Get available trading symbols
      */
     async getSymbols() {
-        return await this.asterService.getPairs();
+        return await this.defaultExchange.getPairs();
     }
 
     /**
@@ -214,8 +214,13 @@ export class TradingService {
         // Get RL metrics
         const rlMetrics = await rlService.getMetrics();
 
-        // Initialize Aster Service with user keys
-        const asterService = new AsterService(user.asterApiKey!, user.asterApiSecret!, user.asterTestnet || true);
+        // Initialize Exchange Adapter with user keys
+        const userExchange = exchangeFactory.getAdapterForUser(
+            (user as any).preferredExchange || 'aster',
+            user.asterApiKey!,
+            user.asterApiSecret!,
+            user.asterTestnet || true
+        );
 
         // Fetch Real Account Data
         let portfolioValue = 0;
@@ -224,9 +229,9 @@ export class TradingService {
 
         try {
             if (user.asterApiKey && user.asterApiSecret) {
-                const balances = await asterService.getBalance();
+                const balances = await userExchange.getBalance();
                 const usdtBalance = balances.find(b => b.asset === 'USDT');
-                const positions = await asterService.getPositions();
+                const positions = await userExchange.getPositions();
 
                 // Calculate Portfolio Value (Wallet Balance + Unrealized PnL)
                 const walletBalance = usdtBalance ? usdtBalance.total : 0;
@@ -545,11 +550,11 @@ export class TradingService {
     private async getMarketData(symbol: string, methodology?: string) {
         try {
             // Get 24hr ticker for general stats
-            const ticker = await this.asterService.getTicker(symbol);
+            const ticker = await this.defaultExchange.getTicker(symbol);
 
             // Get RSI/MACD/ATR (Calculated from Klines)
             // Fetch Klines for TA (100 candles for sufficient history)
-            const klines = await this.asterService.getKlines(symbol, '1h', 100);
+            const klines = await this.defaultExchange.getKlines(symbol, '1h', 100);
 
             // Format data for technical analysis
             const highs = klines.map(k => k.high);
@@ -612,6 +617,7 @@ export class TradingService {
                 methodology: true,
                 tradingCapitalPercent: true,
                 maxDrawdownPercent: true,
+                preferredExchange: true // Also fetch preferred exchange
             }
         });
 
@@ -620,11 +626,17 @@ export class TradingService {
             return null;
         }
 
-        const authService = new AsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet || true);
+        // Get exchange adapter for user
+        const userExchange = exchangeFactory.getAdapterForUser(
+            (user as any).preferredExchange || 'aster',
+            user.asterApiKey,
+            user.asterApiSecret,
+            user.asterTestnet || true
+        );
 
         try {
             // Get current balance to calculate position size
-            const balances = await authService.getBalance();
+            const balances = await userExchange.getBalance();
             const usdtBalance = balances.find(b => b.asset === 'USDT');
             const availableBalance = usdtBalance ? usdtBalance.available : 0;
 
@@ -643,14 +655,14 @@ export class TradingService {
                 const side = decision.finalDecision === 'LONG' ? 'BUY' : 'SELL';
 
                 // Fetch current price to calculate quantity
-                const currentPrice = decision.entryPrice || (await authService.getPrice(symbol));
+                const currentPrice = decision.entryPrice || (await userExchange.getPrice(symbol));
                 const leverage = user.leverage || 10;
 
                 // Calculate quantity: (USDT amount * leverage) / price
                 const rawQuantity = (positionUSDT * leverage) / currentPrice;
 
                 // Get symbol precision
-                const pairs = await this.asterService.getPairs();
+                const pairs = await this.defaultExchange.getPairs();
                 const pairInfo = pairs.find(p => p.symbol === symbol);
                 const stepSize = (pairInfo as any)?.stepSize || pairInfo?.minQty || 0.001;
                 const minQty = pairInfo?.minQty || 0.001;
@@ -660,7 +672,7 @@ export class TradingService {
 
                 console.log(`[Execute] ${side} ${symbol} | Balance: $${availableBalance.toFixed(2)} | ${capitalPercent}% = $${positionUSDT.toFixed(2)} | Qty: ${quantity}`);
 
-                const order = await authService.placeOrder({
+                const order = await userExchange.placeOrder({
                     symbol,
                     side,
                     type,
@@ -812,7 +824,8 @@ export class TradingService {
                 asterApiKey: true,
                 asterApiSecret: true,
                 asterTestnet: true,
-                tradingEnabled: true
+                tradingEnabled: true,
+                preferredExchange: true
             }
         });
 
@@ -824,8 +837,13 @@ export class TradingService {
         // 1. Fetch Real Positions
         if (user.asterApiKey && user.asterApiSecret) {
             try {
-                const aster = new AsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet || true);
-                realPositions = await aster.getPositions();
+                const userExchange = exchangeFactory.getAdapterForUser(
+                    (user as any).preferredExchange || 'aster',
+                    user.asterApiKey,
+                    user.asterApiSecret,
+                    user.asterTestnet || true
+                );
+                realPositions = await userExchange.getPositions();
             } catch (err) {
                 console.warn(`[TradingService] Failed to fetch real positions for ${userId}`, err);
             }
@@ -840,14 +858,14 @@ export class TradingService {
             // Get current prices for valuation
             if (pendingSignals.length > 0) {
                 // Optimize: get all tickers or just fetch needed
-                const uniqueSymbols = [...new Set(pendingSignals.map(s => s.symbol))];
+                const uniqueSymbols = [...new Set(pendingSignals.map((s: any) => s.symbol))] as string[];
                 const prices: Record<string, number> = {};
 
-                // Using public AsterService for prices
-                const publicAster = new AsterService();
+                // Using default exchange for public price data
+                const publicExchange = exchangeFactory.getDefault();
                 await Promise.all(uniqueSymbols.map(async (sym) => {
                     try {
-                        prices[sym] = await publicAster.getPrice(sym);
+                        prices[sym] = await publicExchange.getPrice(sym);
                     } catch (e) {
                         prices[sym] = 0;
                     }

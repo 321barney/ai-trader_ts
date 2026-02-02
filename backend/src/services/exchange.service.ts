@@ -23,13 +23,17 @@ export interface IExchangeAdapter {
 
     // Market Data
     getPrice(symbol: string): Promise<number>;
+    getTicker(symbol: string): Promise<any>;
+    getKlines(symbol: string, interval: string, limit?: number): Promise<any[]>;
     getBalance(): Promise<any[]>;
     getPositions(): Promise<any[]>;
+    getPairs(): Promise<any[]>;
 
     // Trading
     placeOrder(params: OrderParams): Promise<any>;
     cancelOrder(symbol: string, orderId: string): Promise<void>;
     getOpenOrders(symbol?: string): Promise<any[]>;
+    setLeverage?(symbol: string, leverage: number): Promise<void>;
 }
 
 export interface OrderParams {
@@ -40,6 +44,7 @@ export interface OrderParams {
     price?: number;
     stopLoss?: number;
     takeProfit?: number;
+    positionSide?: 'LONG' | 'SHORT';
 }
 
 /**
@@ -64,12 +69,24 @@ class AsterAdapter implements IExchangeAdapter {
         return this.service.getPrice(symbol);
     }
 
+    async getTicker(symbol: string) {
+        return this.service.getTicker(symbol);
+    }
+
+    async getKlines(symbol: string, interval: string, limit?: number) {
+        return this.service.getKlines(symbol, interval as any, limit);
+    }
+
     async getBalance() {
         return this.service.getBalance();
     }
 
     async getPositions() {
         return this.service.getPositions();
+    }
+
+    async getPairs() {
+        return this.service.getPairs();
     }
 
     async placeOrder(params: OrderParams) {
@@ -114,6 +131,17 @@ class ExchangeFactory {
         }
 
         return this.adapters.get(key)!;
+    }
+
+    /**
+     * Helper to get adapter for a user
+     */
+    getAdapterForUser(exchange: string, apiKey: string, apiSecret: string, testnet: boolean): IExchangeAdapter {
+        return this.getAdapter(exchange as ExchangeType, {
+            apiKey,
+            apiSecret,
+            testnet
+        });
     }
 
     /**

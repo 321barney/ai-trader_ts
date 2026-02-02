@@ -213,22 +213,28 @@ router.post('/test-connection', authMiddleware, asyncHandler(async (req: Request
 
     try {
         // Dynamic import to avoid circular dependencies
-        const { createAsterService } = await import('../services/aster.service.js');
-        const aster = createAsterService(apiKey, apiSecret, testnet ?? true);
+        const { exchangeFactory } = await import('../services/exchange.service.js');
+        const exchange = exchangeFactory.getAdapter(
+            req.body.preferredExchange || 'aster',
+            { apiKey, apiSecret, testnet: testnet ?? true }
+        );
 
-        const result = await aster.testConnection();
+        const result = await exchange.testConnection();
 
         if (!result.success) {
             return errorResponse(res, result.error || 'Connection failed');
         }
 
         // Get available pairs
-        const pairs = await aster.getPairs();
+        const pairs = await exchange.getPairs();
         const activePairs = pairs.filter(p => p.status === 'TRADING');
+
+        // Fetch balance explicitly
+        const balance = await exchange.getBalance();
 
         return successResponse(res, {
             connected: true,
-            balance: result.balance,
+            balance: balance,
             availablePairs: activePairs.slice(0, 20), // Return top 20 pairs
             totalPairs: activePairs.length,
         });
@@ -252,10 +258,16 @@ router.get('/pairs', authMiddleware, asyncHandler(async (req: Request, res: Resp
     }
 
     try {
-        const { createAsterService } = await import('../services/aster.service.js');
-        const aster = createAsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet);
+        const { exchangeFactory } = await import('../services/exchange.service.js');
+        // Use default exchange or user's preference if available (here default to Aster for pairs list if not specified)
+        const exchange = exchangeFactory.getAdapterForUser(
+            (user as any).preferredExchange || 'aster',
+            user.asterApiKey,
+            user.asterApiSecret,
+            user.asterTestnet
+        );
 
-        const pairs = await aster.getPairs();
+        const pairs = await exchange.getPairs();
         const activePairs = pairs.filter(p => p.status === 'TRADING');
 
         return successResponse(res, activePairs);

@@ -7,7 +7,7 @@
  */
 
 import { prisma } from '../utils/prisma.js';
-import { asterService } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 import { signalTrackerService } from './signal-tracker.service.js';
 
 // Cast prisma to any for unmigrated models
@@ -114,13 +114,21 @@ class ExecutionService {
                     asterApiKey: true,
                     asterApiSecret: true,
                     asterTestnet: true,
-                    maxRiskPerTrade: true
+                    maxRiskPerTrade: true,
+                    preferredExchange: true
                 }
             });
 
             if (!user?.asterApiKey || !user?.asterApiSecret) {
                 return { success: false, error: 'No API keys configured' };
             }
+
+            const userExchange = exchangeFactory.getAdapterForUser(
+                (user as any).preferredExchange || 'aster',
+                user.asterApiKey,
+                user.asterApiSecret,
+                user.asterTestnet || true
+            );
 
             const riskPercent = user.maxRiskPerTrade || 2;
             const positionSize = await this.calculatePositionSize(
@@ -130,8 +138,8 @@ class ExecutionService {
                 riskPercent
             );
 
-            // Place order via Aster
-            const orderResult = await asterService.placeOrder({
+            // Place order via User Exchange
+            const orderResult = await userExchange.placeOrder({
                 symbol: signal.symbol,
                 side: signal.direction === 'LONG' ? 'BUY' : 'SELL',
                 type: 'MARKET',
@@ -223,13 +231,21 @@ class ExecutionService {
                     asterApiKey: true,
                     asterApiSecret: true,
                     asterTestnet: true,
-                    maxRiskPerTrade: true
+                    maxRiskPerTrade: true,
+                    preferredExchange: true
                 }
             });
 
             if (!user?.asterApiKey || !user?.asterApiSecret) {
                 return { success: false, error: 'No API keys configured' };
             }
+
+            const userExchange = exchangeFactory.getAdapterForUser(
+                (user as any).preferredExchange || 'aster',
+                user.asterApiKey,
+                user.asterApiSecret,
+                user.asterTestnet || true
+            );
 
             const positionSize = request.size || await this.calculatePositionSize(
                 request.symbol,
@@ -238,7 +254,7 @@ class ExecutionService {
                 user.maxRiskPerTrade || 2
             );
 
-            const orderResult = await asterService.placeOrder({
+            const orderResult = await userExchange.placeOrder({
                 symbol: request.symbol,
                 side: request.direction === 'LONG' ? 'BUY' : 'SELL',
                 type: 'MARKET',

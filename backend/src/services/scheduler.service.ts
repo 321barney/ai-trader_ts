@@ -10,7 +10,7 @@
 import cron from 'node-cron';
 import { prisma } from '../utils/prisma.js';
 import { modelService } from './model.service.js';
-import { AsterService } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { tradingService } from './trading.service.js';
 import { rlService } from './rl.service.js';
@@ -264,7 +264,13 @@ export class SchedulerService {
         try {
             const usersWithActiveModels = await prisma.user.findMany({
                 where: { tradingEnabled: true },
-                select: { id: true, asterApiKey: true, asterApiSecret: true }
+                select: {
+                    id: true,
+                    asterApiKey: true,
+                    asterApiSecret: true,
+                    asterTestnet: true,
+                    preferredExchange: true
+                }
             });
 
             for (const user of usersWithActiveModels) {
@@ -273,12 +279,14 @@ export class SchedulerService {
                     if (!activeModel) continue;
 
                     // Get current portfolio value (simplified - would need actual balance)
-                    const aster = new AsterService(
-                        user.asterApiKey || undefined,
-                        user.asterApiSecret || undefined
+                    const adapter = exchangeFactory.getAdapterForUser(
+                        (user as any).preferredExchange || 'aster',
+                        user.asterApiKey!,
+                        user.asterApiSecret!,
+                        user.asterTestnet || true
                     );
 
-                    const balances = await aster.getBalance().catch(() => []);
+                    const balances = await adapter.getBalance().catch(() => []);
                     const totalValue = balances.reduce((sum, b) => sum + b.total, 0);
 
                     // Assume peak is 10% higher for now (would track actual peak)
@@ -422,8 +430,8 @@ export class SchedulerService {
 
             // Fetch historical data for training (use BTCUSDT as default)
             const symbol = 'BTCUSDT';
-            const aster = new AsterService();
-            const historicalData = await aster.getKlines(symbol, '1h', 500);
+            const exchange = exchangeFactory.getDefault();
+            const historicalData = await exchange.getKlines(symbol, '1h', 500);
 
             // Initiate model creation
             try {
@@ -473,8 +481,8 @@ export class SchedulerService {
 
             // Fetch last 6 hours of data (6 * 60 / 5 = 72 candles for 5m, or 6 for 1h)
             const symbol = 'BTCUSDT';
-            const aster = new AsterService();
-            const newData = await aster.getKlines(symbol, '1h', 24); // Last 24 hours
+            const exchange = exchangeFactory.getDefault();
+            const newData = await exchange.getKlines(symbol, '1h', 24); // Last 24 hours
 
             // Send to RL for parameter update
             const updated = await rlService.updateModelWithNewData(symbol, newData);

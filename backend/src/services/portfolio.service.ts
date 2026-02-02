@@ -8,7 +8,7 @@
  */
 
 import { prisma } from '../utils/prisma.js';
-import { AsterService } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 
 const db = prisma as any;
 
@@ -49,7 +49,12 @@ class PortfolioService {
             // Get user credentials
             const user = await db.user.findUnique({
                 where: { id: userId },
-                select: { asterApiKey: true, asterApiSecret: true }
+                select: {
+                    asterApiKey: true,
+                    asterApiSecret: true,
+                    asterTestnet: true,
+                    preferredExchange: true
+                }
             });
 
             if (!user?.asterApiKey || !user?.asterApiSecret) {
@@ -57,14 +62,16 @@ class PortfolioService {
                 return this.getEmptySummary();
             }
 
-            // Create user-specific AsterService instance
-            const userAsterService = new AsterService(
+            // Create user-specific exchange instance
+            const exchange = exchangeFactory.getAdapterForUser(
+                (user as any).preferredExchange || 'aster',
                 user.asterApiKey,
-                user.asterApiSecret
+                user.asterApiSecret,
+                user.asterTestnet || true
             );
 
             // Get user's balances from exchange
-            const balances = await userAsterService.getBalance();
+            const balances = await exchange.getBalance();
 
             // Get open positions
             const openPositions = await db.position.findMany({
@@ -82,7 +89,7 @@ class PortfolioService {
             const positionSummaries: PositionSummary[] = [];
 
             for (const pos of openPositions) {
-                const currentPrice = await userAsterService.getPrice(pos.symbol).catch(() => pos.entryPrice);
+                const currentPrice = await exchange.getPrice(pos.symbol).catch(() => pos.entryPrice);
                 const positionValue = pos.size * currentPrice;
                 const entryValue = pos.size * pos.entryPrice;
 

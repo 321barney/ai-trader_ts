@@ -8,16 +8,16 @@
 import { MCPTool, ToolResult, ToolContext, toolRegistry } from '../tool-registry.js';
 
 // Dynamic imports
-let asterService: any = null;
+let exchangeFactory: any = null;
 let replayService: any = null;
 let marketDataService: any = null;
 
-async function getAsterService() {
-    if (!asterService) {
-        const module = await import('../../services/aster.service.js');
-        asterService = module.asterService;
+async function getExchangeFactory() {
+    if (!exchangeFactory) {
+        const module = await import('../../services/exchange.service.js');
+        exchangeFactory = module.exchangeFactory;
     }
-    return asterService;
+    return exchangeFactory;
 }
 
 async function getReplayService() {
@@ -85,8 +85,9 @@ const getPriceTool: MCPTool = {
                 };
             } else {
                 // Live mode
-                const aster = await getAsterService();
-                const ohlcv = await aster.getOHLCV(symbol, '1m', 1);
+                const factory = await getExchangeFactory();
+                const exchange = factory.getDefault();
+                const ohlcv = await exchange.getKlines(symbol, '1m', 1);
 
                 if (ohlcv.length === 0) {
                     return {
@@ -174,8 +175,9 @@ const getHistoricalTool: MCPTool = {
                 };
             } else {
                 // Live mode
-                const aster = await getAsterService();
-                const ohlcv = await aster.getOHLCV(symbol, interval, days * 24); // Approximate
+                const factory = await getExchangeFactory();
+                const exchange = factory.getDefault();
+                const ohlcv = await exchange.getKlines(symbol, interval, days * 24); // Approximate
 
                 return {
                     success: true,

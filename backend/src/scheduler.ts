@@ -7,7 +7,7 @@ import { prisma } from './utils/prisma.js';
 import { tradingService } from './services/trading.service.js';
 import { strategyService } from './services/strategy.service.js';
 import { signalTrackerService } from './services/signal-tracker.service.js';
-import { AsterService } from './services/aster.service.js';
+import { exchangeFactory } from './services/exchange.service.js';
 
 export class Scheduler {
     private tradingJob: cron.ScheduledTask | null = null;
@@ -114,6 +114,7 @@ export class Scheduler {
                 asterApiKey: true,
                 asterApiSecret: true,
                 asterTestnet: true,
+                preferredExchange: true,
                 maxDrawdownPercent: true,
             }
         });
@@ -133,14 +134,19 @@ export class Scheduler {
             // 2b. Drawdown check - Skip if max drawdown exceeded
             if (user.asterApiKey && user.asterApiSecret) {
                 try {
-                    const aster = new AsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet || true);
-                    const balances = await aster.getBalance();
+                    const exchange = exchangeFactory.getAdapterForUser(
+                        (user as any).preferredExchange || 'aster',
+                        user.asterApiKey,
+                        user.asterApiSecret,
+                        user.asterTestnet || true
+                    );
+                    const balances = await exchange.getBalance();
                     const usdtBalance = balances.find(b => b.asset === 'USDT');
 
                     if (usdtBalance) {
                         // Simple check: if unrealized PnL is very negative, skip
                         // In production: track initial balance and compare
-                        const positions = await aster.getPositions();
+                        const positions = await exchange.getPositions();
                         const unrealizedPnL = positions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
                         const currentBalance = usdtBalance.total + unrealizedPnL;
                         const drawdownPercent = ((usdtBalance.total - currentBalance) / usdtBalance.total) * 100;

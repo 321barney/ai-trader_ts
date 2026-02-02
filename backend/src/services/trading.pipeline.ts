@@ -8,7 +8,7 @@
  * 4. Execute based on mode (signal/trade/test)
  */
 
-import { asterService, createAsterService, OrderParams } from './aster.service.js';
+import { exchangeFactory, OrderParams } from './exchange.service.js';
 import { marketDataService, AnalysisData } from './market-data.service.js';
 import { strategyService, StrategyVersion } from './strategy.service.js';
 import { signalTrackerService, TrackedSignal } from './signal-tracker.service.js';
@@ -39,6 +39,7 @@ export interface UserTradingConfig {
     asterApiKey?: string;
     asterApiSecret?: string;
     asterTestnet: boolean;
+    preferredExchange?: string;
     maxPositionSize: number;  // % of portfolio
     maxRiskPerTrade: number;  // % of portfolio
 }
@@ -81,12 +82,13 @@ export class TradingPipeline {
         let portfolioValue = 10000; // Default fallback
         if (config.asterApiKey && config.asterApiSecret) {
             try {
-                const aster = createAsterService(
+                const exchange = exchangeFactory.getAdapterForUser(
+                    config.preferredExchange || 'aster',
                     config.asterApiKey,
                     config.asterApiSecret,
                     config.asterTestnet
                 );
-                const balances = await aster.getBalance();
+                const balances = await exchange.getBalance();
                 const usdtBalance = balances.find(b => b.asset === 'USDT');
                 if (usdtBalance) {
                     portfolioValue = usdtBalance.total;
@@ -205,6 +207,7 @@ export class TradingPipeline {
                 asterApiKey: true,
                 asterApiSecret: true,
                 asterTestnet: true,
+                preferredExchange: true,
                 maxPositionSize: true,
                 maxRiskPerTrade: true,
             },
@@ -224,6 +227,7 @@ export class TradingPipeline {
             asterApiKey: user.asterApiKey || undefined,
             asterApiSecret: user.asterApiSecret || undefined,
             asterTestnet: user.asterTestnet ?? true,
+            preferredExchange: (user as any).preferredExchange,
             maxPositionSize: user.maxPositionSize || 5,
             maxRiskPerTrade: user.maxRiskPerTrade || 2,
         };
@@ -241,18 +245,21 @@ export class TradingPipeline {
             throw new Error('API credentials not configured');
         }
 
-        // Create AsterDex client with user credentials
-        const aster = createAsterService(
+        // Create Exchange client with user credentials
+        const exchange = exchangeFactory.getAdapterForUser(
+            config.preferredExchange || 'aster',
             config.asterApiKey,
             config.asterApiSecret,
             config.asterTestnet
         );
 
         // Set leverage
-        await aster.setLeverage(signal.symbol, config.leverage);
+        if (exchange.setLeverage) {
+            await exchange.setLeverage(signal.symbol, config.leverage);
+        }
 
         // Calculate position size
-        const balance = await aster.getBalance();
+        const balance = await exchange.getBalance();
         const usdtBalance = balance.find(b => b.asset === 'USDT')?.available || 0;
         const positionValue = usdtBalance * (config.maxPositionSize / 100);
         const quantity = positionValue / signal.entryPrice;
@@ -270,7 +277,7 @@ export class TradingPipeline {
         };
 
         // Place order
-        const order = await aster.placeOrder(orderParams);
+        const order = await exchange.placeOrder(orderParams);
         return order;
     }
 

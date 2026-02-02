@@ -361,11 +361,11 @@ router.post('/test-aster', authMiddleware, asyncHandler(async (req: Request, res
             }
         }
 
-        // Import Aster service dynamically to test connection
-        const { createAsterService } = await import('../services/aster.service.js');
+        // Import Exchange service dynamically to test connection
+        const { exchangeFactory } = await import('../services/exchange.service.js');
 
         // Create a test client with provided credentials
-        const testService = createAsterService(apiKey, apiSecret, testnet ?? true);
+        const testService = exchangeFactory.getAdapter('aster', { apiKey, apiSecret, testnet: testnet ?? true });
 
         // Test by fetching balance
         const balance = await testService.getBalance();
@@ -571,12 +571,17 @@ router.get('/portfolio', authMiddleware, asyncHandler(async (req: Request, res: 
             });
         }
 
-        // Create Aster service with user's credentials
-        const { createAsterService } = await import('../services/aster.service.js');
-        const aster = createAsterService(user.asterApiKey, user.asterApiSecret, user.asterTestnet ?? true);
+        // Create Exchange service with user's credentials
+        const { exchangeFactory } = await import('../services/exchange.service.js');
+        const exchange = exchangeFactory.getAdapterForUser(
+            (user as any).preferredExchange || 'aster',
+            user.asterApiKey,
+            user.asterApiSecret,
+            user.asterTestnet ?? true
+        );
 
         // Fetch balance
-        const balances = await aster.getBalance();
+        const balances = await exchange.getBalance();
 
         // Calculate total value (assuming USDT as base)
         const totalValue = balances.reduce((sum, b) => sum + b.total, 0);
@@ -624,8 +629,8 @@ router.get('/positions', authMiddleware, asyncHandler(async (req: Request, res: 
  */
 router.get('/pairs', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     try {
-        const { asterService } = await import('../services/aster.service.js');
-        const pairs = await asterService.getPairs();
+        const { exchangeFactory } = await import('../services/exchange.service.js');
+        const pairs = await exchangeFactory.getDefault().getPairs();
 
         // Filter to only trading pairs
         const activePairs = pairs.filter(p => p.status === 'TRADING');

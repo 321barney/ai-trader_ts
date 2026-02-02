@@ -7,7 +7,7 @@
  * - Confluence scoring
  */
 
-import { asterService } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 
 export type Timeframe = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
 
@@ -53,7 +53,7 @@ class MultiTimeframeService {
      */
     private async analyzeTimeframe(symbol: string, timeframe: Timeframe): Promise<TimeframeAnalysis> {
         try {
-            const klines = await asterService.getKlines(symbol, timeframe, 50);
+            const klines = await exchangeFactory.getDefault().getKlines(symbol, timeframe, 50);
 
             if (klines.length < 20) {
                 return this.neutralAnalysis(timeframe);

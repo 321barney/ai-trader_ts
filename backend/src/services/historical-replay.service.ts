@@ -8,7 +8,7 @@
  */
 
 import { prisma } from '../utils/prisma.js';
-import { asterService } from './aster.service.js';
+// import { asterService } from './aster.service.js';
 
 const db = prisma as any;
 

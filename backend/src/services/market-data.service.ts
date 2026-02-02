@@ -5,8 +5,8 @@
  * for DeepSeek analysis.
  */
 
-import { asterService, OHLCV, Ticker } from './aster.service.js';
-import { AsterService } from './aster.service.js';
+import { OHLCV, Ticker } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 import { TechnicalAnalysisService } from './technical-analysis.service.js';
 
 // ============================================================================
@@ -140,9 +140,10 @@ export class MarketDataService {
      */
     async getAnalysisData(symbol: string, interval: '1h' | '4h' | '1d' = '1h'): Promise<AnalysisData> {
         // Fetch data
+        const exchange = exchangeFactory.getDefault();
         const [ohlcv, ticker] = await Promise.all([
-            asterService.getKlines(symbol, interval, 200),
-            asterService.getTicker(symbol),
+            exchange.getKlines(symbol, interval, 200),
+            exchange.getTicker(symbol),
         ]);
 
         // Calculate indicators
@@ -502,7 +503,11 @@ ${candles}
         apiKey?: string,
         apiSecret?: string
     ): Promise<MultiTFData> {
-        const aster = new AsterService(apiKey, apiSecret);
+        // Use user adapter if keys provided, otherwise default
+        const exchange = (apiKey && apiSecret)
+            ? exchangeFactory.getAdapterForUser('aster', apiKey, apiSecret, true)
+            : exchangeFactory.getDefault();
+
         const primary = primaryTimeframe || timeframes[0] || '1h';
 
         console.log(`[MarketData] Fetching multi-TF data for ${symbol}: [${timeframes.join(', ')}] (primary: ${primary})`);
@@ -519,7 +524,7 @@ ${candles}
         // Fetch all timeframes in parallel
         const fetchPromises = timeframes.map(async (tf) => {
             try {
-                const data = await aster.getKlines(symbol, tf as any, getMinBars(tf) + 5);
+                const data = await exchange.getKlines(symbol, tf as any, getMinBars(tf) + 5);
                 return { tf, data };
             } catch (error) {
                 console.warn(`[MarketData] Failed to fetch ${tf} data for ${symbol}:`, error);

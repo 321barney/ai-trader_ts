@@ -8,15 +8,15 @@
 import { MCPTool, ToolResult, ToolContext, toolRegistry } from '../tool-registry.js';
 
 // Import services (dynamically to avoid circular deps)
-let asterService: any = null;
+let exchangeFactory: any = null;
 let replayService: any = null;
 
-async function getAsterService() {
-    if (!asterService) {
-        const module = await import('../../services/aster.service.js');
-        asterService = module.asterService;
+async function getExchangeFactory() {
+    if (!exchangeFactory) {
+        const module = await import('../../services/exchange.service.js');
+        exchangeFactory = module.exchangeFactory;
     }
-    return asterService;
+    return exchangeFactory;
 }
 
 async function getReplayService() {
@@ -102,9 +102,10 @@ const buyTool: MCPTool = {
                     timestamp: new Date(),
                 };
             } else {
-                // Live mode - use Aster service
-                const aster = await getAsterService();
-                const order = await aster.placeOrder({
+                // Live mode - use Exchange Factory (Default/Env)
+                const factory = await getExchangeFactory();
+                const exchange = factory.getDefault();
+                const order = await exchange.placeOrder({
                     symbol,
                     side: 'BUY',
                     type: order_type,
@@ -211,8 +212,9 @@ const sellTool: MCPTool = {
                 };
             } else {
                 // Live mode
-                const aster = await getAsterService();
-                const order = await aster.placeOrder({
+                const factory = await getExchangeFactory();
+                const exchange = factory.getDefault();
+                const order = await exchange.placeOrder({
                     symbol,
                     side: 'SELL',
                     type: order_type,
@@ -281,13 +283,17 @@ const getPortfolioTool: MCPTool = {
                 };
             } else {
                 // Live mode - fetch from exchange
-                const aster = await getAsterService();
-                const result = await aster.testConnection();
+                const factory = await getExchangeFactory();
+                const exchange = factory.getDefault();
+                // Test connection to verify credentials
+                const result = await exchange.testConnection();
+                // Get balance
+                const balance = await exchange.getBalance();
 
                 return {
                     success: true,
                     data: {
-                        balance: result.balance,
+                        balance: balance,
                         // positions would need separate API call
                     },
                     timestamp: new Date(),

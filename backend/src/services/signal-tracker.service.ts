@@ -6,7 +6,7 @@
  */
 
 import { prisma } from '../utils/prisma.js';
-import { asterService } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 
 
 // Types
@@ -213,10 +213,11 @@ export class SignalTrackerService {
         });
 
         let updated = 0;
+        const exchange = exchangeFactory.getDefault();
 
         for (const signal of pendingSignals) {
             try {
-                const currentPrice = await asterService.getPrice(signal.symbol);
+                const currentPrice = await exchange.getPrice(signal.symbol);
                 const result = await this.updateSignalStatus(signal.id, currentPrice);
                 if (result) updated++;
             } catch (error) {

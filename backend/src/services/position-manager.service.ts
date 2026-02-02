@@ -8,7 +8,7 @@
  */
 
 import { prisma } from '../utils/prisma.js';
-import { asterService } from './aster.service.js';
+import { exchangeFactory } from './exchange.service.js';
 
 // Cast prisma to any for unmigrated models
 // const db = prisma as any;
@@ -124,8 +124,31 @@ class PositionManagerService {
         console.log(`[PositionManager] Closing ${position.symbol} - ${reason} @ ${exitPrice}`);
 
         try {
+            // Get user keys for execution
+            const user = await prisma.user.findUnique({
+                where: { id: position.userId },
+                select: {
+                    asterApiKey: true,
+                    asterApiSecret: true,
+                    asterTestnet: true,
+                    preferredExchange: true
+                }
+            });
+
+            if (!user?.asterApiKey || !user?.asterApiSecret) {
+                console.error(`[PositionManager] Cannot close position ${position.id}: Missing keys for user ${position.userId}`);
+                return;
+            }
+
+            const userExchange = exchangeFactory.getAdapterForUser(
+                (user as any).preferredExchange || 'aster',
+                user.asterApiKey,
+                user.asterApiSecret,
+                user.asterTestnet || true
+            );
+
             // Place close order
-            await asterService.placeOrder({
+            await userExchange.placeOrder({
                 symbol: position.symbol,
                 side: position.side === 'LONG' ? 'SELL' : 'BUY',
                 type: 'MARKET',
@@ -197,7 +220,8 @@ class PositionManagerService {
             const cached = this.priceCache.get(symbol);
             if (cached) return cached;
 
-            const price = await asterService.getPrice(symbol);
+            const exchange = exchangeFactory.getDefault();
+            const price = await exchange.getPrice(symbol);
             if (price) {
                 this.priceCache.set(symbol, price);
                 setTimeout(() => this.priceCache.delete(symbol), 1000);
