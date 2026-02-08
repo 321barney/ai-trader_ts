@@ -41,6 +41,20 @@ MODEL_DIR = Path("/tmp/rl_models")
 MODEL_DIR.mkdir(exist_ok=True)
 
 
+# ============================================================================
+# Model Quality Thresholds
+# ============================================================================
+
+MODEL_QUALITY_THRESHOLDS = {
+    'min_sharpe_ratio': 1.0,      # Minimum Sharpe ratio for valid model
+    'min_win_rate': 0.52,          # Minimum 52% win rate
+    'max_drawdown': 0.20,          # Maximum 20% drawdown allowed
+    'min_profit_factor': 1.1,      # Minimum profit factor
+    'min_total_trades': 20,        # Minimum trades for statistical significance
+    'min_training_data': 500,      # Minimum data points for training
+}
+
+
 class TrainingProgressCallback(BaseCallback):
     """Callback to track training progress."""
     
@@ -213,11 +227,22 @@ class RLTrainer:
             # Calculate metrics from training
             metrics = self._evaluate_model(df)
             
+            # Validate model against quality thresholds
+            validation = self.validate_model(metrics)
+            
+            if validation['is_valid']:
+                print(f"[Trainer] ✅ Model PASSED validation: {validation['message']}")
+            else:
+                print(f"[Trainer] ⚠️ Model FAILED validation: {validation['message']}")
+                print(f"[Trainer] Failed checks: {validation['failed_checks']}")
+            
             return {
                 'success': True,
                 'model_id': self.model_id,
                 'metrics': metrics,
-                'message': f'Training completed: {total_timesteps} timesteps'
+                'validation': validation,
+                'is_production_ready': validation['is_valid'],
+                'message': f"Training completed: {total_timesteps} timesteps. Validation: {'PASSED' if validation['is_valid'] else 'FAILED'}"
             }
             
         except Exception as e:
@@ -331,6 +356,64 @@ class RLTrainer:
             'max_drawdown': float(max_drawdown),
             'total_trades': len(env.trades),
             'total_pnl': float(info.get('total_pnl', 0))
+        }
+
+    def validate_model(self, metrics: Dict[str, float]) -> Dict[str, Any]:
+        """
+        Validate model against quality thresholds.
+        
+        Returns:
+            {
+                'is_valid': bool,
+                'passed_checks': list,
+                'failed_checks': list,
+                'message': str
+            }
+        """
+        passed = []
+        failed = []
+        
+        # Check Sharpe Ratio
+        sharpe = metrics.get('sharpe', 0)
+        if sharpe >= MODEL_QUALITY_THRESHOLDS['min_sharpe_ratio']:
+            passed.append(f"Sharpe Ratio: {sharpe:.2f} >= {MODEL_QUALITY_THRESHOLDS['min_sharpe_ratio']}")
+        else:
+            failed.append(f"Sharpe Ratio: {sharpe:.2f} < {MODEL_QUALITY_THRESHOLDS['min_sharpe_ratio']}")
+        
+        # Check Win Rate
+        win_rate = metrics.get('win_rate', 0)
+        if win_rate >= MODEL_QUALITY_THRESHOLDS['min_win_rate']:
+            passed.append(f"Win Rate: {win_rate:.1%} >= {MODEL_QUALITY_THRESHOLDS['min_win_rate']:.0%}")
+        else:
+            failed.append(f"Win Rate: {win_rate:.1%} < {MODEL_QUALITY_THRESHOLDS['min_win_rate']:.0%}")
+        
+        # Check Max Drawdown
+        max_dd = metrics.get('max_drawdown', 1)
+        if max_dd <= MODEL_QUALITY_THRESHOLDS['max_drawdown']:
+            passed.append(f"Max Drawdown: {max_dd:.1%} <= {MODEL_QUALITY_THRESHOLDS['max_drawdown']:.0%}")
+        else:
+            failed.append(f"Max Drawdown: {max_dd:.1%} > {MODEL_QUALITY_THRESHOLDS['max_drawdown']:.0%}")
+        
+        # Check Total Trades (statistical significance)
+        total_trades = metrics.get('total_trades', 0)
+        if total_trades >= MODEL_QUALITY_THRESHOLDS['min_total_trades']:
+            passed.append(f"Total Trades: {total_trades} >= {MODEL_QUALITY_THRESHOLDS['min_total_trades']}")
+        else:
+            failed.append(f"Total Trades: {total_trades} < {MODEL_QUALITY_THRESHOLDS['min_total_trades']} (low statistical significance)")
+        
+        is_valid = len(failed) == 0
+        
+        if is_valid:
+            message = f"Model passed all {len(passed)} validation checks"
+        else:
+            message = f"Model failed {len(failed)} of {len(passed) + len(failed)} checks"
+        
+        return {
+            'is_valid': is_valid,
+            'passed_checks': passed,
+            'failed_checks': failed,
+            'message': message,
+            'thresholds': MODEL_QUALITY_THRESHOLDS
         }
 
 

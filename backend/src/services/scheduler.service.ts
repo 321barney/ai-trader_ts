@@ -431,7 +431,7 @@ export class SchedulerService {
             // Fetch historical data for training (use BTCUSDT as default)
             const symbol = 'BTCUSDT';
             const exchange = exchangeFactory.getDefault();
-            const historicalData = await exchange.getKlines(symbol, '1h', 500);
+            const historicalData = await exchange.getKlines(symbol, '1h', 2000);  // Increased from 500 for better generalization
 
             // Initiate model creation
             try {
@@ -440,10 +440,19 @@ export class SchedulerService {
                 if (result.success) {
                     console.log(`[Scheduler] RL model created successfully! Metrics:`, result.metrics);
 
-                    // Evaluate if model meets minimum criteria
-                    if (result.metrics && result.metrics.winRate < 0.4) {
-                        console.log('[Scheduler] Model win rate below 40%, triggering retrain...');
+                    // Check if model passed validation thresholds
+                    const validation = (result as any).validation;
+                    const isProductionReady = (result as any).is_production_ready;
+
+                    if (validation && !isProductionReady) {
+                        console.log('[Scheduler] Model failed validation checks:', validation.failed_checks);
+                        console.log('[Scheduler] Triggering retrain with more timesteps...');
+                        await rlService.startTraining({ symbols: [symbol], timesteps: 150000 });
+                    } else if (result.metrics && result.metrics.winRate < 0.52) {
+                        console.log('[Scheduler] Model win rate below 52%, triggering retrain...');
                         await rlService.startTraining({ symbols: [symbol], timesteps: 100000 });
+                    } else {
+                        console.log('[Scheduler] Model is production-ready! ✅');
                     }
                 } else {
                     console.error('[Scheduler] RL model creation failed:', result.error);

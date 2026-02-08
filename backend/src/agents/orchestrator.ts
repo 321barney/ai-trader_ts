@@ -279,24 +279,96 @@ export class AgentOrchestrator {
         };
 
         // Run AI agents in parallel with injected services and performance hints
-        const [strategyDecision, riskAssessment, marketAnalysis] = await Promise.all([
-            this.strategyAgent.decide({ ...enhancedContext, aiService: strategyService }),
-            this.riskAgent.decide({ ...enhancedContext, aiService: riskService }),
-            this.marketAgent.decide({ ...enhancedContext, aiService: marketService }),
-        ]);
+        // WITH RATE LIMIT DETECTION - fallback to 100% RL if APIs are unavailable
+        let strategyDecision: StrategyDecision;
+        let riskAssessment: RiskAssessment;
+        let marketAnalysis: MarketAnalysis;
+        let rateLimitHit = false;
 
-        // console.log(`[Orchestrator] Raw Agent Outputs:
-        // Strategy: ${strategyDecision.decision} (${strategyDecision.confidence})
-        // Risk: ${riskAssessment.decision} (${(riskAssessment as RiskAssessment).riskLevel})
-        // Market: ${(marketAnalysis as MarketAnalysis).sentiment}`);
+        try {
+            const results = await Promise.all([
+                this.strategyAgent.decide({ ...enhancedContext, aiService: strategyService }),
+                this.riskAgent.decide({ ...enhancedContext, aiService: riskService }),
+                this.marketAgent.decide({ ...enhancedContext, aiService: marketService }),
+            ]);
+            strategyDecision = results[0] as StrategyDecision;
+            riskAssessment = results[1] as RiskAssessment;
+            marketAnalysis = results[2] as MarketAnalysis;
+        } catch (agentError: any) {
+            // Detect rate limit errors (429, quota exceeded, etc.)
+            const errorMsg = agentError?.message?.toLowerCase() || '';
+            const isRateLimit =
+                errorMsg.includes('rate limit') ||
+                errorMsg.includes('429') ||
+                errorMsg.includes('quota') ||
+                errorMsg.includes('too many requests') ||
+                errorMsg.includes('resource exhausted') ||
+                errorMsg.includes('rate_limit_exceeded');
+
+            if (isRateLimit) {
+                console.warn('[Orchestrator] ⚠️ RATE LIMIT HIT - Switching to 100% RL MODE');
+                rateLimitHit = true;
+            } else {
+                console.warn('[Orchestrator] ⚠️ Agent error - Using RL fallback:', agentError.message);
+                rateLimitHit = true; // Treat any agent failure as needing RL fallback
+            }
+
+            // Create placeholder decisions for RL-only mode
+            strategyDecision = {
+                decision: 'HOLD',
+                reasoning: 'API rate limit reached - deferring to RL model',
+                confidence: 0,
+                agentType: 'STRATEGY',
+                action: 'HOLD',
+                strategyMode: 'rl',
+                thoughtSteps: []
+            } as unknown as StrategyDecision;
+
+            riskAssessment = {
+                decision: 'APPROVED',
+                reasoning: 'API rate limit reached - RL mode active',
+                confidence: 0,
+                agentType: 'RISK',
+                riskLevel: 'MEDIUM',
+                approved: true,
+                suggestedStopLoss: 0,
+                suggestedTakeProfit: 0,
+                positionSize: 1,
+                maxLoss: 0,
+                riskRewardRatio: 0,
+                warnings: ['Rate limit fallback - using RL model'],
+                proceed: true
+            } as unknown as RiskAssessment;
+
+            marketAnalysis = {
+                decision: 'HOLD',
+                reasoning: 'API rate limit reached - RL mode active',
+                confidence: 0,
+                agentType: 'MARKET_ANALYST',
+                sentiment: 0,
+                sentimentScore: 0,
+                onChainSignals: [],
+                newsEvents: [],
+                socialSentiment: 0,
+                prediction: 'Rate limit active',
+                timeframe: '1h',
+                marketPhase: 'UNKNOWN'
+            } as unknown as MarketAnalysis;
+        }
+
+        // If rate limit hit, switch to 100% RL mode
+        if (rateLimitHit) {
+            console.log('[Orchestrator] 🤖 Running in 100% RL MODE due to rate limits');
+            mode = 'rl';
+        }
 
         // Get RL prediction - ALWAYS provide one (external API or local fallback)
         let rlPrediction: RLPrediction | undefined;
         let rlMetrics: RLMetrics | undefined;
 
-        if (mode !== 'deepseek') {
+        if (mode !== 'deepseek' || rateLimitHit) {
             try {
-                if (this.rlAvailable) {
+                if (this.rlAvailable && !rateLimitHit) {
                     // Try external RL service first
                     const enhancedRequest = this.buildEnhancedPredictRequest(context);
                     rlPrediction = await this.rlService.predictEnhanced(enhancedRequest);
@@ -310,8 +382,8 @@ export class AgentOrchestrator {
                         console.log(`[Orchestrator] RL prediction: ${rlPrediction.action} (${rlPrediction.confidence})`);
                     }
                 } else {
-                    // External RL unavailable - use 100% local interpretation
-                    console.log('[Orchestrator] External RL unavailable - using local interpretation');
+                    // External RL unavailable OR rate limit hit - use 100% local interpretation
+                    console.log('[Orchestrator] Using local RL interpretation (rate limit or external unavailable)');
                     rlPrediction = this.getLocalRLInterpretation(enhancedContext);
                 }
 

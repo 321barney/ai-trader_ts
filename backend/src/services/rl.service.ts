@@ -319,6 +319,8 @@ export class RLService {
         success: boolean;
         modelId?: string;
         metrics?: { winRate: number; sharpeRatio: number; maxDrawdown: number };
+        validation?: { is_valid: boolean; passed_checks: string[]; failed_checks: string[]; message: string };
+        is_production_ready?: boolean;
         error?: string;
     }> {
         try {
@@ -387,7 +389,9 @@ export class RLService {
                     winRate: backtestMetrics.winRate || metrics?.winRate || 0,
                     sharpeRatio: backtestMetrics.sharpeRatio || metrics?.sharpeRatio || 0,
                     maxDrawdown: backtestMetrics.maxDrawdown || metrics?.maxDrawdown || 0
-                }
+                },
+                validation: trainResult.validation,
+                is_production_ready: trainResult.is_production_ready
             };
 
         } catch (error: any) {
