@@ -48,21 +48,21 @@ export default function DashboardLayout({
     ];
 
     return (
-        <div className="min-h-screen bg-[#020408] text-slate-100 flex selection:bg-blue-500/30">
+        <div className="min-h-screen bg-black text-white flex selection:bg-green-500/30">
             {/* Sidebar */}
-            <aside className="w-72 bg-[#0b1121] border-r border-slate-800/50 flex flex-col fixed h-full z-50 shadow-2xl shadow-black/50">
+            <aside className="w-72 bg-[#0a0a0a] border-r border-gray-800/50 flex flex-col fixed h-full z-50 shadow-2xl shadow-black/50">
                 {/* Logo */}
-                <div className="p-6 border-b border-slate-800">
+                <div className="p-6 border-b border-gray-800">
                     <Link href="/" className="flex items-center gap-3 group">
                         <div className="relative w-11 h-11 flex items-center justify-center">
-                            <div className="absolute inset-0 bg-blue-600 rounded-lg rotate-6 group-hover:rotate-12 transition-transform duration-300 opacity-20 blur-md"></div>
-                            <div className="relative w-full h-full bg-gradient-to-br from-[#0f172a] to-[#1e293b] border border-slate-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
+                            <div className="absolute inset-0 bg-green-500 rounded-lg rotate-6 group-hover:rotate-12 transition-transform duration-300 opacity-20 blur-md"></div>
+                            <div className="relative w-full h-full bg-gradient-to-br from-[#0a0a0a] to-[#141414] border border-gray-700 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
                                 <span className="text-xl">🛡️</span>
                             </div>
                         </div>
                         <div>
-                            <span className="text-xl font-bold text-slate-100 tracking-wide font-mono">CoTrader</span>
-                            <div className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Institutional Intelligence</div>
+                            <span className="text-xl font-bold text-white tracking-wide font-mono">CoTrader</span>
+                            <div className="text-[10px] text-gray-500 font-medium tracking-wider uppercase">Institutional Intelligence</div>
                         </div>
                     </Link>
                 </div>
@@ -76,8 +76,8 @@ export default function DashboardLayout({
                                 key={item.href}
                                 href={item.href}
                                 className={`group flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
-                                    ? "bg-blue-600/10 text-blue-400 shadow-lg shadow-blue-900/20 border border-blue-500/20"
-                                    : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 border border-transparent"
+                                    ? "bg-green-500/10 text-green-400 shadow-lg shadow-green-900/30 border border-green-500/30"
+                                    : "text-gray-400 hover:text-white hover:bg-gray-800/50 border border-transparent"
                                     }`}
                             >
                                 <span className={`text-lg transition-transform duration-300 ${isActive ? "scale-110" : "group-hover:scale-110"} filter grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100`}>

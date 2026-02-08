@@ -278,14 +278,19 @@ export class SignalTrackerService {
     }
 
     /**
-     * Get signal by ID
+     * Get signal by ID (with userId verification for security)
      */
-    async getSignal(signalId: string): Promise<TrackedSignal | null> {
+    async getSignal(signalId: string, userId?: string): Promise<TrackedSignal | null> {
         const signal = await prisma.trackedSignal.findUnique({
             where: { id: signalId },
         });
 
         if (!signal) return null;
+
+        // If userId provided, verify ownership
+        if (userId && signal.userId !== userId) {
+            return null; // User doesn't own this signal
+        }
 
         return {
             id: signal.id,

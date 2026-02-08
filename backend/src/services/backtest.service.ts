@@ -542,12 +542,19 @@ VERDICT: APPROVE|REJECT|MODIFY`;
     }
 
     /**
-     * Get session status
+     * Get session status (with userId verification for security)
      */
-    async getSession(sessionId: string) {
-        return prisma.backtestSession.findUnique({
+    async getSession(sessionId: string, userId?: string) {
+        const session = await prisma.backtestSession.findUnique({
             where: { id: sessionId }
         });
+
+        // If userId provided, verify ownership
+        if (session && userId && session.userId !== userId) {
+            return null; // User doesn't own this session
+        }
+
+        return session;
     }
 
     /**
@@ -575,9 +582,17 @@ VERDICT: APPROVE|REJECT|MODIFY`;
     }
 
     /**
-     * Pause backtest
+     * Pause backtest (with userId verification)
      */
-    async pauseBacktest(sessionId: string) {
+    async pauseBacktest(sessionId: string, userId?: string) {
+        // Verify ownership if userId provided
+        if (userId) {
+            const session = await this.getSession(sessionId, userId);
+            if (!session) {
+                throw new Error('Session not found or access denied');
+            }
+        }
+
         return prisma.backtestSession.update({
             where: { id: sessionId },
             data: { status: 'PAUSED' }
@@ -585,9 +600,17 @@ VERDICT: APPROVE|REJECT|MODIFY`;
     }
 
     /**
-     * Resume backtest
+     * Resume backtest (with userId verification)
      */
-    async resumeBacktest(sessionId: string) {
+    async resumeBacktest(sessionId: string, userId?: string) {
+        // Verify ownership if userId provided
+        if (userId) {
+            const session = await this.getSession(sessionId, userId);
+            if (!session) {
+                throw new Error('Session not found or access denied');
+            }
+        }
+
         const session = await prisma.backtestSession.update({
             where: { id: sessionId },
             data: { status: 'RUNNING' }

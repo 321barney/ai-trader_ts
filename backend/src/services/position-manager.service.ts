@@ -169,6 +169,24 @@ class PositionManagerService {
                 }
             });
 
+            // Update linked Trade record with PnL (Crucial for RL feedback)
+            if ((position as any).tradeId) {
+                await prisma.trade.update({
+                    where: { id: (position as any).tradeId },
+                    data: {
+                        status: 'CLOSED',
+                        exitPrice,
+                        pnl: pnl.amount,
+                        pnlPercent: pnl.percent,
+                        closedAt: new Date()
+                    }
+                });
+                console.log(`[PositionManager] Linked Trade ${(position as any).tradeId} updated with PnL`);
+            } else {
+                // Forward compatibility: Find trade by symbol/user if no ID
+                // (Skipping for now to avoid wrong linking, relying on tradeId)
+            }
+
             console.log(`[PositionManager] Position closed: ${reason}, PnL: ${pnl.amount.toFixed(2)}`);
         } catch (error) {
             console.error('[PositionManager] Close error:', error);

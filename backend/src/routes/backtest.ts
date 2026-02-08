@@ -51,8 +51,9 @@ router.post('/start', asyncHandler(async (req: Request, res: Response) => {
  */
 router.get('/status/:sessionId', asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
+    const userId = req.userId!;
 
-    const session = await backtestService.getSession(sessionId);
+    const session = await backtestService.getSession(sessionId, userId);
 
     if (!session) {
         return res.status(404).json({
@@ -120,8 +121,9 @@ router.get('/history', asyncHandler(async (req: Request, res: Response) => {
  */
 router.post('/pause/:sessionId', asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
+    const userId = req.userId!;
 
-    const session = await backtestService.pauseBacktest(sessionId);
+    const session = await backtestService.pauseBacktest(sessionId, userId);
 
     res.json({
         success: true,
@@ -135,8 +137,9 @@ router.post('/pause/:sessionId', asyncHandler(async (req: Request, res: Response
  */
 router.post('/resume/:sessionId', asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
+    const userId = req.userId!;
 
-    const session = await backtestService.resumeBacktest(sessionId);
+    const session = await backtestService.resumeBacktest(sessionId, userId);
 
     res.json({
         success: true,

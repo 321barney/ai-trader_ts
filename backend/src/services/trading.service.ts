@@ -211,6 +211,29 @@ export class TradingService {
         // Aggregate into agent-ready format with indicators calculated on PRIMARY timeframe
         const marketData = marketDataService.aggregateMultiTF(multiTFData, methodology);
 
+        // 🚀 **NEW: Try strategy-based execution FIRST (LLM-free!)**
+        const { strategyExecutor } = await import('./strategy-executor.service.js');
+        const strategyResult = await strategyExecutor.executeStrategy(userId, symbol, marketData);
+
+        if (!strategyResult.requiresLLM) {
+            console.log(`[TradingService] ✅ Executed via strategy v${strategyResult.strategyVersion} (0 tokens!)`);
+            return {
+                decision: strategyResult.action,
+                confidence: strategyResult.confidence,
+                reasoning: strategyResult.reason,
+                executionMode: 'STRATEGY',
+                tokensUsed: 0,
+                strategyVersion: strategyResult.strategyVersion,
+                entryPrice: strategyResult.entryPrice,
+                stopLoss: strategyResult.stopLoss,
+                takeProfit: strategyResult.takeProfit,
+                positionSize: strategyResult.positionSize
+            };
+        }
+
+        console.log(`[TradingService] Strategy execution unavailable: ${strategyResult.reason}`);
+        console.log(`[TradingService] Falling back to LLM agents...`);
+
         // Get RL metrics
         const rlMetrics = await rlService.getMetrics();
 
@@ -518,6 +541,37 @@ export class TradingService {
         // However, if manual analysis was run 10 mins ago, we should use that cache?
         // Yes, verify logic in orchestrator: checks if cache exists and is < 4h old.
 
+        // 🚀 **NEW: Try strategy-based execution FIRST (LLM-free!)**
+        const { strategyExecutor } = await import('./strategy-executor.service.js');
+        const strategyResult = await strategyExecutor.executeStrategy(userId, symbol, marketData);
+
+        if (!strategyResult.requiresLLM) {
+            console.log(`[TradingService] ✅ Scheduled execution via strategy v${strategyResult.strategyVersion} (0 tokens!)`);
+
+            // Map Strategy Result to Decision Format
+            const decision = {
+                finalDecision: strategyResult.action,
+                confidence: strategyResult.confidence,
+                reasoning: strategyResult.reason,
+                strategyMode: 'STRATEGY',
+                entryPrice: strategyResult.entryPrice,
+                stopLoss: strategyResult.stopLoss,
+                takeProfit: strategyResult.takeProfit,
+                positionSize: strategyResult.positionSize,
+                marketAnalysis: { data: marketData }, // Pass market data for logging
+                agentDecisions: {
+                    strategy: { reasoning: strategyResult.reason },
+                    risk: { reasoning: 'Pre-validated by strategy rules' },
+                    market: { reasoning: 'Technical indicators met criteria' }
+                }
+            };
+
+            await this.handleTradingDecision(userId, symbol, decision, user, activeModel);
+            return;
+        }
+
+        console.log(`[TradingService] Strategy unavailable: ${strategyResult.reason}. Falling back to Orchestrator.`);
+
         try {
             const decision = await this.orchestrator.analyzeWithCaching({
                 userId,
@@ -680,7 +734,7 @@ export class TradingService {
                 });
 
                 // Log trade to DB
-                await prisma.trade.create({
+                const trade = await prisma.trade.create({
                     data: {
                         userId,
                         symbol,
@@ -693,6 +747,28 @@ export class TradingService {
                         methodology: user.methodology || 'SMC'
                     }
                 });
+
+                // Create Position record for Position Manager (Real + Strategy tracking)
+                if (decision.finalDecision === 'LONG' || decision.finalDecision === 'SHORT') {
+                    await prisma.position.create({
+                        data: {
+                            userId,
+                            symbol,
+                            side: decision.finalDecision,
+                            entryPrice: order.avgPrice,
+                            currentPrice: order.avgPrice, // Initialize current price
+                            size: order.executedQty,     // CORRECTED: use 'size' not 'quantity'
+                            status: 'OPEN',
+                            stopLoss: decision.stopLoss,
+                            takeProfit: decision.takeProfit,
+                            trailingStop: null,
+                            unrealizedPnl: 0,
+                            unrealizedPnlPercent: 0,
+                            // leverage: leverage, // Removed: Not in Position model
+                            tradeId: trade.id // Link to Trade log
+                        }
+                    });
+                }
 
                 return order;
             }

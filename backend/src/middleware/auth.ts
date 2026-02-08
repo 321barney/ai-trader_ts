@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../utils/prisma.js';
 import { verifyToken, JwtPayload } from '../utils/jwt.js';
 import { unauthorizedResponse } from '../utils/response.js';
+import { sessionService } from '../services/session.service.js';
 
 // Rate-limited logging: track last log time per token prefix
 const authLogCache = new Map<string, number>();
@@ -77,6 +78,12 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
         if (user.status !== 'ACTIVE') {
             return unauthorizedResponse(res, 'Account is not active');
+        }
+
+        // Validate session exists in database
+        const session = await sessionService.validateSession(token);
+        if (!session) {
+            return unauthorizedResponse(res, 'Session expired. Please login again.');
         }
 
         // Attach user to request

@@ -5,6 +5,7 @@
 import { prisma } from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
+import { sessionService } from './session.service.js';
 
 
 export interface RegisterInput {
@@ -124,6 +125,9 @@ export class AuthService {
         const accessToken = generateAccessToken(payload);
         const refreshToken = generateRefreshToken(payload);
 
+        // Create session in database
+        await sessionService.createSession(user.id, accessToken, 24); // 24 hours
+
         return {
             user: {
                 id: user.id,
@@ -217,6 +221,28 @@ export class AuthService {
             accessToken: generateAccessToken(newPayload),
             refreshToken: generateRefreshToken(newPayload) // Rotate refresh token
         };
+    }
+
+    /**
+     * Logout user (invalidate single session)
+     */
+    async logout(token: string): Promise<void> {
+        await sessionService.deleteSession(token);
+    }
+
+    /**
+     * Logout from all devices (invalidate all user sessions)
+     */
+    async logoutAll(userId: string): Promise<{ sessionsDeleted: number }> {
+        const count = await sessionService.deleteAllUserSessions(userId);
+        return { sessionsDeleted: count };
+    }
+
+    /**
+     * Get all active sessions for a user
+     */
+    async getUserSessions(userId: string) {
+        return await sessionService.getUserSessions(userId);
     }
 }
 

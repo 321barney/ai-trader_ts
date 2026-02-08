@@ -136,6 +136,14 @@ export class MarketDataService {
     // ============ Main Method ============
 
     /**
+     * Get raw Klines (OHLCV) for a symbol
+     */
+    async getKlines(symbol: string, interval: string, limit: number): Promise<OHLCV[]> {
+        const exchange = exchangeFactory.getDefault();
+        return await exchange.getKlines(symbol, interval as any, limit);
+    }
+
+    /**
      * Get complete analysis data for a symbol
      */
     async getAnalysisData(symbol: string, interval: '1h' | '4h' | '1d' = '1h'): Promise<AnalysisData> {

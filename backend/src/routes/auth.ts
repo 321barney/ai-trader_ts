@@ -52,8 +52,45 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
  * POST /api/auth/logout
  */
 router.post('/logout', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
-    // In a more complex setup, we'd invalidate the token in a blacklist
-    return successResponse(res, null, 'Logged out successfully');
+    try {
+        // Get token from authorization header
+        const authHeader = req.headers.authorization;
+        const token = authHeader?.split(' ')[1];
+
+        if (token) {
+            await authService.logout(token);
+        }
+
+        return successResponse(res, null, 'Logged out successfully');
+    } catch (error: any) {
+        return errorResponse(res, error.message, 500);
+    }
+}));
+
+/**
+ * POST /api/auth/logout-all
+ * Logout from all devices
+ */
+router.post('/logout-all', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const result = await authService.logoutAll(req.userId!);
+        return successResponse(res, result, 'Logged out from all devices');
+    } catch (error: any) {
+        return errorResponse(res, error.message, 500);
+    }
+}));
+
+/**
+ * GET /api/auth/sessions
+ * Get all active sessions for the current user
+ */
+router.get('/sessions', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const sessions = await authService.getUserSessions(req.userId!);
+        return successResponse(res, sessions);
+    } catch (error: any) {
+        return errorResponse(res, error.message, 500);
+    }
 }));
 
 /**
@@ -86,3 +123,5 @@ router.get('/me', authMiddleware, asyncHandler(async (req: Request, res: Respons
 }));
 
 export const authRouter = router;
+
+
