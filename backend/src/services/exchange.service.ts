@@ -112,7 +112,10 @@ class ExchangeFactory {
      * Get or create an exchange adapter
      */
     getAdapter(exchange: ExchangeType, config?: ExchangeConfig): IExchangeAdapter {
-        const key = config ? `${exchange}-${config.apiKey.slice(0, 8)}` : exchange;
+        // Safe cache key generation - handle null/undefined apiKey
+        const key = config && config.apiKey
+            ? `${exchange}-${config.apiKey.slice(0, 8)}`
+            : exchange;
 
         if (!this.adapters.has(key)) {
             switch (exchange) {
@@ -135,8 +138,12 @@ class ExchangeFactory {
 
     /**
      * Helper to get adapter for a user
+     * @throws Error if apiKey or apiSecret is missing
      */
-    getAdapterForUser(exchange: string, apiKey: string, apiSecret: string, testnet: boolean): IExchangeAdapter {
+    getAdapterForUser(exchange: string, apiKey: string | null | undefined, apiSecret: string | null | undefined, testnet: boolean): IExchangeAdapter {
+        if (!apiKey || !apiSecret) {
+            throw new Error(`Missing API credentials for exchange ${exchange}`);
+        }
         return this.getAdapter(exchange as ExchangeType, {
             apiKey,
             apiSecret,
