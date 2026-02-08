@@ -63,7 +63,13 @@ const generalLimiter = rateLimit({
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? ['https://www.cotrader.ai', 'https://cotrader.ai', /\.railway\.app$/]
+        ? [
+            'https://www.cotrader.ai',
+            'https://cotrader.ai',
+            'https://www.cotrader.cc',
+            'https://cotrader.cc',
+            /\.railway\.app$/
+        ]
         : ['http://localhost:3000'],
     credentials: true,
 }));
