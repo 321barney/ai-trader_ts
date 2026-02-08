@@ -590,8 +590,42 @@ export class TradingService {
             // Handle Decision (Signal + Trade)
             await this.handleTradingDecision(userId, symbol, decision, user, activeModel);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error(`[TradingService] Scheduled analysis failed via Orchestrator:`, error);
+
+            // 🚨 FALLBACK: If LLM fails (Rate Limit, 500, etc), use Strategy Executor
+            if (error.message?.includes('Rate limit') || error.message?.includes('429') || error.message?.includes('503') || error.message?.includes('quota')) {
+                console.warn(`[TradingService] ⚠️ LLM Rate Limit/Error detected! Falling back to 100% Strategy Execution.`);
+
+                try {
+                    const { strategyExecutor } = await import('./strategy-executor.service.js');
+                    const fallbackResult = await strategyExecutor.executeStrategy(userId, symbol, marketData);
+
+                    console.warn(`[TradingService] 🔄 Fallback Strategy Result: ${fallbackResult.action} (Confidence: ${fallbackResult.confidence})`);
+
+                    const fallbackDecision = {
+                        finalDecision: fallbackResult.action,
+                        confidence: fallbackResult.confidence,
+                        reasoning: `FALLBACK (LLM Error): ${fallbackResult.reason}`,
+                        strategyMode: 'STRATEGY', // Force strategy mode
+                        entryPrice: fallbackResult.entryPrice,
+                        stopLoss: fallbackResult.stopLoss,
+                        takeProfit: fallbackResult.takeProfit,
+                        positionSize: fallbackResult.positionSize,
+                        marketAnalysis: { data: marketData },
+                        agentDecisions: {
+                            strategy: { reasoning: 'Fallback: ' + fallbackResult.reason },
+                            risk: { reasoning: 'Fallback: Risk checks passed via strategy rules' },
+                            market: { reasoning: 'Fallback: Technical indicators analyzed locally' }
+                        }
+                    };
+
+                    await this.handleTradingDecision(userId, symbol, fallbackDecision, user, activeModel);
+
+                } catch (fallbackError) {
+                    console.error(`[TradingService] ❌ CRITICAL: Both LLM and Strategy Fallback failed!`, fallbackError);
+                }
+            }
         }
     }
 
