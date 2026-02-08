@@ -29,7 +29,7 @@ async function main() {
             subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
             // tradingCapital: 10000, // Removed
             tradingCapitalPercent: 20,
-            riskLevel: 'AGGRESSIVE', // Keeping as user requested, might be useful if DB updated later
+            // riskLevel: 'AGGRESSIVE', // Removed: Not in schema
             preferredExchange: 'binance',
         },
     });
