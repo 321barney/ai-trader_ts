@@ -28,7 +28,7 @@ export default function ReportProblemModal({ isOpen, onClose }: ReportProblemMod
 
     const handleSubmit = () => {
         const problemLabel = PROBLEM_TYPES.find(p => p.id === selectedType)?.label || selectedType;
-        const subject = encodeURIComponent(`AISTER Bug Report: ${problemLabel}`);
+        const subject = encodeURIComponent(`CoTrader Bug Report: ${problemLabel}`);
         const body = encodeURIComponent(
             `Problem Type: ${problemLabel}\n\n` +
             `Description:\n${description}\n\n` +
@@ -46,20 +46,20 @@ export default function ReportProblemModal({ isOpen, onClose }: ReportProblemMod
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                 onClick={onClose}
             />
 
             {/* Modal */}
-            <div className="relative bg-[#12121a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl shadow-black/50">
+            <div className="relative bg-[#0b1121] border border-slate-700/50 rounded-lg p-6 w-full max-w-md shadow-2xl shadow-black/50 ring-1 ring-white/5">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <span>🐛</span> Report a Problem
+                <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
+                    <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2 font-mono uppercase tracking-wide">
+                        <span className="filter grayscale">🐛</span> Report a Problem
                     </h2>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-white transition-colors"
+                        className="text-slate-500 hover:text-white transition-colors"
                     >
                         ✕
                     </button>
@@ -67,15 +67,15 @@ export default function ReportProblemModal({ isOpen, onClose }: ReportProblemMod
 
                 {/* Problem Type Selection */}
                 <div className="space-y-2 mb-4">
-                    <label className="text-sm text-gray-400">What's the issue?</label>
+                    <label className="text-xs text-slate-500 uppercase tracking-wider font-semibold">What's the issue?</label>
                     <div className="grid gap-2 max-h-48 overflow-y-auto custom-scrollbar">
                         {PROBLEM_TYPES.map((type) => (
                             <button
                                 key={type.id}
                                 onClick={() => setSelectedType(type.id)}
-                                className={`text-left px-4 py-2.5 rounded-xl text-sm transition-all ${selectedType === type.id
-                                        ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                                        : "bg-white/5 text-gray-300 border border-transparent hover:bg-white/10"
+                                className={`text-left px-4 py-2.5 rounded-lg text-sm transition-all font-medium border ${selectedType === type.id
+                                    ? "bg-blue-600/10 text-blue-400 border-blue-500/30"
+                                    : "bg-slate-800/50 text-slate-400 border-transparent hover:bg-slate-800 hover:text-slate-200"
                                     }`}
                             >
                                 {type.label}
@@ -86,7 +86,7 @@ export default function ReportProblemModal({ isOpen, onClose }: ReportProblemMod
 
                 {/* Description */}
                 <div className="space-y-2 mb-6">
-                    <label className="text-sm text-gray-400">
+                    <label className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
                         {selectedType === "other" ? "Describe the problem *" : "Additional details (optional)"}
                     </label>
                     <textarea
@@ -94,7 +94,7 @@ export default function ReportProblemModal({ isOpen, onClose }: ReportProblemMod
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Tell us what happened..."
                         rows={3}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 resize-none focus:outline-none focus:border-indigo-500/50 transition-colors"
+                        className="w-full bg-black/20 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 placeholder-slate-600 resize-none focus:outline-none focus:border-blue-500/50 transition-colors text-sm"
                     />
                 </div>
 
@@ -102,14 +102,14 @@ export default function ReportProblemModal({ isOpen, onClose }: ReportProblemMod
                 <div className="flex gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 text-gray-300 hover:bg-white/10 transition-colors"
+                        className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors text-sm font-medium"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSubmit}
                         disabled={!selectedType || (selectedType === "other" && !description.trim())}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-500 text-white font-medium hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm uppercase tracking-wide"
                     >
                         Send Report
                     </button>

@@ -1,7 +1,7 @@
 {
-  "name": "AISTRE-backend",
+  "name": "cotrader-backend",
   "version": "1.0.0",
-  "description": "AI Trader Backend - Multi-Agent Trading Platform",
+  "description": "CoTrader Backend - Multi-Agent Trading Platform",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

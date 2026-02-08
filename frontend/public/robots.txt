@@ -1,5 +1,5 @@
 # robots.txt - AI Search Engine Optimization
-# Allows all major AI crawlers to index AISTER
+# Allows all major AI crawlers to index CoTrader
 
 User-agent: *
 Allow: /
@@ -33,4 +33,4 @@ User-agent: Bingbot
 Allow: /
 
 # Sitemap
-Sitemap: https://aiaster.cc/sitemap.xml
+Sitemap: https://www.cotrader.ai/sitemap.xml

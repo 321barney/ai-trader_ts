@@ -80,21 +80,23 @@ export default function ScannerSettingsModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-[#1a1a24] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-                <h3 className="text-xl font-bold text-white mb-2">Scanner Settings</h3>
-                <p className="text-gray-400 text-sm mb-6">
-                    Select the timeframes to scan. The scheduler triggers analysis when any selected candle closes.
-                </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-[#0b1121] border border-slate-700/50 rounded-lg p-6 w-full max-w-lg shadow-2xl ring-1 ring-white/5">
+                <div className="mb-6 border-b border-slate-800 pb-4">
+                    <h3 className="text-xl font-bold text-slate-100 mb-1 font-mono uppercase tracking-wide">Scanner Settings</h3>
+                    <p className="text-slate-500 text-sm">
+                        Select the timeframes to scan. The scheduler triggers analysis when any selected candle closes.
+                    </p>
+                </div>
 
                 {/* Warning banner for active models */}
                 {isModelActive && hasChanged && (
-                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
-                        <div className="flex items-center gap-2 text-yellow-400 text-sm font-medium">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                        <div className="flex items-center gap-2 text-amber-400 text-sm font-medium">
                             <span>⚠️</span>
                             <span>Changing timeframes will reset this model to DRAFT status</span>
                         </div>
-                        <p className="text-yellow-400/70 text-xs mt-1">
+                        <p className="text-amber-400/70 text-xs mt-1">
                             You will need to re-backtest before the model can be activated again.
                         </p>
                     </div>
@@ -103,15 +105,15 @@ export default function ScannerSettingsModal({
                 <div className="space-y-4 mb-8">
                     {Object.entries(TIMEFRAME_GROUPS).map(([group, tfs]) => (
                         <div key={group}>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">{group}</div>
+                            <div className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-2">{group}</div>
                             <div className="flex flex-wrap gap-2">
                                 {tfs.map(tf => (
                                     <button
                                         key={tf}
                                         onClick={() => toggleTimeframe(tf)}
-                                        className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${timeframes.includes(tf)
-                                            ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20'
-                                            : 'bg-white/5 text-gray-400 border-white/5 hover:bg-white/10'
+                                        className={`px-3 py-1.5 rounded-md border text-sm font-mono font-medium transition-all ${timeframes.includes(tf)
+                                            ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/50'
+                                            : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200'
                                             }`}
                                     >
                                         {tf}
@@ -122,18 +124,20 @@ export default function ScannerSettingsModal({
                     ))}
                 </div>
 
-                <div className="text-xs text-gray-500 mb-4">
-                    Selected: <span className="text-orange-400">{timeframes.length > 0 ? timeframes.join(', ') : 'None'}</span>
+                <div className="text-xs text-slate-500 mb-6 font-mono border-t border-slate-800 pt-3">
+                    Selected: <span className="text-blue-400 font-bold">{timeframes.length > 0 ? timeframes.join(', ') : 'None'}</span>
                 </div>
 
                 {/* Confirmation Warning Dialog */}
                 {showWarning && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
-                        <div className="text-red-400 font-bold mb-2">⚠️ Confirm Timeframe Change</div>
+                    <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 mb-6">
+                        <div className="text-red-400 font-bold mb-2 flex items-center gap-2">
+                            <span>⚠️</span> Confirm Timeframe Change
+                        </div>
                         <p className="text-red-300/80 text-sm mb-3">
                             Changing timeframes on an active model will:
                         </p>
-                        <ul className="text-red-300/80 text-sm list-disc list-inside mb-3">
+                        <ul className="text-red-300/80 text-sm list-disc list-inside mb-3 font-mono text-xs">
                             <li>Reset the model status from <strong>ACTIVE</strong> to <strong>DRAFT</strong></li>
                             <li>Require you to re-run a backtest</li>
                             <li>Stop the model from generating signals until approved again</li>
@@ -141,13 +145,13 @@ export default function ScannerSettingsModal({
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setShowWarning(false)}
-                                className="flex-1 px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
+                                className="flex-1 px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={performSave}
-                                className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600"
+                                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-bold hover:bg-red-500 text-sm uppercase tracking-wide"
                             >
                                 Yes, Reset & Update
                             </button>
@@ -155,10 +159,10 @@ export default function ScannerSettingsModal({
                     </div>
                 )}
 
-                <div className="flex gap-3 justify-end">
+                <div className="flex gap-3 justify-end items-center">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 rounded-xl text-gray-400 hover:text-white transition-colors"
+                        className="px-4 py-2 rounded-lg text-slate-500 hover:text-slate-300 transition-colors text-sm font-medium"
                     >
                         Cancel
                     </button>
@@ -166,7 +170,7 @@ export default function ScannerSettingsModal({
                         <button
                             onClick={handleSaveClick}
                             disabled={loading || !activeModelId || timeframes.length === 0}
-                            className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:scale-[1.02] transition-transform disabled:opacity-50"
+                            className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm uppercase tracking-wide"
                         >
                             {loading ? 'Saving...' : 'Save Configuration'}
                         </button>

@@ -188,50 +188,50 @@ export default function DashboardPage() {
             {/* Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
                 {/* Total Value */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 p-6">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                <div className="relative overflow-hidden rounded-lg bg-[#0b1121] border border-slate-700/50 p-6 shadow-xl">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600/10 rounded-full blur-2xl"></div>
                     <div className="relative">
-                        <div className="text-gray-400 text-sm mb-2">Total Value</div>
-                        <div className="text-3xl font-bold text-white">${totalValue.toLocaleString()}</div>
-                        <div className="text-indigo-400 text-sm mt-2 flex items-center gap-1">
-                            <span>💼</span> Portfolio
+                        <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Total Value</div>
+                        <div className="text-3xl font-bold text-slate-100 font-mono">${totalValue.toLocaleString()}</div>
+                        <div className="text-blue-400 text-xs mt-2 flex items-center gap-1 font-medium">
+                            <span className="filter grayscale opacity-70">💼</span> Portfolio
                         </div>
                     </div>
                 </div>
 
                 {/* Unrealized P/L */}
-                <div className={`relative overflow-hidden rounded-2xl border p-6 ${unrealizedPnl >= 0
-                    ? 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20'
-                    : 'bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/20'
+                <div className={`relative overflow-hidden rounded-lg border p-6 shadow-xl ${unrealizedPnl >= 0
+                    ? 'bg-[#0b1121] border-emerald-500/20'
+                    : 'bg-[#0b1121] border-red-500/20'
                     }`}>
-                    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl ${unrealizedPnl >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}></div>
+                    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl ${unrealizedPnl >= 0 ? 'bg-emerald-500/5' : 'bg-red-500/5'}`}></div>
                     <div className="relative">
-                        <div className="text-gray-400 text-sm mb-2">Unrealized P/L</div>
-                        <div className={`text-3xl font-bold ${unrealizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Unrealized P/L</div>
+                        <div className={`text-3xl font-bold font-mono ${unrealizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {unrealizedPnl >= 0 ? '+' : ''}${unrealizedPnl.toFixed(2)}
                         </div>
-                        <div className={`text-sm mt-2 flex items-center gap-1 ${unrealizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <div className={`text-xs mt-2 flex items-center gap-1 font-medium ${unrealizedPnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                             <span>{unrealizedPnl >= 0 ? '📈' : '📉'}</span> {positions.length} Position{positions.length !== 1 ? 's' : ''}
                         </div>
                     </div>
                 </div>
 
                 {/* Active Model */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 p-6">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl"></div>
+                <div className="relative overflow-hidden rounded-lg bg-[#0b1121] border border-slate-700/50 p-6 shadow-xl">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl"></div>
                     <div className="relative">
-                        <div className="text-gray-400 text-sm mb-2">Active Model</div>
+                        <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Active Model</div>
                         {activeModel ? (
                             <>
-                                <div className="text-xl font-bold text-white">v{activeModel.version}</div>
-                                <div className="text-purple-400 text-sm mt-2 flex items-center gap-1">
-                                    <span>🤖</span> {activeModel.methodology}
+                                <div className="text-xl font-bold text-slate-100 font-mono">v{activeModel.version}</div>
+                                <div className="text-purple-400 text-xs mt-2 flex items-center gap-1 font-medium">
+                                    <span className="filter grayscale opacity-70">🤖</span> {activeModel.methodology}
                                 </div>
                             </>
                         ) : (
                             <>
-                                <div className="text-xl font-bold text-gray-500">None</div>
-                                <Link href="/dashboard/strategy-lab" className="text-indigo-400 text-sm mt-2 hover:underline">
+                                <div className="text-xl font-bold text-slate-500 font-mono">None</div>
+                                <Link href="/dashboard/strategy-lab" className="text-blue-400 text-xs mt-2 hover:underline font-medium">
                                     Create Strategy →
                                 </Link>
                             </>
@@ -240,13 +240,13 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Win Rate */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 p-6">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl"></div>
+                <div className="relative overflow-hidden rounded-lg bg-[#0b1121] border border-slate-700/50 p-6 shadow-xl">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl"></div>
                     <div className="relative">
-                        <div className="text-gray-400 text-sm mb-2">Win Rate</div>
-                        <div className="text-3xl font-bold text-white">{activeModel?.winRate?.toFixed(0) || '--'}%</div>
-                        <div className="text-cyan-400 text-sm mt-2 flex items-center gap-1">
-                            <span>🎯</span> Strategy
+                        <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Win Rate</div>
+                        <div className="text-3xl font-bold text-slate-100 font-mono">{activeModel?.winRate?.toFixed(0) || '--'}%</div>
+                        <div className="text-cyan-400 text-xs mt-2 flex items-center gap-1 font-medium">
+                            <span className="filter grayscale opacity-70">🎯</span> Strategy
                         </div>
                     </div>
                 </div>
@@ -254,20 +254,20 @@ export default function DashboardPage() {
                 {/* Scanner Status (Cron) */}
                 <div
                     onClick={() => setShowScannerSettings(true)}
-                    className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border border-orange-500/20 p-6 cursor-pointer hover:bg-orange-500/10 transition-colors group"
+                    className="relative overflow-hidden rounded-lg bg-[#0b1121] border border-slate-700/50 p-6 cursor-pointer hover:bg-slate-800/50 transition-colors group shadow-xl"
                 >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl"></div>
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-orange-400">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl"></div>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-amber-400/50">
                         ⚙️
                     </div>
                     <div className="relative">
-                        <div className="text-gray-400 text-sm mb-2">Scanner</div>
-                        <div className="text-3xl font-bold text-white flex items-center gap-2">
+                        <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Scanner</div>
+                        <div className="text-3xl font-bold text-slate-100 font-mono flex items-center gap-2">
                             <span>1m</span>
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
                         </div>
-                        <div className="text-orange-400 text-sm mt-2 flex items-center gap-1">
-                            <span>⚡</span> {activeModel?.timeframes?.join(', ') || 'Auto'}
+                        <div className="text-amber-400 text-xs mt-2 flex items-center gap-1 font-medium">
+                            <span className="filter grayscale opacity-70">⚡</span> {activeModel?.timeframes?.join(', ') || 'Auto'}
                         </div>
                     </div>
                 </div>

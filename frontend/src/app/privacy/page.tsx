@@ -7,8 +7,8 @@ export default function PrivacyPolicy() {
             <nav className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto border-b border-white/5">
                 <Link href="/" className="flex items-center gap-3 group">
                     <div className="relative w-11 h-11 flex items-center justify-center">
-                        <div className="absolute inset-0 bg-pink-500 rounded-xl rotate-6 group-hover:rotate-12 transition-transform duration-300 opacity-20 blur-md"></div>
-                        <div className="relative w-full h-full bg-gradient-to-tr from-purple-600 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform duration-300">
+                        <div className="absolute inset-0 bg-blue-600 rounded-xl rotate-6 group-hover:rotate-12 transition-transform duration-300 opacity-20 blur-md"></div>
+                        <div className="relative w-full h-full bg-gradient-to-tr from-[#0f172a] to-[#1e293b] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white">
                                 <path d="M12 4L4 20H20L12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 <path d="M12 14L9 19H15L12 14Z" fill="currentColor" fillOpacity="0.2" stroke="none" />
@@ -17,8 +17,8 @@ export default function PrivacyPolicy() {
                         </div>
                     </div>
                     <div>
-                        <span className="text-xl font-bold text-white tracking-wide">AISTER</span>
-                        <div className="text-[10px] text-gray-400 font-medium tracking-wider">Multi-Agent AI Trading</div>
+                        <span className="text-xl font-bold text-slate-100 tracking-wide font-mono">CoTrader</span>
+                        <div className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Institutional Intelligence</div>
                     </div>
                 </Link>
                 <Link href="/" className="text-gray-400 hover:text-white transition-colors">
@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
                     {/* Introduction */}
                     <section className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-6">
                         <p className="text-lg">
-                            At AISTER, we take your privacy seriously. This Privacy Policy explains how we collect,
+                            At CoTrader, we take your privacy seriously. This Privacy Policy explains how we collect,
                             use, disclose, and safeguard your information when you use our multi-agent AI trading platform.
                         </p>
                     </section>
@@ -79,7 +79,7 @@ export default function PrivacyPolicy() {
                     <section>
                         <h2 className="text-2xl font-bold mb-4 text-white">2. How We Use Your Information</h2>
                         <ul className="list-disc list-inside space-y-2 ml-4">
-                            <li><strong>Service Delivery:</strong> To provide and maintain the AISTER trading platform</li>
+                            <li><strong>Service Delivery:</strong> To provide and maintain the CoTrader trading platform</li>
                             <li><strong>Trade Execution:</strong> To generate AI-powered trading signals and execute trades on your behalf</li>
                             <li><strong>AI Analysis:</strong> To power our multi-agent AI system for market analysis</li>
                             <li><strong>Payment Processing:</strong> To manage subscriptions and process payments</li>
@@ -128,7 +128,7 @@ export default function PrivacyPolicy() {
 
                     <section>
                         <h2 className="text-2xl font-bold mb-4 text-white">4. Third-Party Services</h2>
-                        <p className="mb-4">AISTER integrates with the following third-party services:</p>
+                        <p className="mb-4">CoTrader integrates with the following third-party services:</p>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -222,7 +222,7 @@ export default function PrivacyPolicy() {
 
                     <section>
                         <h2 className="text-2xl font-bold mb-4 text-white">7. Cookies & Tracking</h2>
-                        <p className="mb-4">AISTER uses minimal cookies for essential functionality:</p>
+                        <p className="mb-4">CoTrader uses minimal cookies for essential functionality:</p>
                         <ul className="list-disc list-inside space-y-2 ml-4">
                             <li><strong>Authentication:</strong> Session tokens stored in localStorage</li>
                             <li><strong>Preferences:</strong> Trading mode (paper/live) and UI settings</li>
@@ -235,7 +235,7 @@ export default function PrivacyPolicy() {
                     <section>
                         <h2 className="text-2xl font-bold mb-4 text-white">8. Children&apos;s Privacy</h2>
                         <p>
-                            AISTER is not intended for users under 18 years of age. We do not knowingly collect
+                            CoTrader is not intended for users under 18 years of age. We do not knowingly collect
                             personal information from children. If you believe we have collected data from a minor,
                             please contact us immediately.
                         </p>
@@ -246,7 +246,7 @@ export default function PrivacyPolicy() {
                         <p>
                             We may update this Privacy Policy from time to time. We will notify you of any material
                             changes by posting the new policy on this page and updating the &quot;Last updated&quot; date.
-                            Your continued use of AISTER after changes constitutes acceptance of the updated policy.
+                            Your continued use of CoTrader after changes constitutes acceptance of the updated policy.
                         </p>
                     </section>
 
@@ -264,8 +264,8 @@ export default function PrivacyPolicy() {
                             </p>
                             <p>
                                 <strong>Website:</strong>{" "}
-                                <a href="https://www.aiaster.cc" className="text-indigo-400 hover:text-indigo-300">
-                                    www.aiaster.cc
+                                <a href="https://www.cotrader.ai" className="text-indigo-400 hover:text-indigo-300">
+                                    www.cotrader.ai
                                 </a>
                             </p>
                         </div>
@@ -279,7 +279,7 @@ export default function PrivacyPolicy() {
             {/* Footer */}
             <footer className="border-t border-white/5 py-8 mt-16">
                 <div className="max-w-4xl mx-auto px-8 flex items-center justify-between">
-                    <p className="text-gray-500 text-sm">© 2024 AISTER. All rights reserved.</p>
+                    <p className="text-gray-500 text-sm">© 2024 CoTrader. All rights reserved.</p>
                     <div className="flex items-center gap-4 text-gray-500 text-sm">
                         <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
                         <a href="mailto:barnros89@gmail.com" className="hover:text-white transition-colors">Contact</a>

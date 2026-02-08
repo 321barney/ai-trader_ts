@@ -66,17 +66,17 @@ export default function PortfolioWidget() {
     }
 
     return (
-        <div className="card glass">
+        <div className="card glass-panel border-thin">
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <span>💰</span> Portfolio Overview
+                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <span className="text-blue-500">💰</span> Portfolio Overview
                 </h3>
                 {risk && (
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${risk.withinLimits
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'bg-red-500/20 text-red-400'
-                        }`}>
+                    <div className={`px-3 py-1 rounded border ${risk.withinLimits
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                        : 'bg-red-500/10 border-red-500/20 text-red-400'
+                        } text-xs font-medium uppercase tracking-wider`}>
                         {risk.withinLimits ? '✓ Risk OK' : '⚠ Risk Alert'}
                     </div>
                 )}
@@ -85,39 +85,39 @@ export default function PortfolioWidget() {
             {portfolio && (
                 <>
                     {/* Equity */}
-                    <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl p-4 mb-4">
-                        <div className="text-sm text-gray-400 mb-1">Total Equity</div>
-                        <div className="text-3xl font-bold text-white">
+                    <div className="bg-gradient-to-r from-blue-900/20 to-slate-900/20 border border-blue-500/10 rounded-lg p-4 mb-4">
+                        <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Equity</div>
+                        <div className="text-3xl font-mono font-bold text-white">
                             ${portfolio.totalEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </div>
-                        <div className={`text-sm mt-1 ${portfolio.unrealizedPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <div className={`text-sm mt-1 font-medium ${portfolio.unrealizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {portfolio.unrealizedPnl >= 0 ? '+' : ''}${portfolio.unrealizedPnl.toFixed(2)} unrealized
                         </div>
                     </div>
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-white/5 rounded-lg p-3">
-                            <div className="text-xs text-gray-500">Available</div>
-                            <div className="text-lg font-semibold text-white">
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-3">
+                            <div className="text-xs text-slate-500 uppercase">Available</div>
+                            <div className="text-lg font-mono font-medium text-slate-200">
                                 ${portfolio.availableBalance.toFixed(2)}
                             </div>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-3">
-                            <div className="text-xs text-gray-500">Margin Used</div>
-                            <div className="text-lg font-semibold text-white">
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-3">
+                            <div className="text-xs text-slate-500 uppercase">Margin Used</div>
+                            <div className="text-lg font-mono font-medium text-slate-200">
                                 ${portfolio.usedMargin.toFixed(2)}
                             </div>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-3">
-                            <div className="text-xs text-gray-500">Today's P/L</div>
-                            <div className={`text-lg font-semibold ${portfolio.realizedPnlToday >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-3">
+                            <div className="text-xs text-slate-500 uppercase">Today's P/L</div>
+                            <div className={`text-lg font-mono font-medium ${portfolio.realizedPnlToday >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                 {portfolio.realizedPnlToday >= 0 ? '+' : ''}${portfolio.realizedPnlToday.toFixed(2)}
                             </div>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-3">
-                            <div className="text-xs text-gray-500">Exposure</div>
-                            <div className="text-lg font-semibold text-white">
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-3">
+                            <div className="text-xs text-slate-500 uppercase">Exposure</div>
+                            <div className="text-lg font-mono font-medium text-slate-200">
                                 {portfolio.exposurePercent.toFixed(1)}%
                             </div>
                         </div>
@@ -125,19 +125,19 @@ export default function PortfolioWidget() {
 
                     {/* Risk Indicators */}
                     {risk && (
-                        <div className="border-t border-white/10 pt-4">
+                        <div className="border-t border-slate-800/50 pt-4">
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm text-gray-400">Drawdown</span>
-                                <span className={`text-sm font-medium ${risk.currentDrawdown > 10 ? 'text-red-400' :
-                                        risk.currentDrawdown > 5 ? 'text-yellow-400' : 'text-green-400'
+                                <span className="text-xs text-slate-500 uppercase tracking-wider">Drawdown</span>
+                                <span className={`text-sm font-mono font-bold ${risk.currentDrawdown > 10 ? 'text-red-400' :
+                                    risk.currentDrawdown > 5 ? 'text-amber-400' : 'text-emerald-400'
                                     }`}>
                                     {risk.currentDrawdown.toFixed(1)}%
                                 </span>
                             </div>
-                            <div className="w-full bg-white/10 rounded-full h-2">
+                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                                 <div
-                                    className={`h-2 rounded-full transition-all ${risk.currentDrawdown > 10 ? 'bg-red-500' :
-                                            risk.currentDrawdown > 5 ? 'bg-yellow-500' : 'bg-green-500'
+                                    className={`h-full transition-all ${risk.currentDrawdown > 10 ? 'bg-red-500' :
+                                        risk.currentDrawdown > 5 ? 'bg-amber-500' : 'bg-emerald-500'
                                         }`}
                                     style={{ width: `${Math.min(risk.currentDrawdown * 5, 100)}%` }}
                                 ></div>
@@ -147,7 +147,7 @@ export default function PortfolioWidget() {
                             {risk.violations.length > 0 && (
                                 <div className="mt-3 space-y-1">
                                     {risk.violations.map((v, i) => (
-                                        <div key={i} className="text-xs text-red-400 flex items-center gap-1">
+                                        <div key={i} className="text-xs text-red-400 flex items-center gap-1 bg-red-500/5 px-2 py-1 rounded border border-red-500/10">
                                             <span>⚠️</span> {v}
                                         </div>
                                     ))}

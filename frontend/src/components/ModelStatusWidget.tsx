@@ -68,39 +68,39 @@ export function ModelStatusWidget() {
     };
 
     const getDrawdownColor = (drawdown: number) => {
-        if (drawdown < 5) return "text-green-400";
-        if (drawdown < 10) return "text-yellow-400";
+        if (drawdown < 5) return "text-emerald-400";
+        if (drawdown < 10) return "text-amber-400";
         if (drawdown < 15) return "text-orange-400";
         return "text-red-400";
     };
 
     const getStatusBadge = (status: string) => {
         const colors: Record<string, string> = {
-            "ACTIVE": "bg-green-500/20 text-green-400",
-            "APPROVED": "bg-blue-500/20 text-blue-400",
-            "BACKTESTING": "bg-yellow-500/20 text-yellow-400",
-            "RETRAINING": "bg-orange-500/20 text-orange-400",
-            "DRAFT": "bg-gray-500/20 text-gray-400"
+            "ACTIVE": "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+            "APPROVED": "bg-blue-500/10 border-blue-500/20 text-blue-400",
+            "BACKTESTING": "bg-amber-500/10 border-amber-500/20 text-amber-400",
+            "RETRAINING": "bg-orange-500/10 border-orange-500/20 text-orange-400",
+            "DRAFT": "bg-slate-500/10 border-slate-500/20 text-slate-400"
         };
         return colors[status] || colors["DRAFT"];
     };
 
     if (loading) {
         return (
-            <div className="card glass animate-pulse">
-                <div className="h-20 bg-gray-700/50 rounded"></div>
+            <div className="card glass-panel border-thin animate-pulse">
+                <div className="h-20 bg-slate-800/50 rounded"></div>
             </div>
         );
     }
 
     return (
-        <div className="card glass">
+        <div className="card glass-panel border-thin">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    🧠 Trading Model
+                <h3 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
+                    <span className="text-purple-500">🧠</span> Trading Model
                 </h3>
                 {activeModel && (
-                    <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(activeModel.status)}`}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium uppercase tracking-wider border ${getStatusBadge(activeModel.status)}`}>
                         {activeModel.status}
                     </span>
                 )}
@@ -111,14 +111,14 @@ export function ModelStatusWidget() {
                     {/* Active Model Info */}
                     <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <div className="text-gray-400 text-xs">Version</div>
-                            <div className="text-xl font-bold text-white">
+                            <div className="text-slate-500 text-xs uppercase">Version</div>
+                            <div className="text-xl font-mono font-bold text-slate-100">
                                 v{activeModel.version}
                             </div>
                         </div>
                         <div>
-                            <div className="text-gray-400 text-xs">Methodology</div>
-                            <div className="text-xl font-bold text-white">
+                            <div className="text-slate-500 text-xs uppercase">Methodology</div>
+                            <div className="text-xl font-mono font-bold text-slate-100">
                                 {activeModel.methodology}
                             </div>
                         </div>
@@ -127,42 +127,42 @@ export function ModelStatusWidget() {
                     {/* Drawdown Meter */}
                     <div className="mb-4">
                         <div className="flex justify-between text-sm mb-1">
-                            <span className="text-gray-400">Drawdown</span>
-                            <span className={getDrawdownColor(activeModel.currentDrawdown)}>
+                            <span className="text-slate-500 text-xs uppercase">Drawdown</span>
+                            <span className={`font-mono font-bold ${getDrawdownColor(activeModel.currentDrawdown)}`}>
                                 {activeModel.currentDrawdown.toFixed(1)}%
                             </span>
                         </div>
-                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                             <div
-                                className={`h-full transition-all ${activeModel.currentDrawdown < 5 ? 'bg-green-500' :
-                                        activeModel.currentDrawdown < 10 ? 'bg-yellow-500' :
-                                            activeModel.currentDrawdown < 15 ? 'bg-orange-500' :
-                                                'bg-red-500'
+                                className={`h-full transition-all ${activeModel.currentDrawdown < 5 ? 'bg-emerald-500' :
+                                    activeModel.currentDrawdown < 10 ? 'bg-amber-500' :
+                                        activeModel.currentDrawdown < 15 ? 'bg-orange-500' :
+                                            'bg-red-500'
                                     }`}
                                 style={{ width: `${Math.min(activeModel.currentDrawdown * 6.67, 100)}%` }}
                             />
                         </div>
-                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <div className="flex justify-between text-xs text-slate-600 mt-1">
                             <span>0%</span>
-                            <span className="text-red-400">15% retrain</span>
+                            <span className="text-red-400/70">15% retrain</span>
                         </div>
                     </div>
 
                     {/* Performance */}
                     {(activeModel.winRate || activeModel.sharpeRatio) && (
-                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-700">
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800/50">
                             {activeModel.winRate && (
                                 <div>
-                                    <div className="text-gray-400 text-xs">Win Rate</div>
-                                    <div className="text-lg font-semibold text-green-400">
+                                    <div className="text-slate-500 text-xs uppercase">Win Rate</div>
+                                    <div className="text-lg font-mono font-semibold text-emerald-400">
                                         {activeModel.winRate.toFixed(1)}%
                                     </div>
                                 </div>
                             )}
                             {activeModel.sharpeRatio && (
                                 <div>
-                                    <div className="text-gray-400 text-xs">Sharpe Ratio</div>
-                                    <div className="text-lg font-semibold text-blue-400">
+                                    <div className="text-slate-500 text-xs uppercase">Sharpe Ratio</div>
+                                    <div className="text-lg font-mono font-semibold text-blue-400">
                                         {activeModel.sharpeRatio.toFixed(2)}
                                     </div>
                                 </div>
@@ -171,9 +171,9 @@ export function ModelStatusWidget() {
                     )}
                 </>
             ) : (
-                <div className="text-center py-6">
-                    <div className="text-gray-500 mb-2">No active model</div>
-                    <p className="text-xs text-gray-600">
+                <div className="text-center py-8">
+                    <div className="text-slate-500 mb-2 uppercase tracking-wide text-sm">No active model</div>
+                    <p className="text-xs text-slate-600">
                         Run Strategy Analysis to generate a model
                     </p>
                 </div>
@@ -181,7 +181,7 @@ export function ModelStatusWidget() {
 
             {/* Stats Footer */}
             {stats && (
-                <div className="flex justify-between text-xs text-gray-400 pt-3 mt-3 border-t border-gray-700">
+                <div className="flex justify-between text-xs text-slate-500 pt-3 mt-3 border-t border-slate-800/50 font-mono">
                     <span>{stats.total} total</span>
                     <span>{stats.approved} approved</span>
                     <span>{stats.backtesting} testing</span>

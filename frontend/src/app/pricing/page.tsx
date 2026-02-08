@@ -139,7 +139,7 @@ function PricingContent() {
         }
 
         if (plan === 'CUSTOM') {
-            window.location.href = 'mailto:barnros89@gmail.com?subject=AISTER%20Custom%20Plan%20Inquiry';
+            window.location.href = 'mailto:barnros89@gmail.com?subject=CoTrader%20Custom%20Plan%20Inquiry';
             return;
         }
 
@@ -191,14 +191,14 @@ function PricingContent() {
             {/* Navigation */}
             <nav className="relative z-10 flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
                 <Link href="/" className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-slate-800 flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
                             <path d="M12 4L4 20H20L12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             <path d="M12 14L9 19H15L12 14Z" fill="currentColor" fillOpacity="0.2" stroke="none" />
                             <path d="M8 19L12 11L16 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     </div>
-                    <span className="text-xl font-bold tracking-wide">AISTER</span>
+                    <span className="text-xl font-bold tracking-wide text-slate-100">CoTrader</span>
                 </Link>
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard" className="text-gray-400 hover:text-white transition-colors">
@@ -213,7 +213,7 @@ function PricingContent() {
                 {paymentSuccess && (
                     <div className="mb-8 p-4 rounded-xl bg-green-500/20 border border-green-500/50 text-center">
                         <h3 className="text-lg font-bold text-green-400">🎉 Payment Successful!</h3>
-                        <p className="text-gray-300">Your subscription is now active. Welcome to AISTER Pro!</p>
+                        <p className="text-gray-300">Your subscription is now active. Welcome to CoTrader Pro!</p>
                         <Link href="/dashboard" className="inline-block mt-4 px-6 py-2 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600 transition-colors">
                             Go to Dashboard
                         </Link>
@@ -241,7 +241,7 @@ function PricingContent() {
                 {/* Header */}
                 <div className="text-center mb-16">
                     <h1 className="text-5xl font-bold mb-4">
-                        Choose Your <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Plan</span>
+                        Choose Your <span className="bg-gradient-to-r from-blue-400 to-amber-400 bg-clip-text text-transparent">Plan</span>
                     </h1>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
                         Pay with cryptocurrency. No credit card required. Cancel anytime.
@@ -333,7 +333,7 @@ function PricingContent() {
                             <button
                                 onClick={() => handleSubscribe('PRO')}
                                 disabled={processingPayment}
-                                className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-center font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-center font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {processingPayment ? 'Processing...' : 'Subscribe with Crypto'}
                             </button>
@@ -363,7 +363,7 @@ function PricingContent() {
                             </li>
                         </ul>
                         <a
-                            href="mailto:barnros89@gmail.com?subject=AISTER%20Custom%20Plan%20Inquiry"
+                            href="mailto:barnros89@gmail.com?subject=CoTrader%20Custom%20Plan%20Inquiry"
                             className="block w-full py-3 rounded-xl border border-white/20 text-center font-medium hover:bg-white/5 transition-colors"
                         >
                             Contact Sales
@@ -423,7 +423,7 @@ function PricingContent() {
                 {/* Disclaimers */}
                 <div className="mt-16 text-center text-gray-500 text-xs">
                     <p className="mb-2">
-                        ⚠️ Trading cryptocurrencies involves substantial risk of loss. AISTER is not a financial advisor.
+                        ⚠️ Trading cryptocurrencies involves substantial risk of loss. CoTrader is not a financial advisor.
                     </p>
                     <p>
                         See our <Link href="/terms" className="text-gray-400 hover:text-white underline">Terms of Service</Link> and{' '}
@@ -435,7 +435,7 @@ function PricingContent() {
             {/* Footer */}
             <footer className="relative z-10 border-t border-white/5 py-8 mt-16">
                 <div className="max-w-6xl mx-auto px-8 text-center text-gray-500 text-sm">
-                    © 2024 AISTER. Multi-Agent AI Trading Platform.
+                    © 2024 CoTrader. Multi-Agent AI Trading Platform.
                 </div>
             </footer>
         </div>

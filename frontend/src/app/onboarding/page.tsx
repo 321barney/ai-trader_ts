@@ -49,7 +49,7 @@ export default function OnboardingPage() {
     const totalSteps = 6;
 
     const steps = [
-        { title: "Exchange API", description: "Connect your Aster exchange" },
+        { title: "Exchange API", description: "Connect your CoTrader exchange" },
         { title: "Leverage", description: "Set your leverage preference" },
         { title: "Trading Pairs", description: "Select pairs to trade" },
         { title: "Market Type", description: "Choose perp or spot" },
@@ -211,17 +211,17 @@ export default function OnboardingPage() {
         <div className="min-h-screen bg-[#0a0a0f] flex">
             {/* Background */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[128px]" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[128px]" />
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[128px]" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-slate-500/10 rounded-full blur-[128px]" />
             </div>
 
             {/* Sidebar - Steps */}
             <aside className="w-80 border-r border-white/5 p-8 relative z-10">
                 <div className="flex items-center gap-3 mb-12">
                     <div className="relative w-11 h-11 flex items-center justify-center">
-                        <div className="absolute inset-0 bg-pink-500 rounded-xl rotate-6 opacity-20 blur-md"></div>
-                        <div className="relative w-full h-full bg-gradient-to-tr from-purple-600 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white">
+                        <div className="absolute inset-0 bg-blue-600 rounded-xl rotate-6 opacity-20 blur-md"></div>
+                        <div className="relative w-full h-full bg-gradient-to-tr from-[#0f172a] to-[#1e293b] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-100">
                                 <path d="M12 4L4 20H20L12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 <path d="M12 14L9 19H15L12 14Z" fill="currentColor" fillOpacity="0.2" stroke="none" />
                                 <path d="M8 19L12 11L16 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -229,8 +229,8 @@ export default function OnboardingPage() {
                         </div>
                     </div>
                     <div>
-                        <span className="text-xl font-bold text-white tracking-wide">AISTER</span>
-                        <div className="text-[10px] text-gray-400 font-medium tracking-wider">Multi-Agent AI Trading</div>
+                        <span className="text-xl font-bold text-slate-100 tracking-wide font-mono">CoTrader</span>
+                        <div className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Institutional Intelligence</div>
                     </div>
                 </div>
 
@@ -239,7 +239,7 @@ export default function OnboardingPage() {
                         <div
                             key={i}
                             className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${currentStep === i + 1
-                                ? "bg-indigo-500/10 border border-indigo-500/30"
+                                ? "bg-blue-600/10 border border-blue-500/30"
                                 : currentStep > i + 1
                                     ? "opacity-60"
                                     : "opacity-40"
@@ -248,7 +248,7 @@ export default function OnboardingPage() {
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${currentStep > i + 1
                                 ? "bg-green-500 text-white"
                                 : currentStep === i + 1
-                                    ? "bg-indigo-500 text-white"
+                                    ? "bg-blue-600 text-white"
                                     : "bg-white/10 text-gray-400"
                                 }`}>
                                 {currentStep > i + 1 ? "✓" : i + 1}
@@ -273,7 +273,7 @@ export default function OnboardingPage() {
                         </div>
                         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300"
+                                className="h-full bg-gradient-to-r from-blue-600 to-slate-400 transition-all duration-300"
                                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
                             />
                         </div>
@@ -285,7 +285,7 @@ export default function OnboardingPage() {
                         {currentStep === 1 && (
                             <>
                                 <h2 className="text-2xl font-bold text-white mb-2">Connect Exchange</h2>
-                                <p className="text-gray-400 mb-6">Enter your AsterDex API credentials</p>
+                                <p className="text-gray-400 mb-6">Enter your CoTrader API credentials</p>
 
                                 <div className="space-y-4">
                                     <div>
@@ -294,7 +294,7 @@ export default function OnboardingPage() {
                                             type="text"
                                             value={data.asterApiKey || ""}
                                             onChange={(e) => setData({ ...data, asterApiKey: e.target.value })}
-                                            className="w-full px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white focus:border-indigo-500 outline-none"
+                                            className="w-full px-4 py-3 bg-[#0f172a] border border-white/10 rounded-lg text-white focus:border-blue-500 outline-none"
                                             placeholder="Enter API key"
                                         />
                                     </div>
@@ -304,7 +304,7 @@ export default function OnboardingPage() {
                                             type="password"
                                             value={data.asterApiSecret || ""}
                                             onChange={(e) => setData({ ...data, asterApiSecret: e.target.value })}
-                                            className="w-full px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white focus:border-indigo-500 outline-none"
+                                            className="w-full px-4 py-3 bg-[#0f172a] border border-white/10 rounded-lg text-white focus:border-blue-500 outline-none"
                                             placeholder="Enter API secret"
                                         />
                                     </div>
@@ -313,7 +313,7 @@ export default function OnboardingPage() {
                                             type="checkbox"
                                             checked={data.asterTestnet}
                                             onChange={(e) => setData({ ...data, asterTestnet: e.target.checked })}
-                                            className="w-5 h-5 rounded bg-[#1a1a25] border-white/10"
+                                            className="w-5 h-5 rounded bg-[#0f172a] border-white/10"
                                         />
                                         <span className="text-gray-300">Use Testnet (recommended for testing)</span>
                                     </label>
@@ -322,7 +322,7 @@ export default function OnboardingPage() {
                                     <button
                                         onClick={testConnection}
                                         disabled={isTesting || !data.asterApiKey || !data.asterApiSecret}
-                                        className="w-full py-3 rounded-lg border border-indigo-500/50 bg-indigo-500/10 text-indigo-400 font-medium hover:bg-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        className="w-full py-3 rounded-lg border border-blue-500/50 bg-blue-500/10 text-blue-400 font-medium hover:bg-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
                                         {isTesting ? (
                                             <>
@@ -415,7 +415,7 @@ export default function OnboardingPage() {
                                             key={pair}
                                             onClick={() => togglePair(pair)}
                                             className={`p-4 rounded-lg border transition-all ${data.selectedPairs?.includes(pair)
-                                                ? "bg-indigo-500/20 border-indigo-500/50 text-white"
+                                                ? "bg-blue-600/20 border-blue-500/50 text-white"
                                                 : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20"
                                                 }`}
                                         >
@@ -439,7 +439,7 @@ export default function OnboardingPage() {
                                     <button
                                         onClick={() => setData({ ...data, marketType: "perp" })}
                                         className={`p-6 rounded-lg border transition-all ${data.marketType === "perp"
-                                            ? "bg-indigo-500/20 border-indigo-500/50"
+                                            ? "bg-blue-600/20 border-blue-500/50"
                                             : "bg-white/5 border-white/10 hover:border-white/20"
                                             }`}
                                     >
@@ -450,7 +450,7 @@ export default function OnboardingPage() {
                                     <button
                                         onClick={() => setData({ ...data, marketType: "spot" })}
                                         className={`p-6 rounded-lg border transition-all ${data.marketType === "spot"
-                                            ? "bg-indigo-500/20 border-indigo-500/50"
+                                            ? "bg-blue-600/20 border-blue-500/50"
                                             : "bg-white/5 border-white/10 hover:border-white/20"
                                             }`}
                                     >
@@ -474,7 +474,7 @@ export default function OnboardingPage() {
                                             key={m.id}
                                             onClick={() => setData({ ...data, methodology: m.id })}
                                             className={`w-full p-4 rounded-lg border text-left transition-all ${data.methodology === m.id
-                                                ? "bg-indigo-500/20 border-indigo-500/50"
+                                                ? "bg-blue-600/20 border-blue-500/50"
                                                 : "bg-white/5 border-white/10 hover:border-white/20"
                                                 }`}
                                         >
@@ -499,7 +499,7 @@ export default function OnboardingPage() {
                                             type="password"
                                             value={data.deepseekApiKey || ""}
                                             onChange={(e) => setData({ ...data, deepseekApiKey: e.target.value })}
-                                            className="w-full px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white focus:border-indigo-500 outline-none"
+                                            className="w-full px-4 py-3 bg-[#0f172a] border border-white/10 rounded-lg text-white focus:border-blue-500 outline-none"
                                             placeholder="sk-..."
                                         />
                                     </div>
