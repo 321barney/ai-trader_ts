@@ -799,7 +799,7 @@ export class TradingService {
                             unrealizedPnl: 0,
                             unrealizedPnlPercent: 0,
                             // leverage: leverage, // Removed: Not in Position model
-                            tradeId: trade.id // Link to Trade log
+                            // tradeId: trade.id // Removed: Not in Position model
                         }
                     });
                 }

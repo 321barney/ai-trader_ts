@@ -8,7 +8,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireSubscription } from '../middleware/subscription.js'; // Ensure correct import
-import { asyncHandler } from '../utils/async-handler.js';
+import { asyncHandler } from '../middleware/error.js';
 import { strategyBuilder } from '../services/strategy-builder.service.js';
 import { strategyExecutor } from '../services/strategy-executor.service.js';
 import { strategyService } from '../services/strategy.service.js'; // Keep existing service

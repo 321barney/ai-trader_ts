@@ -15,21 +15,21 @@ async function main() {
         where: { email },
         update: {
             password: hashedPassword,
-            subscriptionTier: 'PRO',
+            subscriptionPlan: 'PRO', // Corrected field name
             subscriptionStatus: 'ACTIVE',
-            subscriptionExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+            subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Corrected field name
         },
         create: {
             email,
             password: hashedPassword,
-            name: 'Youssef Ghazii',
-            role: 'USER',
-            subscriptionTier: 'PRO',
+            username: 'YoussefGhazii', // Corrected: schema has username, not name
+            role: 'TRADER',
+            subscriptionPlan: 'PRO',
             subscriptionStatus: 'ACTIVE',
-            subscriptionExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-            tradingCapital: 10000,
+            subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+            // tradingCapital: 10000, // Removed
             tradingCapitalPercent: 20,
-            riskLevel: 'AGGRESSIVE',
+            riskLevel: 'AGGRESSIVE', // Keeping as user requested, might be useful if DB updated later
             preferredExchange: 'binance',
         },
     });
@@ -37,7 +37,7 @@ async function main() {
     console.log(`✅ User seeded successfully!`);
     console.log(`🆔 ID: ${user.id}`);
     console.log(`📧 Email: ${user.email}`);
-    console.log(`💎 Tier: ${user.subscriptionTier}`);
+    console.log(`💎 Plan: ${user.subscriptionPlan}`);
 }
 
 main()
