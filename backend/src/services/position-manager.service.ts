@@ -182,6 +182,18 @@ class PositionManagerService {
                     }
                 });
                 console.log(`[PositionManager] Linked Trade ${(position as any).tradeId} updated with PnL`);
+
+                // Send Feedback to RL Service (Phase 5: RL Learning)
+                const { rlService } = await import('./rl.service.js');
+                await rlService.sendTradeFeedback({
+                    symbol: position.symbol,
+                    action: position.side,
+                    pnl: pnl.amount,
+                    pnlPercent: pnl.percent,
+                    duration: (Date.now() - new Date((position as any).createdAt || Date.now()).getTime()) / 1000,
+                    strategy: 'STRATEGY_EXECUTOR' // Or fetch methodology
+                });
+
             } else {
                 // Forward compatibility: Find trade by symbol/user if no ID
                 // (Skipping for now to avoid wrong linking, relying on tradeId)

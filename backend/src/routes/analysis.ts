@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { analysisTrigger } from '../services/analysis-trigger.service.js';
 import { schedulerService } from '../services/scheduler.service.js';
 import { rlService } from '../services/rl.service.js';
-import { authenticate } from '../middleware/auth.middleware.js';
-import { requireSubscription } from '../middleware/subscription.middleware.js';
+import { authMiddleware } from '../middleware/auth.js';
+import { requireSubscription } from '../middleware/subscription.js';
 
 const router = Router();
 
@@ -12,7 +12,7 @@ const router = Router();
  * @desc Check if analysis would run for a symbol (without running it)
  * @access Private
  */
-router.get('/trigger-status/:symbol', authenticate, async (req, res) => {
+router.get('/trigger-status/:symbol', authMiddleware as any, async (req, res) => {
     try {
         const { symbol } = req.params;
         const userId = (req as any).user.id;
@@ -34,7 +34,7 @@ router.get('/trigger-status/:symbol', authenticate, async (req, res) => {
  * @desc Manually trigger analysis (bypassing smart triggers)
  * @access Private (Premium)
  */
-router.post('/trigger/:symbol', authenticate, requireSubscription, async (req, res) => {
+router.post('/trigger/:symbol', authMiddleware as any, requireSubscription as any, async (req, res) => {
     try {
         const { symbol } = req.params;
         const userId = (req as any).user.id;
@@ -56,7 +56,7 @@ router.post('/trigger/:symbol', authenticate, requireSubscription, async (req, r
  * @desc Get RL training status
  * @access Private
  */
-router.get('/rl/status', authenticate, async (req, res) => {
+router.get('/rl/status', authMiddleware as any, async (req, res) => {
     try {
         const status = await rlService.getTrainingStatus();
         const metrics = await rlService.getMetrics();
@@ -77,7 +77,7 @@ router.get('/rl/status', authenticate, async (req, res) => {
  * @desc Manually trigger RL training (Admin/Dev only)
  * @access Private
  */
-router.post('/rl/train', authenticate, async (req, res) => {
+router.post('/rl/train', authMiddleware as any, async (req, res) => {
     try {
         const { symbol, timesteps } = req.body;
 

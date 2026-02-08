@@ -434,6 +434,40 @@ export class RLService {
     }
 
     /**
+     * Send trade result feedback to RL model (Reinforcement Step)
+     * This allows the model to learn from actual execution results
+     */
+    async sendTradeFeedback(trade: {
+        symbol: string;
+        action: 'LONG' | 'SHORT';
+        pnl: number;
+        pnlPercent: number;
+        duration: number;
+        strategy: string;
+    }): Promise<boolean> {
+        try {
+            console.log(`[RL Service] Sending trade feedback for ${trade.symbol}: ${trade.pnlPercent.toFixed(2)}%`);
+
+            const response = await fetch(`${this.baseUrl}/model/feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(trade),
+            });
+
+            if (response.ok) {
+                return true;
+            }
+
+            // Don't log error for 404/500 to avoid log noise if RL service is down
+            // Just return false
+            return false;
+        } catch (error) {
+            // fail silently
+            return false;
+        }
+    }
+
+    /**
      * Run manual backtest on current model
      */
     async runBacktest(symbol: string): Promise<any> {
