@@ -134,13 +134,7 @@ app.listen(PORT, async () => {
 
     console.log('✅ Database connected - starting background services...');
 
-    // Start Scheduler (only after DB is ready)
-    import('./scheduler.js').then(({ scheduler }) => {
-        scheduler.startTradingLoop();
-        scheduler.startSignalMonitoring();
-    }).catch(err => {
-        console.error('[Scheduler] Failed to start:', err.message);
-    });
+
 
     // Resume interrupted backtests (only after DB is ready)
     import('./services/backtest.service.js').then(({ backtestService }) => {
