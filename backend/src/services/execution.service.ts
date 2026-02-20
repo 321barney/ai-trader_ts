@@ -112,12 +112,11 @@ class ExecutionService {
             const user = await prisma.user.findUnique({
                 where: { id: signal.userId },
                 select: {
-                    select: {
-                        // keys removed
-                        maxRiskPerTrade: true,
-                        preferredExchange: true
-                    }
-                });
+                    // keys removed
+                    maxRiskPerTrade: true,
+                    preferredExchange: true
+                }
+            });
 
             const asterApiKey = await vaultService.getSecret(signal.userId, 'aster_api_key');
             const asterApiSecret = await vaultService.getSecret(signal.userId, 'aster_api_secret');
@@ -231,12 +230,11 @@ class ExecutionService {
             const user = await prisma.user.findUnique({
                 where: { id: request.userId },
                 select: {
-                    select: {
-                        // keys removed
-                        maxRiskPerTrade: true,
-                        preferredExchange: true
-                    }
-                });
+                    // keys removed
+                    maxRiskPerTrade: true,
+                    preferredExchange: true
+                }
+            });
 
             const asterApiKey = await vaultService.getSecret(request.userId, 'aster_api_key');
             const asterApiSecret = await vaultService.getSecret(request.userId, 'aster_api_secret');
