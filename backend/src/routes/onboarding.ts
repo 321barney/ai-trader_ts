@@ -37,7 +37,6 @@ router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Res
         where: { id: req.userId },
         select: {
             onboardingStep: true,
-            onboardingCompleted: true,
             asterApiKey: true,
             leverage: true,
             selectedPairs: true,
@@ -53,7 +52,7 @@ router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Res
 
     return successResponse(res, {
         currentStep: user.onboardingStep,
-        completed: user.onboardingCompleted,
+        completed: user.onboardingStep >= 6,
         steps: {
             1: !!user.asterApiKey,
             2: !!user.leverage,
@@ -73,18 +72,17 @@ router.post('/fix', authMiddleware, asyncHandler(async (req: Request, res: Respo
     const user = await prisma.user.update({
         where: { id: req.userId },
         data: {
-            onboardingCompleted: true,
             onboardingStep: 6,
         },
         select: {
             id: true,
-            onboardingCompleted: true,
+            onboardingStep: true,
         },
     });
 
     return successResponse(res, {
         fixed: true,
-        onboardingCompleted: user.onboardingCompleted,
+        onboardingCompleted: true,
         message: 'Onboarding marked as complete'
     });
 }));
@@ -140,14 +138,12 @@ router.post('/step', authMiddleware, asyncHandler(async (req: Request, res: Resp
             updateData = {
                 ...updateData,
                 methodology: (validation.data as any).methodology,
-                onboardingCompleted: true, // Mark completed at step 5 since step 6 is optional
             };
             break;
         case 6:
             updateData = {
                 ...updateData,
                 deepseekApiKey: (validation.data as any).deepseekApiKey || null,
-                onboardingCompleted: true,
             };
             break;
     }
@@ -157,14 +153,13 @@ router.post('/step', authMiddleware, asyncHandler(async (req: Request, res: Resp
         data: updateData,
         select: {
             onboardingStep: true,
-            onboardingCompleted: true,
         },
     });
 
     return successResponse(res, {
         step,
         nextStep: step < 6 ? step + 1 : null,
-        completed: user.onboardingCompleted,
+        completed: step >= 6,
     });
 }));
 
@@ -181,10 +176,7 @@ router.post('/skip', authMiddleware, asyncHandler(async (req: Request, res: Resp
 
     const updateData: any = { onboardingStep: step + 1 };
 
-    // If skipping last step, complete onboarding
-    if (step === 6) {
-        updateData.onboardingCompleted = true;
-    }
+
 
     const user = await prisma.user.update({
         where: { id: req.userId },
@@ -194,7 +186,7 @@ router.post('/skip', authMiddleware, asyncHandler(async (req: Request, res: Resp
     return successResponse(res, {
         step,
         nextStep: step < 6 ? step + 1 : null,
-        completed: user.onboardingCompleted
+        completed: step >= 6
     });
 }));
 

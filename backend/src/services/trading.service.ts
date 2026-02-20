@@ -41,7 +41,6 @@ export class TradingService {
                 strategyMode: true,
                 methodology: true,
                 selectedPairs: true,
-                onboardingCompleted: true,
                 asterApiKey: true,
                 deepseekApiKey: true,
             },

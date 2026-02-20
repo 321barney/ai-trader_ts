@@ -11,62 +11,8 @@ import { unauthorizedResponse } from '../utils/response.js';
  * Check if user has an active paid subscription (PRO or CUSTOM)
  */
 export async function requirePaidSubscription(req: Request, res: Response, next: NextFunction) {
-    if (!req.userId) {
-        return unauthorizedResponse(res, 'Authentication required');
-    }
-
-    try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.userId },
-            select: {
-                subscriptionPlan: true,
-                subscriptionStatus: true,
-                subscriptionEndsAt: true,
-            },
-        });
-
-        if (!user) {
-            return unauthorizedResponse(res, 'User not found');
-        }
-
-        // Check if user has PRO or CUSTOM plan
-        if (user.subscriptionPlan === 'FREE') {
-            return res.status(403).json({
-                success: false,
-                error: 'This feature requires a PRO subscription',
-                message: 'Upgrade to PRO to access AI trading features',
-                upgradeUrl: '/pricing',
-            });
-        }
-
-        // Check if subscription is active
-        if (user.subscriptionStatus !== 'ACTIVE') {
-            return res.status(403).json({
-                success: false,
-                error: 'Subscription is not active',
-                message: `Your subscription status is ${user.subscriptionStatus}. Please renew your subscription.`,
-                upgradeUrl: '/pricing',
-            });
-        }
-
-        // Check if subscription hasn't expired
-        if (user.subscriptionEndsAt && user.subscriptionEndsAt < new Date()) {
-            return res.status(403).json({
-                success: false,
-                error: 'Subscription has expired',
-                message: 'Your subscription has expired. Please renew to continue using premium features.',
-                upgradeUrl: '/pricing',
-            });
-        }
-
-        next();
-    } catch (error) {
-        console.error('[Subscription Middleware] Error:', error);
-        return res.status(500).json({
-            success: false,
-            error: 'Failed to verify subscription',
-        });
-    }
+    // Subscription checks disabled for open source version
+    next();
 }
 
 /**

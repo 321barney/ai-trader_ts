@@ -26,18 +26,12 @@ async function main() {
             where: { email: u.email },
             update: {
                 password: u.passwordHash,
-                subscriptionPlan: 'PRO',
-                subscriptionStatus: 'ACTIVE',
-                subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
             },
             create: {
                 email: u.email,
                 password: u.passwordHash,
                 username: u.username,
                 role: 'TRADER',
-                subscriptionPlan: 'PRO',
-                subscriptionStatus: 'ACTIVE',
-                subscriptionEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
                 tradingCapitalPercent: 20,
                 preferredExchange: 'binance',
             },

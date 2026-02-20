@@ -190,26 +190,4 @@ export function adminMiddleware(req: Request, res: Response, next: NextFunction)
     next();
 }
 
-/**
- * Require completed onboarding
- */
-export async function onboardingCompleteMiddleware(req: Request, res: Response, next: NextFunction) {
-    if (!req.userId) {
-        return unauthorizedResponse(res);
-    }
 
-    const user = await prisma.user.findUnique({
-        where: { id: req.userId },
-        select: { onboardingCompleted: true },
-    });
-
-    if (!user?.onboardingCompleted) {
-        return res.status(403).json({
-            success: false,
-            error: 'Please complete onboarding first',
-            redirectTo: '/onboarding',
-        });
-    }
-
-    next();
-}
