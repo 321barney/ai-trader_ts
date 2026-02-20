@@ -21,16 +21,8 @@ model User {
   role      UserRole @default(TRADER)
   status    UserStatus @default(ACTIVE)
   
-  // Exchange Credentials (encrypted)
-  asterApiKey      String?
-  asterApiSecret   String?
-  asterTestnet     Boolean @default(true)
-  
-  // AI Provider Keys
-  deepseekApiKey   String?
-  openaiApiKey     String?
-  anthropicApiKey  String?
-  geminiApiKey     String?
+  // Exchange Credentials & AI Keys -> Moved to VaultSecret
+  // Deprecated fields removed: asterApiKey, asterApiSecret, deepseekApiKey, etc.
 
   // Agent Model Configuration (deepseek | openai | anthropic | gemini)
   marketAnalystModel    String @default("deepseek")
@@ -62,6 +54,7 @@ model User {
   // Relations
   sessions         UserSession[]
   apiKeys          ApiKey[]
+  vaultSecrets     VaultSecret[]
   trades           Trade[]
   signals          Signal[]
   agentDecisions   AgentDecision[]
