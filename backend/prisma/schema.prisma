@@ -553,4 +553,21 @@ model ApiKey {
   @@index([keyPrefix])
 }
 
-
+model VaultSecret {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  key       String   // e.g. "aster_api_key", "deepseek_api_key"
+  
+  // Encrypted content
+  encryptedValue String
+  iv             String
+  authTag        String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, key])
+  @@index([userId])
+}
