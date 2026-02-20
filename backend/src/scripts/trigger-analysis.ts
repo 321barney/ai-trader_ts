@@ -2,6 +2,7 @@ import 'dotenv/config'; // Load env vars
 import { prisma } from '../utils/prisma.js';
 import { tradingService } from '../services/trading.service.js';
 import { schedulerService } from '../services/scheduler.service.js';
+import { vaultService } from '../services/vault.service.js';
 
 async function main() {
     console.log('Environment loaded.');
@@ -20,12 +21,16 @@ async function main() {
     console.log(`Found user: ${user.id} (${user.email})`);
     const symbol = 'BTCUSDT';
 
+    // Get keys from vault
+    const asterApiKey = await vaultService.getSecret(user.id, 'aster_api_key');
+    const asterApiSecret = await vaultService.getSecret(user.id, 'aster_api_secret');
+
     // Fetch data manually using scheduler service helper
     const multiTF = await schedulerService.fetchMultiTFData(
         symbol,
         ['1h'], // Default timeframe for manual trigger
-        user.asterApiKey || undefined,
-        user.asterApiSecret || undefined
+        asterApiKey || undefined,
+        asterApiSecret || undefined
     );
 
     console.log('Market data fetched. Running execution pipeline...');
