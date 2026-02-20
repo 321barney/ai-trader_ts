@@ -77,9 +77,7 @@ AI Trader provides a secure API for external bots to connect and trade.
     - [x] Fix `subscription.middleware.ts` <!-- id: 5 -->
     - [x] Fix `routes/onboarding.ts` <!-- id: 6 -->
     - [x] Fix `routes/trading.ts` <!-- id: 7 -->
-    - [x] Fix `routes/agents.ts` <!-- id: 8 -->
-    - [x] Fix `auth.service.ts` <!-- id: 9 -->
-- [ ] Fix frontend build errors `npm run build` <!-- id: 10 -->cp .env.example .env.local
+    cp .env.example .env.local
     npm run dev
     ```
 

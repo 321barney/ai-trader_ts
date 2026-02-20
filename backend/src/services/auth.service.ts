@@ -132,7 +132,6 @@ export class AuthService {
                 username: user.username,
                 email: user.email,
                 role: user.role,
-                onboardingCompleted: user.onboardingCompleted,
             },
             accessToken,
             refreshToken,
@@ -179,8 +178,6 @@ export class AuthService {
         // For security, don't expose full keys - just indicate if they're set
         return {
             ...user,
-            onboardingCompleted: true, // Always true for legacy support if needed, or just remove if frontend doesn't need it. 
-            // Actually, better to just remove it if the interface changed. 
             // But wait, the interface removal above assumes I remove it here too.
             // Let's check if the frontend expects it. 
             // The frontend likely expects it. I should probably return 'true' hardcoded if the frontend checks it, 
