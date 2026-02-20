@@ -145,15 +145,8 @@ async function main() {
             logger.info(`Sending notification to user ${data.userId}: ${data.title}`);
 
             try {
-                // Create notification in database
-                await (prisma as any).notification.create({
-                    data: {
-                        userId: data.userId,
-                        type: data.type,
-                        title: data.title,
-                        message: data.message,
-                    }
-                });
+                // Removed DB storage as Notification table was dropped
+                // Ideally this would push to a real-time service or external notification provider
 
                 return { sent: true };
             } catch (error: any) {

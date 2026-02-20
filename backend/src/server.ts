@@ -82,6 +82,16 @@ app.use('/api', generalLimiter);
 // Health check routes (no rate limit)
 app.use('/health', healthRouter);
 
+// Root route
+app.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'CoTrader API is running',
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
+    });
+});
+
 // API Routes
 console.log('[Server] Mounting API routes at /api');
 app.use('/api', apiRouter);

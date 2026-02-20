@@ -51,20 +51,8 @@ class NotificationService {
             createdAt: new Date()
         };
 
-        try {
-            await db.notification.create({
-                data: {
-                    userId,
-                    type,
-                    title,
-                    message,
-                    data: data ? JSON.stringify(data) : null,
-                    read: false
-                }
-            });
-        } catch (error) {
-            console.log(`[Notification] ${type}: ${title} - ${message}`);
-        }
+        // DB storage removed as table was dropped
+        // We only emit real-time events now
 
         const userListeners = this.listeners.get(userId) || [];
         for (const listener of userListeners) {
@@ -124,33 +112,15 @@ class NotificationService {
     }
 
     async getUnread(userId: string): Promise<Notification[]> {
-        try {
-            return await db.notification.findMany({
-                where: { userId, read: false },
-                orderBy: { createdAt: 'desc' },
-                take: 20
-            }) as unknown as Notification[];
-        } catch (error) {
-            return [];
-        }
+        return [];
     }
 
     async markRead(notificationId: string): Promise<void> {
-        try {
-            await db.notification.update({
-                where: { id: notificationId },
-                data: { read: true }
-            });
-        } catch (error) { }
+        // No-op
     }
 
     async markAllRead(userId: string): Promise<void> {
-        try {
-            await db.notification.updateMany({
-                where: { userId, read: false },
-                data: { read: true }
-            });
-        } catch (error) { }
+        // No-op
     }
 }
 
