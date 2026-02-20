@@ -45,7 +45,7 @@ export default function LoginPage() {
         <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
             {/* Background Effects */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[128px]" />
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-[128px]" />
                 <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-slate-500/10 rounded-full blur-[128px]" />
             </div>
 
@@ -54,13 +54,9 @@ export default function LoginPage() {
                 <div className="flex items-center justify-center gap-3 mb-8">
                     <Link href="/" className="flex items-center gap-3 group">
                         <div className="relative w-11 h-11 flex items-center justify-center">
-                            <div className="absolute inset-0 bg-blue-600 rounded-xl rotate-6 group-hover:rotate-12 transition-transform duration-300 opacity-20 blur-md"></div>
-                            <div className="relative w-full h-full bg-gradient-to-tr from-[#0f172a] to-[#1e293b] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-100">
-                                    <path d="M12 4L4 20H20L12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    <path d="M12 14L9 19H15L12 14Z" fill="currentColor" fillOpacity="0.2" stroke="none" />
-                                    <path d="M8 19L12 11L16 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
+                            <div className="absolute inset-0 bg-emerald-500 rounded-xl rotate-6 group-hover:rotate-12 transition-transform duration-300 opacity-20 blur-md"></div>
+                            <div className="relative w-full h-full bg-gradient-to-tr from-[#0f172a] to-[#1e293b] rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-300 border border-emerald-500/20">
+                                <span className="text-xl">🛡️</span>
                             </div>
                         </div>
                         <div>
@@ -71,7 +67,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Login Card */}
-                <div className="card glass p-8">
+                <div className="card glass-pro p-8 border border-white/5">
                     <h1 className="text-2xl font-bold text-white text-center mb-2">
                         Welcome Back
                     </h1>
@@ -95,7 +91,7 @@ export default function LoginPage() {
                                 required
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className="w-full px-4 py-3 bg-[#0f172a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                                className="w-full px-4 py-3 bg-[#0f172a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
                                 placeholder="you@example.com"
                             />
                         </div>
@@ -109,7 +105,7 @@ export default function LoginPage() {
                                 required
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                className="w-full px-4 py-3 bg-[#0f172a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                                className="w-full px-4 py-3 bg-[#0f172a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
                                 placeholder="••••••••"
                             />
                         </div>
@@ -117,7 +113,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold py-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-900/20"
                         >
                             {isLoading ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -136,7 +132,7 @@ export default function LoginPage() {
                     <div className="mt-6 text-center">
                         <p className="text-gray-400">
                             Don&apos;t have an account?{" "}
-                            <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium">
+                            <Link href="/register" className="text-emerald-400 hover:text-emerald-300 font-medium">
                                 Sign up
                             </Link>
                         </p>

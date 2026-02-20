@@ -65,15 +65,7 @@ export default function PrivacyPolicy() {
                             <li>Platform usage statistics</li>
                         </ul>
 
-                        <h3 className="text-lg font-semibold text-indigo-400 mb-2">1.4 Payment Information</h3>
-                        <ul className="list-disc list-inside space-y-2 ml-4">
-                            <li>Cryptocurrency wallet addresses (for payment purposes)</li>
-                            <li>Transaction IDs and payment status</li>
-                            <li>Subscription plan and billing history</li>
-                        </ul>
-                        <p className="mt-2 text-gray-400 text-sm">
-                            Note: Payment processing is handled by NOWPayments. We do not store your private keys or full payment details.
-                        </p>
+
                     </section>
 
                     <section>
@@ -82,7 +74,7 @@ export default function PrivacyPolicy() {
                             <li><strong>Service Delivery:</strong> To provide and maintain the CoTrader trading platform</li>
                             <li><strong>Trade Execution:</strong> To generate AI-powered trading signals and execute trades on your behalf</li>
                             <li><strong>AI Analysis:</strong> To power our multi-agent AI system for market analysis</li>
-                            <li><strong>Payment Processing:</strong> To manage subscriptions and process payments</li>
+
                             <li><strong>Communication:</strong> To send important account notifications and updates</li>
                             <li><strong>Platform Improvement:</strong> To analyze usage patterns and improve our services</li>
                             <li><strong>Security:</strong> To detect and prevent fraudulent or unauthorized activity</li>
@@ -140,11 +132,7 @@ export default function PrivacyPolicy() {
                                     </tr>
                                 </thead>
                                 <tbody className="text-gray-400">
-                                    <tr className="border-b border-white/5">
-                                        <td className="py-2">NOWPayments</td>
-                                        <td className="py-2">Crypto payment processing</td>
-                                        <td className="py-2">Payment amount, wallet address</td>
-                                    </tr>
+
                                     <tr className="border-b border-white/5">
                                         <td className="py-2">DeepSeek / OpenAI / Anthropic</td>
                                         <td className="py-2">AI market analysis</td>
@@ -182,7 +170,7 @@ export default function PrivacyPolicy() {
                             <li><strong>Trading History:</strong> Retained for 2 years for analysis and compliance</li>
                             <li><strong>Backtest Results:</strong> Automatically cleaned up after 90 days</li>
                             <li><strong>Deleted Accounts:</strong> Data removed within 30 days of deletion request</li>
-                            <li><strong>Payment Records:</strong> Retained for 7 years for legal/tax compliance</li>
+
                         </ul>
                     </section>
 

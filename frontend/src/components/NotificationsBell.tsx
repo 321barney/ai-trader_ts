@@ -116,7 +116,7 @@ export default function NotificationsBell() {
                         {unreadCount > 0 && (
                             <button
                                 onClick={markAllAsRead}
-                                className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                                className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
                             >
                                 MARK ALL READ
                             </button>
@@ -135,7 +135,7 @@ export default function NotificationsBell() {
                                 <div
                                     key={notif.id}
                                     onClick={() => !notif.read && markAsRead(notif.id)}
-                                    className={`p-4 border-b border-slate-800/50 hover:bg-slate-800/50 cursor-pointer transition-colors ${!notif.read ? 'bg-blue-500/5' : ''
+                                    className={`p-4 border-b border-slate-800/50 hover:bg-slate-800/50 cursor-pointer transition-colors ${!notif.read ? 'bg-emerald-500/5' : ''
                                         }`}
                                 >
                                     <div className="flex gap-3">
@@ -146,7 +146,7 @@ export default function NotificationsBell() {
                                                     {notif.title}
                                                 </span>
                                                 {!notif.read && (
-                                                    <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 animate-pulse" />
+                                                    <span className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 animate-pulse" />
                                                 )}
                                             </div>
                                             <p className="text-xs text-slate-400 mt-1 leading-relaxed truncate">{notif.message}</p>

@@ -44,10 +44,20 @@ declare global {
  */
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
     try {
-        // Get token from header
+        // 1. Check for API Key (X-API-KEY or Authorization: Api-Key <key>)
+        const apiKeyHeader = req.headers['x-api-key'] || req.headers['x-api-token'];
+        if (apiKeyHeader && typeof apiKeyHeader === 'string') {
+            return await verifyApiKey(req, res, next, apiKeyHeader);
+        }
+
+        // 2. Check for Bearer Token (JWT)
         const authHeader = req.headers.authorization;
+        if (authHeader?.startsWith('Api-Key ')) {
+            return await verifyApiKey(req, res, next, authHeader.split(' ')[1]);
+        }
+
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            console.warn('[Auth Middleware] No token in header');
+            // console.warn('[Auth Middleware] No token in header');
             return unauthorizedResponse(res, 'No token provided');
         }
 
@@ -94,6 +104,48 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     } catch (error) {
         console.error('[Auth Middleware] Error:', error);
         return unauthorizedResponse(res, 'Authentication failed');
+    }
+}
+
+// Helper to verify API Key
+import bcrypt from 'bcrypt';
+
+async function verifyApiKey(req: Request, res: Response, next: NextFunction, apiKey: string) {
+    try {
+        // Key format: pk_randomString
+        const keyPrefix = apiKey.substring(0, 8); // "pk_xxxxx"
+
+        // Find potential key match by prefix (optimization)
+        const storedKeys = await prisma.apiKey.findMany({
+            where: { keyPrefix },
+            include: { user: true }
+        });
+
+        for (const storedKey of storedKeys) {
+            const isValid = await bcrypt.compare(apiKey, storedKey.keyHash);
+            if (isValid) {
+                // Update usage
+                await prisma.apiKey.update({
+                    where: { id: storedKey.id },
+                    data: { lastUsedAt: new Date() }
+                });
+
+                // Attach user
+                req.user = {
+                    userId: storedKey.userId,
+                    email: storedKey.user.email,
+                    role: storedKey.user.role,
+                    id: storedKey.userId
+                };
+                req.userId = storedKey.userId;
+                return next();
+            }
+        }
+
+        return unauthorizedResponse(res, 'Invalid API Key');
+    } catch (error) {
+        console.error('API Key Verify Error:', error);
+        return unauthorizedResponse(res, 'API Key Validation Failed');
     }
 }
 

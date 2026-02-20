@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import ApiKeysSettings from "@/components/settings/ApiKeysSettings";
 
 interface ConnectionTest {
     testing: boolean;
@@ -401,256 +402,261 @@ export default function SettingsPage() {
                             )}
                         </div>
 
-                        {/* DeepSeek API Key */}
                     </div>
+
+                    {/* DeepSeek API Key */}
                 </div>
+            </div>
 
-                {/* AI Model Keys */}
-                <div className="card glass relative">
-                    <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <span>🧠</span> AI Model Keys
-                    </h2>
+            {/* API Keys (Bot Access) */}
+            <ApiKeysSettings />
 
-                    <div className="space-y-4">
-                        {/* DeepSeek */}
-                        <div>
-                            <label className="text-white font-medium block mb-2">DeepSeek API Key</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type={editingKey === 'deepseek' ? 'text' : 'password'}
-                                    value={settings.deepseekApiKey}
-                                    onChange={(e) => setSettings({ ...settings, deepseekApiKey: e.target.value })}
-                                    readOnly={editingKey !== 'deepseek'}
-                                    placeholder="sk-..."
-                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
-                                />
-                                <button
-                                    onClick={() => setEditingKey(editingKey === 'deepseek' ? null : 'deepseek')}
-                                    className="btn-secondary px-4"
-                                >
-                                    {editingKey === 'deepseek' ? 'Done' : 'Edit'}
-                                </button>
-                                <button
-                                    onClick={testDeepseekConnection}
-                                    disabled={deepseekTest.testing}
-                                    className="btn-secondary px-4"
-                                >
-                                    {deepseekTest.testing ? 'Testing...' : 'Test'}
-                                </button>
-                            </div>
-                            {deepseekTest.result && (
-                                <div className={`text-sm mt-2 flex items-center gap-1 ${deepseekTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
-                                    <span className={`w-2 h-2 rounded-full ${deepseekTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
-                                    {deepseekTest.result.connected ? deepseekTest.result.message : deepseekTest.result.error}
-                                </div>
-                            )}
-                        </div>
+            {/* AI Model Keys */}
+            <div className="card glass relative">
+                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <span>🧠</span> AI Model Keys
+                </h2>
 
-                        {/* OpenAI */}
-                        <div>
-                            <label className="text-white font-medium block mb-2">OpenAI API Key (ChatGPT)</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type={editingKey === 'openai' ? 'text' : 'password'}
-                                    value={settings.openaiApiKey}
-                                    onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
-                                    readOnly={editingKey !== 'openai'}
-                                    placeholder="sk-..."
-                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
-                                />
-                                <button
-                                    onClick={() => setEditingKey(editingKey === 'openai' ? null : 'openai')}
-                                    className="btn-secondary px-4"
-                                >
-                                    {editingKey === 'openai' ? 'Done' : 'Edit'}
-                                </button>
-                                <button
-                                    onClick={testOpenaiConnection}
-                                    disabled={openaiTest.testing}
-                                    className="btn-secondary px-4"
-                                >
-                                    {openaiTest.testing ? 'Testing...' : 'Test'}
-                                </button>
-                            </div>
-                            {openaiTest.result && (
-                                <div className={`text-sm mt-2 flex items-center gap-1 ${openaiTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
-                                    <span className={`w-2 h-2 rounded-full ${openaiTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
-                                    {openaiTest.result.connected ? openaiTest.result.message : openaiTest.result.error}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Anthropic */}
-                        <div>
-                            <label className="text-white font-medium block mb-2">Anthropic API Key (Claude)</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type={editingKey === 'anthropic' ? 'text' : 'password'}
-                                    value={settings.anthropicApiKey}
-                                    onChange={(e) => setSettings({ ...settings, anthropicApiKey: e.target.value })}
-                                    readOnly={editingKey !== 'anthropic'}
-                                    placeholder="sk-ant-..."
-                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
-                                />
-                                <button
-                                    onClick={() => setEditingKey(editingKey === 'anthropic' ? null : 'anthropic')}
-                                    className="btn-secondary px-4"
-                                >
-                                    {editingKey === 'anthropic' ? 'Done' : 'Edit'}
-                                </button>
-                                <button
-                                    onClick={testAnthropicConnection}
-                                    disabled={anthropicTest.testing}
-                                    className="btn-secondary px-4"
-                                >
-                                    {anthropicTest.testing ? 'Testing...' : 'Test'}
-                                </button>
-                            </div>
-                            {anthropicTest.result && (
-                                <div className={`text-sm mt-2 flex items-center gap-1 ${anthropicTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
-                                    <span className={`w-2 h-2 rounded-full ${anthropicTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
-                                    {anthropicTest.result.connected ? anthropicTest.result.message : anthropicTest.result.error}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Gemini */}
-                        <div>
-                            <label className="text-white font-medium block mb-2">Google Gemini API Key</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type={editingKey === 'gemini' ? 'text' : 'password'}
-                                    value={settings.geminiApiKey}
-                                    onChange={(e) => setSettings({ ...settings, geminiApiKey: e.target.value })}
-                                    readOnly={editingKey !== 'gemini'}
-                                    placeholder="AIza..."
-                                    className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
-                                />
-                                <button
-                                    onClick={() => setEditingKey(editingKey === 'gemini' ? null : 'gemini')}
-                                    className="btn-secondary px-4"
-                                >
-                                    {editingKey === 'gemini' ? 'Done' : 'Edit'}
-                                </button>
-                                <button
-                                    onClick={testGeminiConnection}
-                                    disabled={geminiTest.testing}
-                                    className="btn-secondary px-4"
-                                >
-                                    {geminiTest.testing ? 'Testing...' : 'Test'}
-                                </button>
-                            </div>
-                            {geminiTest.result && (
-                                <div className={`text-sm mt-2 flex items-center gap-1 ${geminiTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
-                                    <span className={`w-2 h-2 rounded-full ${geminiTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
-                                    {geminiTest.result.connected ? geminiTest.result.message : geminiTest.result.error}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Agent Configuration */}
-                <div className="card glass">
-                    <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <span>🤖</span> Agent Configuration
-                    </h2>
-                    <p className="text-gray-400 text-sm mb-4">Select which AI model powers each agent.</p>
-
-                    <div className="space-y-4">
-                        {[
-                            { id: 'marketAnalystModel', label: 'Market Analyst', icon: '📊' },
-                            { id: 'riskOfficerModel', label: 'Risk Officer', icon: '🛡️' },
-                            { id: 'strategyConsultantModel', label: 'Strategy Consultant', icon: '💡' },
-                            { id: 'orchestratorModel', label: 'Orchestrator', icon: '🎼' }
-                        ].map((agent) => (
-                            <div key={agent.id}>
-                                <label className="text-white font-medium block mb-2 flex items-center gap-2">
-                                    <span>{agent.icon}</span> {agent.label}
-                                </label>
-                                <select
-                                    value={(settings as any)[agent.id]}
-                                    onChange={(e) => setSettings({ ...settings, [agent.id]: e.target.value })}
-                                    className="w-full px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white appearance-none cursor-pointer hover:border-white/20 transition-colors"
-                                >
-                                    <option value="deepseek">DeepSeek (Default)</option>
-                                    <option value="openai">OpenAI (GPT-4)</option>
-                                    <option value="anthropic">Anthropic (Claude 3)</option>
-                                    <option value="gemini">Google (Gemini 1.5)</option>
-                                </select>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Trading Pairs */}
-                <div className="card glass">
-                    <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <span>💹</span> Trading Pairs
-                    </h2>
-
-                    <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto pr-2">
-                        {availablePairs.map((pairData) => (
+                <div className="space-y-4">
+                    {/* DeepSeek */}
+                    <div>
+                        <label className="text-white font-medium block mb-2">DeepSeek API Key</label>
+                        <div className="flex gap-2">
+                            <input
+                                type={editingKey === 'deepseek' ? 'text' : 'password'}
+                                value={settings.deepseekApiKey}
+                                onChange={(e) => setSettings({ ...settings, deepseekApiKey: e.target.value })}
+                                readOnly={editingKey !== 'deepseek'}
+                                placeholder="sk-..."
+                                className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
+                            />
                             <button
-                                key={pairData.symbol}
-                                onClick={() => {
-                                    const pairs = settings.selectedPairs.includes(pairData.symbol)
-                                        ? settings.selectedPairs.filter(p => p !== pairData.symbol)
-                                        : [...settings.selectedPairs, pairData.symbol];
-                                    setSettings({ ...settings, selectedPairs: pairs });
-                                }}
-                                className={`px-4 py-2 rounded-lg border transition-all text-sm flex items-center gap-2 ${settings.selectedPairs.includes(pairData.symbol)
-                                    ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
-                                    : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
-                                    }`}
+                                onClick={() => setEditingKey(editingKey === 'deepseek' ? null : 'deepseek')}
+                                className="btn-secondary px-4"
                             >
-                                <span>{pairData.symbol}</span>
-                                {pairData.maxLeverage && (
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${settings.selectedPairs.includes(pairData.symbol)
-                                        ? 'bg-indigo-500/30'
-                                        : 'bg-white/10'
-                                        }`}>
-                                        {pairData.maxLeverage}x
-                                    </span>
-                                )}
+                                {editingKey === 'deepseek' ? 'Done' : 'Edit'}
                             </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Methodology */}
-                <div className="card glass">
-                    <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <span>📈</span> Methodology
-                    </h2>
-
-                    <div className="space-y-2">
-                        {['SMC', 'ICT', 'Gann', 'Custom'].map((m) => (
                             <button
-                                key={m}
-                                onClick={() => setSettings({ ...settings, methodology: m })}
-                                className={`w-full p-4 rounded-lg border text-left transition-all ${settings.methodology === m
-                                    ? 'bg-indigo-500/20 border-indigo-500/50'
-                                    : 'bg-white/5 border-white/10 hover:border-white/20'
-                                    }`}
+                                onClick={testDeepseekConnection}
+                                disabled={deepseekTest.testing}
+                                className="btn-secondary px-4"
                             >
-                                <div className="text-white font-medium">{m}</div>
+                                {deepseekTest.testing ? 'Testing...' : 'Test'}
                             </button>
-                        ))}
+                        </div>
+                        {deepseekTest.result && (
+                            <div className={`text-sm mt-2 flex items-center gap-1 ${deepseekTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                <span className={`w-2 h-2 rounded-full ${deepseekTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                {deepseekTest.result.connected ? deepseekTest.result.message : deepseekTest.result.error}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* OpenAI */}
+                    <div>
+                        <label className="text-white font-medium block mb-2">OpenAI API Key (ChatGPT)</label>
+                        <div className="flex gap-2">
+                            <input
+                                type={editingKey === 'openai' ? 'text' : 'password'}
+                                value={settings.openaiApiKey}
+                                onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
+                                readOnly={editingKey !== 'openai'}
+                                placeholder="sk-..."
+                                className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
+                            />
+                            <button
+                                onClick={() => setEditingKey(editingKey === 'openai' ? null : 'openai')}
+                                className="btn-secondary px-4"
+                            >
+                                {editingKey === 'openai' ? 'Done' : 'Edit'}
+                            </button>
+                            <button
+                                onClick={testOpenaiConnection}
+                                disabled={openaiTest.testing}
+                                className="btn-secondary px-4"
+                            >
+                                {openaiTest.testing ? 'Testing...' : 'Test'}
+                            </button>
+                        </div>
+                        {openaiTest.result && (
+                            <div className={`text-sm mt-2 flex items-center gap-1 ${openaiTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                <span className={`w-2 h-2 rounded-full ${openaiTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                {openaiTest.result.connected ? openaiTest.result.message : openaiTest.result.error}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Anthropic */}
+                    <div>
+                        <label className="text-white font-medium block mb-2">Anthropic API Key (Claude)</label>
+                        <div className="flex gap-2">
+                            <input
+                                type={editingKey === 'anthropic' ? 'text' : 'password'}
+                                value={settings.anthropicApiKey}
+                                onChange={(e) => setSettings({ ...settings, anthropicApiKey: e.target.value })}
+                                readOnly={editingKey !== 'anthropic'}
+                                placeholder="sk-ant-..."
+                                className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
+                            />
+                            <button
+                                onClick={() => setEditingKey(editingKey === 'anthropic' ? null : 'anthropic')}
+                                className="btn-secondary px-4"
+                            >
+                                {editingKey === 'anthropic' ? 'Done' : 'Edit'}
+                            </button>
+                            <button
+                                onClick={testAnthropicConnection}
+                                disabled={anthropicTest.testing}
+                                className="btn-secondary px-4"
+                            >
+                                {anthropicTest.testing ? 'Testing...' : 'Test'}
+                            </button>
+                        </div>
+                        {anthropicTest.result && (
+                            <div className={`text-sm mt-2 flex items-center gap-1 ${anthropicTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                <span className={`w-2 h-2 rounded-full ${anthropicTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                {anthropicTest.result.connected ? anthropicTest.result.message : anthropicTest.result.error}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Gemini */}
+                    <div>
+                        <label className="text-white font-medium block mb-2">Google Gemini API Key</label>
+                        <div className="flex gap-2">
+                            <input
+                                type={editingKey === 'gemini' ? 'text' : 'password'}
+                                value={settings.geminiApiKey}
+                                onChange={(e) => setSettings({ ...settings, geminiApiKey: e.target.value })}
+                                readOnly={editingKey !== 'gemini'}
+                                placeholder="AIza..."
+                                className="flex-1 px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white"
+                            />
+                            <button
+                                onClick={() => setEditingKey(editingKey === 'gemini' ? null : 'gemini')}
+                                className="btn-secondary px-4"
+                            >
+                                {editingKey === 'gemini' ? 'Done' : 'Edit'}
+                            </button>
+                            <button
+                                onClick={testGeminiConnection}
+                                disabled={geminiTest.testing}
+                                className="btn-secondary px-4"
+                            >
+                                {geminiTest.testing ? 'Testing...' : 'Test'}
+                            </button>
+                        </div>
+                        {geminiTest.result && (
+                            <div className={`text-sm mt-2 flex items-center gap-1 ${geminiTest.result.connected ? 'text-green-400' : 'text-red-400'}`}>
+                                <span className={`w-2 h-2 rounded-full ${geminiTest.result.connected ? 'bg-green-400' : 'bg-red-400'}`} />
+                                {geminiTest.result.connected ? geminiTest.result.message : geminiTest.result.error}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Save Button */}
-            <div className="mt-8 flex justify-end">
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="btn-primary px-8 py-3 disabled:opacity-50"
-                >
-                    {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Changes'}
-                </button>
-            </div >
+            {/* Agent Configuration */}
+            <div className="card glass">
+                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <span>🤖</span> Agent Configuration
+                </h2>
+                <p className="text-gray-400 text-sm mb-4">Select which AI model powers each agent.</p>
+
+                <div className="space-y-4">
+                    {[
+                        { id: 'marketAnalystModel', label: 'Market Analyst', icon: '📊' },
+                        { id: 'riskOfficerModel', label: 'Risk Officer', icon: '🛡️' },
+                        { id: 'strategyConsultantModel', label: 'Strategy Consultant', icon: '💡' },
+                        { id: 'orchestratorModel', label: 'Orchestrator', icon: '🎼' }
+                    ].map((agent) => (
+                        <div key={agent.id}>
+                            <label className="text-white font-medium block mb-2 flex items-center gap-2">
+                                <span>{agent.icon}</span> {agent.label}
+                            </label>
+                            <select
+                                value={(settings as any)[agent.id]}
+                                onChange={(e) => setSettings({ ...settings, [agent.id]: e.target.value })}
+                                className="w-full px-4 py-3 bg-[#1a1a25] border border-white/10 rounded-lg text-white appearance-none cursor-pointer hover:border-white/20 transition-colors"
+                            >
+                                <option value="deepseek">DeepSeek (Default)</option>
+                                <option value="openai">OpenAI (GPT-4)</option>
+                                <option value="anthropic">Anthropic (Claude 3)</option>
+                                <option value="gemini">Google (Gemini 1.5)</option>
+                            </select>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Trading Pairs */}
+            <div className="card glass">
+                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <span>💹</span> Trading Pairs
+                </h2>
+
+                <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto pr-2">
+                    {availablePairs.map((pairData) => (
+                        <button
+                            key={pairData.symbol}
+                            onClick={() => {
+                                const pairs = settings.selectedPairs.includes(pairData.symbol)
+                                    ? settings.selectedPairs.filter(p => p !== pairData.symbol)
+                                    : [...settings.selectedPairs, pairData.symbol];
+                                setSettings({ ...settings, selectedPairs: pairs });
+                            }}
+                            className={`px-4 py-2 rounded-lg border transition-all text-sm flex items-center gap-2 ${settings.selectedPairs.includes(pairData.symbol)
+                                ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                                : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                                }`}
+                        >
+                            <span>{pairData.symbol}</span>
+                            {pairData.maxLeverage && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${settings.selectedPairs.includes(pairData.symbol)
+                                    ? 'bg-indigo-500/30'
+                                    : 'bg-white/10'
+                                    }`}>
+                                    {pairData.maxLeverage}x
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Methodology */}
+            <div className="card glass">
+                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <span>📈</span> Methodology
+                </h2>
+
+                <div className="space-y-2">
+                    {['SMC', 'ICT', 'Gann', 'Custom'].map((m) => (
+                        <button
+                            key={m}
+                            onClick={() => setSettings({ ...settings, methodology: m })}
+                            className={`w-full p-4 rounded-lg border text-left transition-all ${settings.methodology === m
+                                ? 'bg-indigo-500/20 border-indigo-500/50'
+                                : 'bg-white/5 border-white/10 hover:border-white/20'
+                                }`}
+                        >
+                            <div className="text-white font-medium">{m}</div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+
+            {/* Save Button */ }
+    <div className="mt-8 flex justify-end">
+        <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary px-8 py-3 disabled:opacity-50"
+        >
+            {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Changes'}
+        </button>
+    </div >
         </div >
     );
 }

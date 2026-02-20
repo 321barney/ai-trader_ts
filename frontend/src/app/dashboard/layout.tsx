@@ -139,7 +139,7 @@ export default function DashboardLayout({
                 <div className="p-4 border-t border-slate-800 relative bg-[#0b1121]">
                     <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-slate-600 transition-colors group cursor-pointer">
                         <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-md bg-gradient-to-br from-blue-600 to-slate-700 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-105 transition-transform font-mono text-sm">
+                            <div className="w-9 h-9 rounded-md bg-gradient-to-br from-emerald-600 to-slate-700 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-105 transition-transform font-mono text-sm">
                                 {userEmail.charAt(0).toUpperCase()}
                             </div>
                             <div className="overflow-hidden">
@@ -155,7 +155,7 @@ export default function DashboardLayout({
             {/* Main Content */}
             <main className="flex-1 ml-72 overflow-auto bg-[#020408] relative">
                 {/* Top ambient glow */}
-                <div className="absolute top-0 left-0 w-full h-96 bg-blue-900/5 blur-[120px] pointer-events-none" />
+                <div className="absolute top-0 left-0 w-full h-96 bg-emerald-900/5 blur-[120px] pointer-events-none" />
 
                 <div className="min-h-full relative z-10">
                     {children}

@@ -134,49 +134,19 @@ export default function TermsOfService() {
                     </section>
 
                     {/* Section 4 - Subscription */}
-                    <section id="section-4">
+                    <section id="section-4" className="p-6 rounded-xl bg-indigo-500/10 border-2 border-indigo-500/30">
                         <h2 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-                            <span className="text-indigo-400 font-mono">ARTICLE 4.</span> SUBSCRIPTION PLANS & FEES
+                            <span className="text-indigo-400 font-mono">ARTICLE 4.</span> OPEN SOURCE LICENSE
                         </h2>
                         <div className="space-y-4 ml-4">
-                            <p><strong className="text-white">4.1. FREE PLAN</strong></p>
-                            <p className="ml-6 text-gray-400">Limited access to demonstration features only. Real trading execution is not available. No payment required.</p>
-
-                            <p><strong className="text-white">4.2. PRO PLAN - Twenty-Five United States Dollars ($25.00) per month</strong></p>
-                            <ul className="list-[lower-alpha] list-inside space-y-2 ml-6 text-gray-400">
-                                <li>Full access to all Platform features and AI Agents;</li>
-                                <li>User must provide their own LLM API keys (&quot;Bring Your Own Key&quot; or &quot;BYOK&quot; model);</li>
-                                <li>User is responsible for all costs incurred on their API provider accounts;</li>
-                                <li>Payment accepted exclusively in cryptocurrency via NOWPayments.</li>
-                            </ul>
-
-                            <p><strong className="text-white">4.3. CUSTOM ENTERPRISE PLAN</strong></p>
-                            <p className="ml-6 text-gray-400">Custom pricing with managed LLM API keys provided by the Company. Terms negotiated individually. Contact sales for details.</p>
-
-                            <p><strong className="text-white">4.4.</strong> All fees are non-refundable except as expressly provided in Article 5 (Refund Policy) of this Agreement.</p>
+                            <p><strong className="text-white">4.1.</strong> This software is provided under the <strong>AGPL v3 License</strong>.</p>
+                            <p><strong className="text-white">4.2.</strong> The software is free to use, modify, and distribute under the terms of the license.</p>
+                            <p><strong className="text-white">4.3.</strong> No subscription or fees are required for the use of this software in its self-hosted form.</p>
                         </div>
                     </section>
 
                     {/* Section 5 - Refund Policy */}
-                    <section id="section-5" className="p-6 rounded-xl bg-red-500/10 border-2 border-red-500/30">
-                        <h2 className="text-xl font-bold mb-4 text-red-400 flex items-center gap-2">
-                            <span className="font-mono">ARTICLE 5.</span> REFUND POLICY
-                        </h2>
-                        <div className="space-y-4 ml-4">
-                            <p className="font-bold text-white uppercase">
-                                THIS SECTION CONTAINS IMPORTANT LIMITATIONS ON REFUNDS. PLEASE READ CAREFULLY.
-                            </p>
 
-                            <p><strong className="text-white">5.1. ELIGIBILITY FOR REFUND</strong></p>
-                            <p className="ml-6">Refunds are available ONLY if requested before the Platform generates your first Trading Signal. You may request a refund by contacting support within this window.</p>
-
-                            <p><strong className="text-white">5.2. NON-REFUNDABLE CONDITIONS</strong></p>
-                            <p className="ml-6">Once the AI Agents have analyzed market data and produced any Trading Signal for your account—whether or not you acted upon such signal—your Subscription is deemed &quot;used&quot; and <strong className="text-red-400">NO REFUNDS SHALL BE ISSUED</strong> under any circumstances.</p>
-
-                            <p><strong className="text-white">5.3. ACKNOWLEDGMENT</strong></p>
-                            <p className="ml-6">By subscribing to the Platform, you expressly acknowledge that you have read, understood, and unconditionally agree to this Refund Policy.</p>
-                        </div>
-                    </section>
 
                     {/* Section 6 - Not Financial Advice */}
                     <section id="section-6" className="p-6 rounded-xl bg-yellow-500/10 border-2 border-yellow-500/30">
@@ -365,10 +335,10 @@ export default function TermsOfService() {
                         </Link>
                     </div>
                 </div>
-            </main>
+            </main >
 
             {/* Footer */}
-            <footer className="border-t border-white/5 py-8 mt-16">
+            < footer className="border-t border-white/5 py-8 mt-16" >
                 <div className="max-w-4xl mx-auto px-8 flex items-center justify-between">
                     <p className="text-gray-500 text-sm">© 2024 CoTrader. All rights reserved.</p>
                     <div className="flex items-center gap-4 text-gray-500 text-sm">
@@ -376,7 +346,7 @@ export default function TermsOfService() {
                         <a href="mailto:barnros89@gmail.com" className="hover:text-white transition-colors">Contact</a>
                     </div>
                 </div>
-            </footer>
-        </div>
+            </footer >
+        </div >
     );
 }

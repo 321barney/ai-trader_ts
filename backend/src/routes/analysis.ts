@@ -3,7 +3,7 @@ import { analysisTrigger } from '../services/analysis-trigger.service.js';
 import { schedulerService } from '../services/scheduler.service.js';
 import { rlService } from '../services/rl.service.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { requireSubscription } from '../middleware/subscription.js';
+
 
 const router = Router();
 
@@ -34,7 +34,7 @@ router.get('/trigger-status/:symbol', authMiddleware as any, async (req, res) =>
  * @desc Manually trigger analysis (bypassing smart triggers)
  * @access Private (Premium)
  */
-router.post('/trigger/:symbol', authMiddleware as any, requireSubscription as any, async (req, res) => {
+router.post('/trigger/:symbol', authMiddleware as any, async (req, res) => {
     try {
         const { symbol } = req.params;
         const userId = (req as any).user.id;

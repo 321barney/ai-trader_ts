@@ -11,7 +11,7 @@
 
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { requireSubscription } from '../middleware/subscription.js';
+
 import { modelService } from '../services/model.service.js';
 import { schedulerService } from '../services/scheduler.service.js';
 import { prisma } from '../utils/prisma.js';
@@ -23,7 +23,7 @@ const router = Router();
 
 // All model routes require authentication AND active subscription
 router.use(authMiddleware);
-router.use(requireSubscription);
+
 
 
 // Helper for success response

@@ -147,23 +147,13 @@ class ApiClient {
         }
 
         // Handle 402 (Payment Required) - Redirect to pricing
+        // Handle 402 (Payment Required) - REMOVED
         if (response.status === 402) {
-            console.warn('[ApiClient] Got 402 Payment Required on', endpoint, '- subscription needed');
-            const data = await response.json();
-
-            // Store the error for display
-            if (typeof window !== 'undefined') {
-                // Redirect to pricing page
-                const currentPath = window.location.pathname;
-                if (currentPath !== '/pricing') {
-                    window.location.href = '/pricing?subscription_required=true&from=' + encodeURIComponent(currentPath);
-                }
-            }
-
+            console.warn('[ApiClient] Got 402 Payment Required - but payment system is removed.');
             return {
                 success: false,
-                error: data.error || 'Active subscription required',
-                code: data.code || 'SUBSCRIPTION_REQUIRED'
+                error: 'Payment system is disabled in this open source version.',
+                code: 'PAYMENT_DISABLED'
             } as any;
         }
 

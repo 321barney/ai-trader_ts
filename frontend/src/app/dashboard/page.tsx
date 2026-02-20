@@ -30,13 +30,6 @@ interface ActiveModel {
     timeframes?: string[];
 }
 
-interface Subscription {
-    plan: string;
-    status: string;
-    endsAt: string | null;
-    termsAccepted: boolean;
-}
-
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [connected, setConnected] = useState(false);
@@ -46,7 +39,6 @@ export default function DashboardPage() {
     const [positions, setPositions] = useState<Position[]>([]);
     const [activeModel, setActiveModel] = useState<ActiveModel | null>(null);
     const [showScannerSettings, setShowScannerSettings] = useState(false);
-    const [subscription, setSubscription] = useState<Subscription | null>(null);
 
     useEffect(() => {
         fetchDashboardData();
@@ -66,15 +58,8 @@ export default function DashboardPage() {
         };
 
         try {
-            // Fetch subscription status first (always works, not protected)
-            const subRes = await fetch(`${API_BASE}/api/subscription/status`, { headers });
-            const subData = await subRes.json();
-            if (subData.success) {
-                setSubscription(subData.data);
-            }
-
-            // Only fetch trading data if user has active subscription
-            // These will return 402 for free users and trigger redirect
+            // Fetch trading data
+            // These might return errors if keys aren't configured, but not due to subscription
             const [portfolioRes, positionsRes, modelsRes] = await Promise.all([
                 fetch(`${API_BASE}/api/trading/portfolio`, { headers }),
                 fetch(`${API_BASE}/api/trading/positions`, { headers }),
@@ -107,7 +92,7 @@ export default function DashboardPage() {
         }
     };
 
-    const unrealizedPnl = positions.reduce((sum, p) => sum + (p.unrealizedPnl || 0), 0);
+    const unrealizedPnl = positions.reduce((sum: number, p: Position) => sum + (p.unrealizedPnl || 0), 0);
 
     if (loading) {
         return (
@@ -126,21 +111,7 @@ export default function DashboardPage() {
 
     return (
         <div className="p-8 space-y-8">
-            {/* Subscription Status Banner (for FREE users) */}
-            {subscription && subscription.plan === 'FREE' && (
-                <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl">⚡</span>
-                        <div>
-                            <div className="text-white font-semibold">Upgrade to Pro</div>
-                            <div className="text-gray-400 text-sm">Get unlimited trading signals and full AI agent access</div>
-                        </div>
-                    </div>
-                    <Link href="/pricing" className="px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:opacity-90 transition-opacity">
-                        Upgrade for $25/mo
-                    </Link>
-                </div>
-            )}
+
 
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -149,25 +120,7 @@ export default function DashboardPage() {
                     <p className="text-gray-500 mt-1">Welcome back. Here's your trading overview.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    {/* Subscription Badge */}
-                    {subscription && (
-                        <Link
-                            href="/pricing"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${subscription.plan === 'PRO'
-                                ? 'bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20'
-                                : subscription.plan === 'CUSTOM'
-                                    ? 'bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20'
-                                    : 'bg-gray-500/10 border border-gray-500/20 hover:bg-gray-500/20'
-                                }`}
-                        >
-                            <span className={`text-sm font-medium ${subscription.plan === 'PRO' ? 'text-indigo-400'
-                                : subscription.plan === 'CUSTOM' ? 'text-purple-400'
-                                    : 'text-gray-400'
-                                }`}>
-                                {subscription.plan === 'PRO' ? '⭐ Pro' : subscription.plan === 'CUSTOM' ? '🏆 Custom' : '🆓 Free'}
-                            </span>
-                        </Link>
-                    )}
+
 
                     {/* Connection Status */}
                     {connected ? (
@@ -189,11 +142,11 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
                 {/* Total Value */}
                 <div className="relative overflow-hidden rounded-lg bg-[#0b1121] border border-slate-700/50 p-6 shadow-xl">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600/10 rounded-full blur-2xl"></div>
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-600/10 rounded-full blur-2xl"></div>
                     <div className="relative">
                         <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Total Value</div>
                         <div className="text-3xl font-bold text-slate-100 font-mono">${totalValue.toLocaleString()}</div>
-                        <div className="text-blue-400 text-xs mt-2 flex items-center gap-1 font-medium">
+                        <div className="text-emerald-400 text-xs mt-2 flex items-center gap-1 font-medium">
                             <span className="filter grayscale opacity-70">💼</span> Portfolio
                         </div>
                     </div>
@@ -231,7 +184,7 @@ export default function DashboardPage() {
                         ) : (
                             <>
                                 <div className="text-xl font-bold text-slate-500 font-mono">None</div>
-                                <Link href="/dashboard/strategy-lab" className="text-blue-400 text-xs mt-2 hover:underline font-medium">
+                                <Link href="/dashboard/strategy-lab" className="text-emerald-400 text-xs mt-2 hover:underline font-medium">
                                     Create Strategy →
                                 </Link>
                             </>

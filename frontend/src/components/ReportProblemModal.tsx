@@ -11,7 +11,7 @@ const PROBLEM_TYPES = [
     { id: "login", label: "🔐 Login/Authentication Issues" },
     { id: "trading", label: "📊 Trading Not Working" },
     { id: "signals", label: "📡 Signals Not Generating" },
-    { id: "payment", label: "💳 Payment/Subscription Issue" },
+    { id: "signals", label: "📡 Signals Not Generating" },
     { id: "backtest", label: "🔬 Backtest Problems" },
     { id: "api", label: "🔗 API Connection Errors" },
     { id: "ui", label: "🎨 UI/Display Bug" },

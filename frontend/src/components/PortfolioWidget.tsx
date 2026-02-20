@@ -70,7 +70,7 @@ export default function PortfolioWidget() {
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                    <span className="text-blue-500">💰</span> Portfolio Overview
+                    <span className="text-emerald-500">💰</span> Portfolio Overview
                 </h3>
                 {risk && (
                     <div className={`px-3 py-1 rounded border ${risk.withinLimits
@@ -85,7 +85,7 @@ export default function PortfolioWidget() {
             {portfolio && (
                 <>
                     {/* Equity */}
-                    <div className="bg-gradient-to-r from-blue-900/20 to-slate-900/20 border border-blue-500/10 rounded-lg p-4 mb-4">
+                    <div className="bg-gradient-to-r from-emerald-900/20 to-slate-900/20 border border-emerald-500/10 rounded-lg p-4 mb-4">
                         <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Equity</div>
                         <div className="text-3xl font-mono font-bold text-white">
                             ${portfolio.totalEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
