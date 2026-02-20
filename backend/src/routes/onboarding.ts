@@ -36,7 +36,6 @@ router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Res
     const user = await prisma.user.findUnique({
         where: { id: req.userId },
         select: {
-            onboardingStep: true,
             asterApiKey: true,
             leverage: true,
             selectedPairs: true,
@@ -51,8 +50,8 @@ router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Res
     }
 
     return successResponse(res, {
-        currentStep: user.onboardingStep,
-        completed: user.onboardingStep >= 6,
+        currentStep: 6,
+        completed: true,
         steps: {
             1: !!user.asterApiKey,
             2: !!user.leverage,
@@ -69,17 +68,7 @@ router.get('/status', authMiddleware, asyncHandler(async (req: Request, res: Res
  * Force-complete onboarding for existing users
  */
 router.post('/fix', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
-    const user = await prisma.user.update({
-        where: { id: req.userId },
-        data: {
-            onboardingStep: 6,
-        },
-        select: {
-            id: true,
-            onboardingStep: true,
-        },
-    });
-
+    // Onboarding status is now implicit/removed, so we just return success
     return successResponse(res, {
         fixed: true,
         onboardingCompleted: true,
@@ -105,12 +94,11 @@ router.post('/step', authMiddleware, asyncHandler(async (req: Request, res: Resp
     }
 
     // Build update data based on step
-    let updateData: any = { onboardingStep: step };
+    let updateData: any = {};
 
     switch (step) {
         case 1:
             updateData = {
-                ...updateData,
                 asterApiKey: (validation.data as any).asterApiKey,
                 asterApiSecret: (validation.data as any).asterApiSecret,
                 asterTestnet: (validation.data as any).asterTestnet ?? true,
@@ -118,42 +106,34 @@ router.post('/step', authMiddleware, asyncHandler(async (req: Request, res: Resp
             break;
         case 2:
             updateData = {
-                ...updateData,
                 leverage: (validation.data as any).leverage,
             };
             break;
         case 3:
             updateData = {
-                ...updateData,
                 selectedPairs: (validation.data as any).selectedPairs,
             };
             break;
         case 4:
             updateData = {
-                ...updateData,
                 marketType: (validation.data as any).marketType,
             };
             break;
         case 5:
             updateData = {
-                ...updateData,
                 methodology: (validation.data as any).methodology,
             };
             break;
         case 6:
             updateData = {
-                ...updateData,
                 deepseekApiKey: (validation.data as any).deepseekApiKey || null,
             };
             break;
     }
 
-    const user = await prisma.user.update({
+    await prisma.user.update({
         where: { id: req.userId },
         data: updateData,
-        select: {
-            onboardingStep: true,
-        },
     });
 
     return successResponse(res, {
@@ -174,13 +154,13 @@ router.post('/skip', authMiddleware, asyncHandler(async (req: Request, res: Resp
         return errorResponse(res, 'Only step 1 (Exchange) and 6 (DeepSeek) can be skipped');
     }
 
-    const updateData: any = { onboardingStep: step + 1 };
+    // No DB update needed as onboardingStep is removed.
+    // Frontend handles navigation.
 
-
-
-    const user = await prisma.user.update({
-        where: { id: req.userId },
-        data: updateData,
+    return successResponse(res, {
+        step,
+        nextStep: step < 6 ? step + 1 : null,
+        completed: step >= 6
     });
 
     return successResponse(res, {

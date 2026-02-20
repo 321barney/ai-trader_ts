@@ -92,8 +92,8 @@ router.post('/webhook', asyncHandler(async (req: Request, res: Response) => {
         if (result.processed) {
             return res.status(200).json({ status: 'ok' });
         } else {
-            console.warn('[Webhook] Not processed:', result.reason);
-            return res.status(200).json({ status: 'ok', warning: result.reason });
+            console.warn('[Webhook] Not processed');
+            return res.status(200).json({ status: 'ok', warning: 'skipped' });
         }
     } catch (error: any) {
         console.error('[Webhook] Error:', error);

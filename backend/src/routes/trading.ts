@@ -4,7 +4,7 @@
 
 import { Router, Request, Response } from 'express';
 import { tradingService } from '../services/trading.service.js';
-import { authMiddleware, onboardingCompleteMiddleware } from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 import { asyncHandler } from '../middleware/error.js';
 import { successResponse, errorResponse } from '../utils/response.js';
@@ -33,7 +33,7 @@ router.get('/signals', authMiddleware, asyncHandler(async (req: Request, res: Re
  * Generate a new trading signal using local RL interpretation
  * Works 100% offline - no external RL API required
  */
-router.post('/signal', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
+router.post('/signal', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { symbol } = req.body;
 
     if (!symbol) {
@@ -169,7 +169,7 @@ router.get('/symbols', authMiddleware, asyncHandler(async (req: Request, res: Re
 /**
  * PUT /api/trading/enable
  */
-router.put('/enable', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
+router.put('/enable', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { disclaimerAccepted } = req.body;
 
     try {
@@ -245,7 +245,7 @@ router.put('/settings', authMiddleware, asyncHandler(async (req: Request, res: R
 /**
  * POST /api/trading/analyze
  */
-router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
+router.post('/analyze', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { symbol } = req.body;
 
     if (!symbol) {

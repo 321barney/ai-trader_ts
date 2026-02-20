@@ -4,7 +4,7 @@
 
 import { Router, Request, Response } from 'express';
 import { prisma } from '../utils/prisma.js';
-import { authMiddleware, onboardingCompleteMiddleware } from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/auth.js';
 import { requireSubscription } from '../middleware/subscription.js';
 import { asyncHandler } from '../middleware/error.js';
 import { successResponse, errorResponse } from '../utils/response.js';
@@ -104,7 +104,7 @@ router.post('/debug-create', authMiddleware, asyncHandler(async (req: Request, r
 /**
  * POST /api/agents/analyze
  */
-router.post('/analyze', authMiddleware, onboardingCompleteMiddleware, asyncHandler(async (req: Request, res: Response) => {
+router.post('/analyze', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
     const { symbol } = req.body;
 
     if (!symbol) {

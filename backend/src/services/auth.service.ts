@@ -150,7 +150,6 @@ export class AuthService {
                 username: true,
                 email: true,
                 role: true,
-                onboardingStep: true,
                 tradingEnabled: true,
                 tradingMode: true,
                 strategyMode: true,
