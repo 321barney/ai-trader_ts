@@ -206,7 +206,6 @@ export class TradingPipeline {
                 selectedPairs: true,
                 methodology: true,
                 // Keys handled via vault
-                asterTestnet: true,
                 preferredExchange: true,
                 maxPositionSize: true,
                 maxRiskPerTrade: true,
@@ -229,7 +228,7 @@ export class TradingPipeline {
             methodology: user.methodology || 'Custom',
             asterApiKey: asterApiKey || undefined,
             asterApiSecret: asterApiSecret || undefined,
-            asterTestnet: user.asterTestnet ?? true,
+            asterTestnet: true, // Default to true as field removed
             preferredExchange: (user as any).preferredExchange,
             maxPositionSize: user.maxPositionSize || 5,
             maxRiskPerTrade: user.maxRiskPerTrade || 2,

@@ -250,6 +250,10 @@ class ExecutionService {
                 true
             );
 
+            if (!user) {
+                return { success: false, error: 'User not found' };
+            }
+
             const positionSize = request.size || await this.calculatePositionSize(
                 request.symbol,
                 request.entryPrice || 0,

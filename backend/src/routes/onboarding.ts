@@ -261,9 +261,15 @@ router.get('/pairs', authMiddleware, asyncHandler(async (req: Request, res: Resp
 
     try {
         const { exchangeFactory } = await import('../services/exchange.service.js');
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { preferredExchange: true }
+        });
+
         // Use default exchange or user's preference if available (here default to Aster for pairs list if not specified)
         const exchange = exchangeFactory.getAdapterForUser(
-            (user as any).preferredExchange || 'aster',
+            user?.preferredExchange || 'aster',
             asterApiKey,
             asterApiSecret,
             asterTestnet
