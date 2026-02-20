@@ -9,6 +9,7 @@
 
 import cron from 'node-cron';
 import { prisma } from '../utils/prisma.js';
+import { vaultService } from './vault.service.js';
 import { modelService } from './model.service.js';
 import { exchangeFactory } from './exchange.service.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
@@ -187,8 +188,8 @@ export class SchedulerService {
                 select: {
                     id: true,
                     selectedPairs: true,
-                    asterApiKey: true,
-                    asterApiSecret: true,
+                    // keys removed
+                    // keys removed
                     methodology: true
                 }
             });
@@ -226,12 +227,16 @@ export class SchedulerService {
                         }
 
                         for (const symbol of pairs.slice(0, 3)) {
+
+                            const asterApiKey = await vaultService.getSecret(user.id, 'aster_api_key');
+                            const asterApiSecret = await vaultService.getSecret(user.id, 'aster_api_secret');
+
                             // Fetch Data using DYNAMIC timeframes from model
                             const multiTF = await this.fetchMultiTFData(
                                 symbol,
                                 timeframes as string[],
-                                user.asterApiKey || undefined,
-                                user.asterApiSecret || undefined
+                                asterApiKey || undefined,
+                                asterApiSecret || undefined
                             );
 
                             // Execute Analysis
@@ -266,9 +271,6 @@ export class SchedulerService {
                 where: { tradingEnabled: true },
                 select: {
                     id: true,
-                    asterApiKey: true,
-                    asterApiSecret: true,
-                    asterTestnet: true,
                     preferredExchange: true
                 }
             });
@@ -278,12 +280,15 @@ export class SchedulerService {
                     const activeModel = await modelService.getActiveModel(user.id);
                     if (!activeModel) continue;
 
+                    const asterApiKey = await vaultService.getSecret(user.id, 'aster_api_key');
+                    const asterApiSecret = await vaultService.getSecret(user.id, 'aster_api_secret');
+
                     // Get current portfolio value (simplified - would need actual balance)
                     const adapter = exchangeFactory.getAdapterForUser(
                         (user as any).preferredExchange || 'aster',
-                        user.asterApiKey!,
-                        user.asterApiSecret!,
-                        user.asterTestnet || true
+                        asterApiKey!,
+                        asterApiSecret!,
+                        true
                     );
 
                     const balances = await adapter.getBalance().catch(() => []);
@@ -375,19 +380,20 @@ export class SchedulerService {
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
-                asterApiKey: true,
-                asterApiSecret: true,
                 methodology: true
             }
         });
 
         if (!user) throw new Error('User not found');
 
+        const asterApiKey = await vaultService.getSecret(userId, 'aster_api_key');
+        const asterApiSecret = await vaultService.getSecret(userId, 'aster_api_secret');
+
         const multiTF = await this.fetchMultiTFData(
             symbol,
             ['1h'], // Default timeframe for manual analysis
-            user.asterApiKey || undefined,
-            user.asterApiSecret || undefined
+            asterApiKey || undefined,
+            asterApiSecret || undefined
         );
 
         return await this.orchestrator.analyzeWithCaching({

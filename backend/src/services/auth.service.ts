@@ -6,6 +6,7 @@ import { prisma } from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { sessionService } from './session.service.js';
+import { vaultService } from './vault.service.js';
 
 
 export interface RegisterInput {
@@ -155,16 +156,6 @@ export class AuthService {
                 methodology: true,
                 leverage: true,
                 selectedPairs: true,
-                // API keys (returned as boolean check for security)
-                asterApiKey: true,
-                asterApiSecret: true,
-                asterTestnet: true,
-                deepseekApiKey: true,
-                openaiApiKey: true,
-                anthropicApiKey: true,
-                geminiApiKey: true,
-                marketAnalystModel: true,
-                riskOfficerModel: true,
                 strategyConsultantModel: true,
                 createdAt: true,
                 lastLogin: true,
@@ -175,21 +166,22 @@ export class AuthService {
             throw new Error('User not found');
         }
 
-        // For security, don't expose full keys - just indicate if they're set
+        // Check Vault for keys
+        const hasAsterApiKey = await vaultService.hasSecret(userId, 'aster_api_key');
+        const hasAsterApiSecret = await vaultService.hasSecret(userId, 'aster_api_secret');
+        const hasDeepseekApiKey = await vaultService.hasSecret(userId, 'deepseek_api_key');
+        const hasOpenaiApiKey = await vaultService.hasSecret(userId, 'openai_api_key');
+        const hasAnthropicApiKey = await vaultService.hasSecret(userId, 'anthropic_api_key');
+        const hasGeminiApiKey = await vaultService.hasSecret(userId, 'gemini_api_key');
+
         return {
             ...user,
-            // But wait, the interface removal above assumes I remove it here too.
-            // Let's check if the frontend expects it. 
-            // The frontend likely expects it. I should probably return 'true' hardcoded if the frontend checks it, 
-            // OR if I am sure the frontend doesn't need it.
-            // The user said "remove these references... to allow the build process to complete".
-            // So I will remove it from the object.
-            asterApiKey: user.asterApiKey ? '••••••••' : null,
-            asterApiSecret: user.asterApiSecret ? '••••••••' : null,
-            deepseekApiKey: user.deepseekApiKey ? '••••••••' : null,
-            openaiApiKey: user.openaiApiKey ? '••••••••' : null,
-            anthropicApiKey: user.anthropicApiKey ? '••••••••' : null,
-            geminiApiKey: user.geminiApiKey ? '••••••••' : null,
+            asterApiKey: hasAsterApiKey ? '••••••••' : null,
+            asterApiSecret: hasAsterApiSecret ? '••••••••' : null,
+            deepseekApiKey: hasDeepseekApiKey ? '••••••••' : null,
+            openaiApiKey: hasOpenaiApiKey ? '••••••••' : null,
+            anthropicApiKey: hasAnthropicApiKey ? '••••••••' : null,
+            geminiApiKey: hasGeminiApiKey ? '••••••••' : null,
         };
     }
 

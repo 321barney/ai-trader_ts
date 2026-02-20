@@ -4,6 +4,7 @@
 
 import { Router, Request, Response } from 'express';
 import { tradingService } from '../services/trading.service.js';
+import { vaultService } from '../services/vault.service.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 import { asyncHandler } from '../middleware/error.js';
@@ -50,12 +51,15 @@ router.post('/signal', authMiddleware, asyncHandler(async (req: Request, res: Re
         const user = await prisma.user.findUnique({ where: { id: req.userId } });
         if (!user) return errorResponse(res, 'User not found');
 
+        const asterApiKey = await vaultService.getSecret(req.userId!, 'aster_api_key');
+        const asterApiSecret = await vaultService.getSecret(req.userId!, 'aster_api_secret');
+
         // Fetch market data
         const multiTF = await schedulerService.fetchMultiTFData(
             symbol,
             ['15m'], // Default timeframe for signal generation
-            user.asterApiKey || undefined,
-            user.asterApiSecret || undefined
+            asterApiKey || undefined,
+            asterApiSecret || undefined
         );
 
         // Get latest candle from the primary timeframe
@@ -273,12 +277,15 @@ router.post('/debug/trigger-analysis', authMiddleware, asyncHandler(async (req: 
         const user = await prisma.user.findUnique({ where: { id: req.userId } });
         if (!user) return errorResponse(res, 'User not found');
 
+        const asterApiKey = await vaultService.getSecret(req.userId!, 'aster_api_key');
+        const asterApiSecret = await vaultService.getSecret(req.userId!, 'aster_api_secret');
+
         // Fetch Data
         const multiTF = await schedulerService.fetchMultiTFData(
             symbol || 'BTCUSDT',
             ['1h'], // Default timeframe for debug analysis
-            user.asterApiKey || undefined,
-            user.asterApiSecret || undefined
+            asterApiKey || undefined,
+            asterApiSecret || undefined
         );
 
         // Execute
@@ -347,12 +354,15 @@ router.post('/test-aster', authMiddleware, asyncHandler(async (req: Request, res
         // If keys not provided, try to get from DB
         if (!apiKey || !apiSecret) {
             const { prisma } = await import('../utils/prisma.js');
-            const user = await prisma.user.findUnique({ where: { id: req.userId } });
+            // const user = await prisma.user.findUnique({ where: { id: req.userId } });
 
-            if (user?.asterApiKey && user?.asterApiSecret) {
-                apiKey = user.asterApiKey;
-                apiSecret = user.asterApiSecret;
-                testnet = user.asterTestnet ?? true;
+            const dbApiKey = await vaultService.getSecret(req.userId!, 'aster_api_key');
+            const dbApiSecret = await vaultService.getSecret(req.userId!, 'aster_api_secret');
+
+            if (dbApiKey && dbApiSecret) {
+                apiKey = dbApiKey;
+                apiSecret = dbApiSecret;
+                testnet = true; // Defaulting to true as field removed. 
             } else {
                 return successResponse(res, {
                     connected: false,
@@ -392,10 +402,10 @@ router.post('/test-deepseek', authMiddleware, asyncHandler(async (req: Request, 
 
     // If key not provided, try to get from DB
     if (!apiKey) {
-        const { prisma } = await import('../utils/prisma.js');
-        const user = await prisma.user.findUnique({ where: { id: req.userId } });
-        if (user?.deepseekApiKey) {
-            apiKey = user.deepseekApiKey;
+        // const { prisma } = await import('../utils/prisma.js');
+        const dbKey = await vaultService.getSecret(req.userId!, 'deepseek_api_key');
+        if (dbKey) {
+            apiKey = dbKey;
         } else {
             return successResponse(res, {
                 connected: false,
@@ -444,9 +454,8 @@ router.post('/test-openai', authMiddleware, asyncHandler(async (req: Request, re
     let { apiKey } = req.body;
 
     if (!apiKey) {
-        const { prisma } = await import('../utils/prisma.js');
-        const user = await prisma.user.findUnique({ where: { id: req.userId } });
-        if (user?.openaiApiKey) apiKey = user.openaiApiKey;
+        const dbKey = await vaultService.getSecret(req.userId!, 'openai_api_key');
+        if (dbKey) apiKey = dbKey;
         else return successResponse(res, { connected: false, error: 'Please provide API key or save it in settings first' });
     }
 
@@ -483,9 +492,8 @@ router.post('/test-anthropic', authMiddleware, asyncHandler(async (req: Request,
     let { apiKey } = req.body;
 
     if (!apiKey) {
-        const { prisma } = await import('../utils/prisma.js');
-        const user = await prisma.user.findUnique({ where: { id: req.userId } });
-        if (user?.anthropicApiKey) apiKey = user.anthropicApiKey;
+        const dbKey = await vaultService.getSecret(req.userId!, 'anthropic_api_key');
+        if (dbKey) apiKey = dbKey;
         else return successResponse(res, { connected: false, error: 'Please provide API key or save it in settings first' });
     }
 
@@ -523,9 +531,8 @@ router.post('/test-gemini', authMiddleware, asyncHandler(async (req: Request, re
     let { apiKey } = req.body;
 
     if (!apiKey) {
-        const { prisma } = await import('../utils/prisma.js');
-        const user = await prisma.user.findUnique({ where: { id: req.userId } });
-        if (user?.geminiApiKey) apiKey = user.geminiApiKey;
+        const dbKey = await vaultService.getSecret(req.userId!, 'gemini_api_key');
+        if (dbKey) apiKey = dbKey;
         else return successResponse(res, { connected: false, error: 'Please provide API key or save it in settings first' });
     }
 
@@ -562,7 +569,10 @@ router.get('/portfolio', authMiddleware, asyncHandler(async (req: Request, res: 
             where: { id: req.userId }
         });
 
-        if (!user?.asterApiKey || !user?.asterApiSecret) {
+        const asterApiKey = await vaultService.getSecret(req.userId!, 'aster_api_key');
+        const asterApiSecret = await vaultService.getSecret(req.userId!, 'aster_api_secret');
+
+        if (!asterApiKey || !asterApiSecret) {
             return successResponse(res, {
                 connected: false,
                 balance: [],
@@ -575,9 +585,9 @@ router.get('/portfolio', authMiddleware, asyncHandler(async (req: Request, res: 
         const { exchangeFactory } = await import('../services/exchange.service.js');
         const exchange = exchangeFactory.getAdapterForUser(
             (user as any).preferredExchange || 'aster',
-            user.asterApiKey,
-            user.asterApiSecret,
-            user.asterTestnet ?? true
+            asterApiKey,
+            asterApiSecret,
+            true // Defaulting to testnet as field removed
         );
 
         // Fetch balance

@@ -13,6 +13,7 @@ import { RiskOfficerAgent, RiskAssessment } from './risk-officer.js';
 import { MarketAnalystAgent, MarketAnalysis } from './market-analyst.js';
 import { RLService, RLPrediction, RLMetrics, RLParams, SMCFeatures, VolumeFeatures, EnhancedPredictRequest } from '../services/rl.service.js';
 import { prisma } from '../utils/prisma.js';
+import { vaultService } from '../services/vault.service.js';
 import { OpenAIService } from '../services/openai.service.js';
 import { ClaudeService } from '../services/claude.service.js';
 import { GeminiService } from '../services/gemini.service.js';
@@ -237,23 +238,33 @@ export class AgentOrchestrator {
         }
 
         // Fetch user config for AI models
+        // Fetch user config for AI models
         const user = await prisma.user.findUnique({
             where: { id: context.userId },
             select: {
-                deepseekApiKey: true,
-                openaiApiKey: true,
-                anthropicApiKey: true,
-                geminiApiKey: true,
+                // Keys handled via vault
                 marketAnalystModel: true,
                 riskOfficerModel: true,
                 strategyConsultantModel: true
             }
         });
 
+        const deepseekApiKey = await vaultService.getSecret(context.userId, 'deepseek_api_key');
+        const openaiApiKey = await vaultService.getSecret(context.userId, 'openai_api_key');
+        const anthropicApiKey = await vaultService.getSecret(context.userId, 'anthropic_api_key');
+        const geminiApiKey = await vaultService.getSecret(context.userId, 'gemini_api_key');
+
+        const keys = {
+            deepseekApiKey,
+            openaiApiKey,
+            anthropicApiKey,
+            geminiApiKey
+        };
+
         // Determine services for each agent
-        const marketService = this.getAiService(user?.marketAnalystModel || 'deepseek', user);
-        const riskService = this.getAiService(user?.riskOfficerModel || 'deepseek', user);
-        const strategyService = this.getAiService(user?.strategyConsultantModel || 'deepseek', user);
+        const marketService = this.getAiService(user?.marketAnalystModel || 'deepseek', keys);
+        const riskService = this.getAiService(user?.riskOfficerModel || 'deepseek', keys);
+        const strategyService = this.getAiService(user?.strategyConsultantModel || 'deepseek', keys);
 
         // Generate performance-based prompt hints for dynamic optimization
         const performanceHints = await this.generatePerformanceHints(context.userId, context.methodology);

@@ -9,6 +9,7 @@
 import { prisma } from '../utils/prisma.js';
 import { exchangeFactory } from './exchange.service.js';
 import { signalTrackerService } from './signal-tracker.service.js';
+import { vaultService } from './vault.service.js';
 
 // Cast prisma to any for unmigrated models
 // const db = prisma as any;
@@ -111,23 +112,25 @@ class ExecutionService {
             const user = await prisma.user.findUnique({
                 where: { id: signal.userId },
                 select: {
-                    asterApiKey: true,
-                    asterApiSecret: true,
-                    asterTestnet: true,
-                    maxRiskPerTrade: true,
-                    preferredExchange: true
-                }
-            });
+                    select: {
+                        // keys removed
+                        maxRiskPerTrade: true,
+                        preferredExchange: true
+                    }
+                });
 
-            if (!user?.asterApiKey || !user?.asterApiSecret) {
+            const asterApiKey = await vaultService.getSecret(signal.userId, 'aster_api_key');
+            const asterApiSecret = await vaultService.getSecret(signal.userId, 'aster_api_secret');
+
+            if (!asterApiKey || !asterApiSecret) {
                 return { success: false, error: 'No API keys configured' };
             }
 
             const userExchange = exchangeFactory.getAdapterForUser(
                 (user as any).preferredExchange || 'aster',
-                user.asterApiKey,
-                user.asterApiSecret,
-                user.asterTestnet || true
+                asterApiKey,
+                asterApiSecret,
+                true
             );
 
             const riskPercent = user.maxRiskPerTrade || 2;
@@ -228,23 +231,25 @@ class ExecutionService {
             const user = await prisma.user.findUnique({
                 where: { id: request.userId },
                 select: {
-                    asterApiKey: true,
-                    asterApiSecret: true,
-                    asterTestnet: true,
-                    maxRiskPerTrade: true,
-                    preferredExchange: true
-                }
-            });
+                    select: {
+                        // keys removed
+                        maxRiskPerTrade: true,
+                        preferredExchange: true
+                    }
+                });
 
-            if (!user?.asterApiKey || !user?.asterApiSecret) {
+            const asterApiKey = await vaultService.getSecret(request.userId, 'aster_api_key');
+            const asterApiSecret = await vaultService.getSecret(request.userId, 'aster_api_secret');
+
+            if (!asterApiKey || !asterApiSecret) {
                 return { success: false, error: 'No API keys configured' };
             }
 
             const userExchange = exchangeFactory.getAdapterForUser(
                 (user as any).preferredExchange || 'aster',
-                user.asterApiKey,
-                user.asterApiSecret,
-                user.asterTestnet || true
+                asterApiKey,
+                asterApiSecret,
+                true
             );
 
             const positionSize = request.size || await this.calculatePositionSize(

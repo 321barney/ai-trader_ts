@@ -12,6 +12,7 @@ import { exchangeFactory } from './exchange.service.js';
 
 // Cast prisma to any for unmigrated models
 // const db = prisma as any;
+import { vaultService } from './vault.service.js';
 
 export interface Position {
     id: string;
@@ -125,26 +126,28 @@ class PositionManagerService {
 
         try {
             // Get user keys for execution
+            // Get user keys for execution
             const user = await prisma.user.findUnique({
                 where: { id: position.userId },
                 select: {
-                    asterApiKey: true,
-                    asterApiSecret: true,
-                    asterTestnet: true,
+                    // Keys removed
                     preferredExchange: true
                 }
             });
 
-            if (!user?.asterApiKey || !user?.asterApiSecret) {
+            const asterApiKey = await vaultService.getSecret(position.userId, 'aster_api_key');
+            const asterApiSecret = await vaultService.getSecret(position.userId, 'aster_api_secret');
+
+            if (!asterApiKey || !asterApiSecret) {
                 console.error(`[PositionManager] Cannot close position ${position.id}: Missing keys for user ${position.userId}`);
                 return;
             }
 
             const userExchange = exchangeFactory.getAdapterForUser(
                 (user as any).preferredExchange || 'aster',
-                user.asterApiKey,
-                user.asterApiSecret,
-                user.asterTestnet || true
+                asterApiKey,
+                asterApiSecret,
+                true
             );
 
             // Place close order

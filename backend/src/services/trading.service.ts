@@ -5,6 +5,7 @@
 import { prisma } from '../utils/prisma.js';
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 import { rlService } from './rl.service.js';
+import { vaultService } from './vault.service.js';
 import { Position } from './aster.service.js';
 import { exchangeFactory } from './exchange.service.js';
 import { signalTrackerService } from './signal-tracker.service.js';
@@ -41,8 +42,8 @@ export class TradingService {
                 strategyMode: true,
                 methodology: true,
                 selectedPairs: true,
-                asterApiKey: true,
-                deepseekApiKey: true,
+                // Removed key fields from selection
+                // Removed key fields from selection
             },
         });
 
@@ -50,16 +51,19 @@ export class TradingService {
             throw new Error('User not found');
         }
 
+        const hasAsterApiKey = await vaultService.hasSecret(userId, 'aster_api_key');
+        const hasDeepseekApiKey = await vaultService.hasSecret(userId, 'deepseek_api_key');
+
         const warnings: string[] = [];
-        if (!user.asterApiKey) warnings.push('Exchange API not configured');
-        if (!user.deepseekApiKey) warnings.push('DeepSeek API not configured');
+        if (!hasAsterApiKey) warnings.push('Exchange API not configured');
+        if (!hasDeepseekApiKey) warnings.push('DeepSeek API not configured');
 
         return {
             ...user,
             asterApiKey: undefined,
             deepseekApiKey: undefined,
-            hasAsterApiKey: !!user.asterApiKey,
-            hasDeepseekApiKey: !!user.deepseekApiKey,
+            hasAsterApiKey,
+            hasDeepseekApiKey,
             warnings,
         };
     }
@@ -129,17 +133,21 @@ export class TradingService {
         if (settings.leverage !== undefined) updateData.leverage = settings.leverage;
         if (settings.selectedPairs !== undefined) updateData.selectedPairs = settings.selectedPairs;
         if (settings.marketType !== undefined) updateData.marketType = settings.marketType;
-        if (settings.asterApiKey !== undefined) updateData.asterApiKey = settings.asterApiKey;
-        if (settings.asterApiSecret !== undefined) updateData.asterApiSecret = settings.asterApiSecret;
-        if (settings.asterTestnet !== undefined) updateData.asterTestnet = settings.asterTestnet;
-        if (settings.deepseekApiKey !== undefined) updateData.deepseekApiKey = settings.deepseekApiKey;
-        if (settings.openaiApiKey !== undefined) updateData.openaiApiKey = settings.openaiApiKey;
-        if (settings.anthropicApiKey !== undefined) updateData.anthropicApiKey = settings.anthropicApiKey;
-        if (settings.geminiApiKey !== undefined) updateData.geminiApiKey = settings.geminiApiKey;
+        if (settings.marketType !== undefined) updateData.marketType = settings.marketType;
+        // Keys handled via Vault, not User update
         if (settings.marketAnalystModel !== undefined) updateData.marketAnalystModel = settings.marketAnalystModel;
         if (settings.riskOfficerModel !== undefined) updateData.riskOfficerModel = settings.riskOfficerModel;
         if (settings.strategyConsultantModel !== undefined) updateData.strategyConsultantModel = settings.strategyConsultantModel;
         if (settings.orchestratorModel !== undefined) updateData.orchestratorModel = settings.orchestratorModel;
+
+        const promises = [];
+        if (settings.asterApiKey) promises.push(vaultService.saveSecret(userId, 'aster_api_key', settings.asterApiKey));
+        if (settings.asterApiSecret) promises.push(vaultService.saveSecret(userId, 'aster_api_secret', settings.asterApiSecret));
+        if (settings.deepseekApiKey) promises.push(vaultService.saveSecret(userId, 'deepseek_api_key', settings.deepseekApiKey));
+        if (settings.openaiApiKey) promises.push(vaultService.saveSecret(userId, 'openai_api_key', settings.openaiApiKey));
+        if (settings.anthropicApiKey) promises.push(vaultService.saveSecret(userId, 'anthropic_api_key', settings.anthropicApiKey));
+        if (settings.geminiApiKey) promises.push(vaultService.saveSecret(userId, 'gemini_api_key', settings.geminiApiKey));
+        await Promise.all(promises);
 
         const user = await prisma.user.update({
             where: { id: userId },
@@ -171,9 +179,7 @@ export class TradingService {
                 strategyMode: true,
                 tradingEnabled: true,
                 tradingMode: true,
-                asterApiKey: true,
-                asterApiSecret: true,
-                asterTestnet: true,
+                // Keys removed
             },
         });
 
@@ -199,12 +205,16 @@ export class TradingService {
         console.log(`[TradingService] Running analysis for ${symbol} with TFs: [${timeframes.join(', ')}] (primary: ${primaryTimeframe})`);
 
         // DYNAMIC: Fetch multi-TF data using user's configured timeframes
+        // DYNAMIC: Fetch multi-TF data using user's configured timeframes
+        const asterApiKey = await vaultService.getSecret(userId, 'aster_api_key');
+        const asterApiSecret = await vaultService.getSecret(userId, 'aster_api_secret');
+
         const multiTFData = await marketDataService.fetchMultiTFData(
             symbol,
             timeframes,
             primaryTimeframe,
-            user.asterApiKey || undefined,
-            user.asterApiSecret || undefined
+            asterApiKey || undefined,
+            asterApiSecret || undefined
         );
 
         // Aggregate into agent-ready format with indicators calculated on PRIMARY timeframe
@@ -239,9 +249,9 @@ export class TradingService {
         // Initialize Exchange Adapter with user keys
         const userExchange = exchangeFactory.getAdapterForUser(
             (user as any).preferredExchange || 'aster',
-            user.asterApiKey!,
-            user.asterApiSecret!,
-            user.asterTestnet || true
+            asterApiKey!,
+            asterApiSecret!,
+            true
         );
 
         // Fetch Real Account Data
@@ -250,7 +260,7 @@ export class TradingService {
         let currentExposure = 0;
 
         try {
-            if (user.asterApiKey && user.asterApiSecret) {
+            if (asterApiKey && asterApiSecret) {
                 const balances = await userExchange.getBalance();
                 const usdtBalance = balances.find(b => b.asset === 'USDT');
                 const positions = await userExchange.getPositions();
@@ -469,10 +479,10 @@ export class TradingService {
                 methodology: true,
                 strategyMode: true,
                 tradingEnabled: true,
+                tradingEnabled: true,
                 tradingMode: true,
-                asterApiKey: true, // Need API key for execution check
-                asterApiSecret: true,
-                asterTestnet: true,
+                // Keys removed
+                // Keys removed
                 leverage: true,
                 tradingCapitalPercent: true,
             },
@@ -697,9 +707,7 @@ export class TradingService {
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
-                asterApiKey: true,
-                asterApiSecret: true,
-                asterTestnet: true,
+                // Keys removed
                 leverage: true,
                 methodology: true,
                 tradingCapitalPercent: true,
@@ -708,7 +716,10 @@ export class TradingService {
             }
         });
 
-        if (!user || !user.asterApiKey || !user.asterApiSecret) {
+        const asterApiKey = await vaultService.getSecret(userId, 'aster_api_key');
+        const asterApiSecret = await vaultService.getSecret(userId, 'aster_api_secret');
+
+        if (!user || !asterApiKey || !asterApiSecret) {
             console.warn(`User ${userId} missing API keys, skipping execution`);
             return null;
         }
@@ -716,9 +727,9 @@ export class TradingService {
         // Get exchange adapter for user
         const userExchange = exchangeFactory.getAdapterForUser(
             (user as any).preferredExchange || 'aster',
-            user.asterApiKey,
-            user.asterApiSecret,
-            user.asterTestnet || true
+            asterApiKey,
+            asterApiSecret,
+            true // Default testnet
         );
 
         try {
@@ -930,32 +941,41 @@ export class TradingService {
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
-                asterApiKey: true,
-                asterApiSecret: true,
-                asterTestnet: true,
-                tradingEnabled: true,
-                preferredExchange: true
-            }
+                preferredExchange: true, // Kept as it's used in exchangeFactory.getAdapterForUser
+                leverage: true,
+            },
         });
 
         if (!user) throw new Error('User not found');
 
-        let realPositions: Position[] = [];
-        const virtualPositions: (Position & { isVirtual: boolean, entryTime: Date })[] = [];
+        // This method seems to use keys only for fetching open positions from exchange
+        const asterApiKey = await vaultService.getSecret(userId, 'aster_api_key');
+        const asterApiSecret = await vaultService.getSecret(userId, 'aster_api_secret');
 
-        // 1. Fetch Real Positions
-        if (user.asterApiKey && user.asterApiSecret) {
-            try {
+        const virtualPositions: (Position & { isVirtual: boolean, entryTime: Date })[] = [];
+        const positions: {
+            real: Position[],
+            virtual: (Position & { isVirtual: boolean, entryTime: Date })[],
+            combined: (Position & { isVirtual: boolean })[]
+        } = {
+            real: [],
+            virtual: [],
+            combined: []
+        };
+
+        // 1. Get Real Exchange Positions
+        try {
+            if (asterApiKey && asterApiSecret) {
                 const userExchange = exchangeFactory.getAdapterForUser(
                     (user as any).preferredExchange || 'aster',
-                    user.asterApiKey,
-                    user.asterApiSecret,
-                    user.asterTestnet || true
+                    asterApiKey,
+                    asterApiSecret,
+                    true // Assuming testnet is always true for now, or needs to be fetched from vault
                 );
-                realPositions = await userExchange.getPositions();
-            } catch (err) {
-                console.warn(`[TradingService] Failed to fetch real positions for ${userId}`, err);
+                positions.real = await userExchange.getPositions();
             }
+        } catch (error) {
+            console.warn(`[TradingService] Failed to fetch real positions for ${userId}`, error);
         }
 
         // 2. Fetch Virtual Positions (Pending Signals)
@@ -1010,11 +1030,11 @@ export class TradingService {
             console.error('[TradingService] Failed to fetch virtual positions:', err);
         }
 
-        return {
-            real: realPositions,
-            virtual: virtualPositions,
-            combined: [...realPositions.map(p => ({ ...p, isVirtual: false })), ...virtualPositions]
-        };
+        // 3. Combine and Return
+        positions.virtual = virtualPositions;
+        positions.combined = [...positions.real.map(p => ({ ...p, isVirtual: false })), ...virtualPositions.map(p => ({ ...p, isVirtual: true } as any))];
+
+        return positions;
     }
 }
 

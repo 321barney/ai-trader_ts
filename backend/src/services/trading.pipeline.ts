@@ -14,6 +14,7 @@ import { strategyService, StrategyVersion } from './strategy.service.js';
 import { signalTrackerService, TrackedSignal } from './signal-tracker.service.js';
 import { AgentOrchestrator, OrchestratorDecision } from '../agents/orchestrator.js';
 import { prisma } from '../utils/prisma.js';
+import { vaultService } from './vault.service.js';
 
 
 // Types
@@ -204,8 +205,7 @@ export class TradingPipeline {
                 leverage: true,
                 selectedPairs: true,
                 methodology: true,
-                asterApiKey: true,
-                asterApiSecret: true,
+                // Keys handled via vault
                 asterTestnet: true,
                 preferredExchange: true,
                 maxPositionSize: true,
@@ -217,6 +217,9 @@ export class TradingPipeline {
             throw new Error('User not found');
         }
 
+        const asterApiKey = await vaultService.getSecret(userId, 'aster_api_key');
+        const asterApiSecret = await vaultService.getSecret(userId, 'aster_api_secret');
+
         return {
             userId: user.id,
             tradingEnabled: user.tradingEnabled,
@@ -224,8 +227,8 @@ export class TradingPipeline {
             leverage: user.leverage || 10,
             selectedPairs: (user.selectedPairs as string[]) || [],
             methodology: user.methodology || 'Custom',
-            asterApiKey: user.asterApiKey || undefined,
-            asterApiSecret: user.asterApiSecret || undefined,
+            asterApiKey: asterApiKey || undefined,
+            asterApiSecret: asterApiSecret || undefined,
             asterTestnet: user.asterTestnet ?? true,
             preferredExchange: (user as any).preferredExchange,
             maxPositionSize: user.maxPositionSize || 5,
