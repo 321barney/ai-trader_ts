@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "prisma db push && npx ts-node src/scripts/seed-user.ts && node dist/server.js",
+    "start": "prisma db push --accept-data-loss && npx ts-node src/scripts/seed-user.ts && node dist/server.js",
     "test": "jest",
     "lint": "eslint src/",
     "prisma:generate": "prisma generate",
