@@ -600,7 +600,7 @@ router.get('/portfolio', authMiddleware, asyncHandler(async (req: Request, res: 
             connected: true,
             balance: balances,
             totalValue,
-            testnet: user.asterTestnet ?? true
+            testnet: true // Defaulting to testnet as field removed
         });
     } catch (error: any) {
         return successResponse(res, {

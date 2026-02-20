@@ -478,9 +478,8 @@ export class TradingService {
             select: {
                 methodology: true,
                 strategyMode: true,
-                tradingEnabled: true,
-                tradingEnabled: true,
                 tradingMode: true,
+                // Keys removed
                 // Keys removed
                 // Keys removed
                 leverage: true,

@@ -132,6 +132,10 @@ class ExecutionService {
                 true
             );
 
+            if (!user) {
+                return { success: false, error: 'User not found' };
+            }
+
             const riskPercent = user.maxRiskPerTrade || 2;
             const positionSize = await this.calculatePositionSize(
                 signal.symbol,

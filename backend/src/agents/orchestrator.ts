@@ -1285,10 +1285,6 @@ REASON: [One-line summary of why this decision]`;
             const user = await prisma.user.findUnique({
                 where: { id: context.userId },
                 select: {
-                    deepseekApiKey: true,
-                    openaiApiKey: true,
-                    anthropicApiKey: true,
-                    geminiApiKey: true,
                     riskOfficerModel: true,
                     strategyConsultantModel: true
                 }
