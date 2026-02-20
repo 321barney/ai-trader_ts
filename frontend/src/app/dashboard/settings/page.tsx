@@ -645,18 +645,18 @@ export default function SettingsPage() {
                     ))}
                 </div>
             </div>
-        </div>
 
-            {/* Save Button */ }
-    <div className="mt-8 flex justify-end">
-        <button
-            onClick={handleSave}
-            disabled={saving}
-            className="btn-primary px-8 py-3 disabled:opacity-50"
-        >
-            {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Changes'}
-        </button>
-    </div >
+
+            {/* Save Button */}
+            <div className="mt-8 flex justify-end">
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="btn-primary px-8 py-3 disabled:opacity-50"
+                >
+                    {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Changes'}
+                </button>
+            </div >
         </div >
     );
 }
